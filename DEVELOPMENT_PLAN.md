@@ -132,22 +132,22 @@ Performance / CI / Hardening
 и понимает, какими командами пользоваться.
 ```
 
-- [ ] **Task 0.2 — Создать Gradle-проект**
+- [x] **Task 0.2 — Создать Gradle-проект**
 
 Шаги:
 
-- [ ] Создать `settings.gradle.kts`.
-- [ ] Создать корневой `build.gradle.kts`.
-- [ ] Настроить Java Toolchain 25.
-- [ ] Подключить Spring Boot plugin.
-- [ ] Подключить dependency management.
-- [ ] Настроить UTF-8.
-- [ ] Настроить test task.
-- [ ] Включить JUnit Platform.
-- [ ] Добавить базовые quality checks:
-   - compilation
-   - tests
-- [ ] Добавить Gradle wrapper.
+- [x] Создать `settings.gradle.kts`.
+- [x] Создать корневой `build.gradle.kts`.
+- [x] Настроить Java Toolchain 25.
+- [x] Подключить Spring Boot plugin.
+- [x] Подключить dependency management.
+- [x] Настроить UTF-8.
+- [x] Настроить test task.
+- [x] Включить JUnit Platform.
+- [x] Добавить базовые quality checks:
+   - [x] compilation
+   - [x] tests
+- [x] Добавить Gradle wrapper.
 
 Критерий готовности:
 

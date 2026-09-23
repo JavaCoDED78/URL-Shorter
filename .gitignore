@@ -42,3 +42,7 @@ Thumbs.db
 # --- Databases / local data ---
 *.sqlite
 *.db
+!/.fastRequest/
+
+# --- IDEA fastRequest plugin ---
+.fastRequest/
