@@ -229,20 +229,20 @@ application-test.yml
 
 Запустить PostgreSQL и Redis без приложения.
 
-- [ ] **Task 1.1 — Docker Compose для production-like local stack**
+- [x] **Task 1.1 — Docker Compose для production-like local stack**
 
 Шаги:
 
-- [ ] Создать `docker-compose.yml`.
-- [ ] Добавить PostgreSQL.
-- [ ] Добавить Redis.
-- [ ] Создать named volumes.
-- [ ] Создать private network.
-- [ ] Задать health checks.
-- [ ] Проверить корректность environment variables.
-- [ ] Проверить restart policy.
-- [ ] Проверить ports.
-- [ ] Не использовать secrets напрямую в Git.
+- [x] Создать `docker-compose.yml`.
+- [x] Добавить PostgreSQL.
+- [x] Добавить Redis.
+- [x] Создать named volumes.
+- [x] Создать private network.
+- [x] Задать health checks.
+- [x] Проверить корректность environment variables.
+- [x] Проверить restart policy.
+- [x] Проверить ports.
+- [x] Не использовать secrets напрямую в Git.
 
 Критерий:
 
