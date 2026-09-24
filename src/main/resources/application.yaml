@@ -1,3 +1,29 @@
 spring:
   application:
     name: URL-Shorter
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/urlshortener}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: ${REDIS_TIMEOUT:2s}
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: ${SERVER_PORT:8080}
+
+shortener:
+  code:
+    length: 7
+  cache:
+    ttl: ${SHORTENER_CACHE_TTL:1h}
+  flush:
+    interval: ${SHORTENER_FLUSH_INTERVAL:PT5S}

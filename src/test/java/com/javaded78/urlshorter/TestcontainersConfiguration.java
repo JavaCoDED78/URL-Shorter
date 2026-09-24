@@ -10,17 +10,16 @@ import org.testcontainers.utility.DockerImageName;
 @TestConfiguration(proxyBeanMethods = false)
 class TestcontainersConfiguration {
 
-	// 'resource' suppresses the "AutoCloseable used without try-with-resources" inspection:
-	// these containers are Spring-managed singletons, and Spring Boot's
-	// TestcontainersLifecycleBeanPostProcessor starts/stops them with the application
-	// context, so try-with-resources would be incorrect here.
-	@SuppressWarnings("resource")
 	@Bean
 	@ServiceConnection
 	PostgreSQLContainer postgresContainer() {
 		return new PostgreSQLContainer(DockerImageName.parse("postgres:17"));
 	}
 
+	// 'resource' suppresses the "AutoCloseable used without try-with-resources" inspection:
+	// these containers are Spring-managed singletons, and Spring Boot's
+	// TestcontainersLifecycleBeanPostProcessor starts/stops them with the application
+	// context, so try-with-resources would be incorrect here.
 	@SuppressWarnings("resource")
 	@Bean
 	@ServiceConnection(name = "redis")

@@ -157,17 +157,17 @@ Performance / CI / Hardening
 
 проходит успешно.
 
-- [ ] **Task 0.3 — Создать минимальное приложение**
+- [x] **Task 0.3 — Создать минимальное приложение**
 
 Шаги:
 
-- [ ] Создать main application class.
-- [ ] Проверить component scanning.
-- [ ] Запустить приложение.
-- [ ] Убедиться, что Spring context поднимается.
-- [ ] Добавить простой smoke test на application context.
+- [x] Создать main application class.
+- [x] Проверить component scanning.
+- [x] Запустить приложение.
+- [x] Убедиться, что Spring context поднимается.
+- [x] Добавить простой smoke test на application context.
 
-- [ ] **Task 0.4 — Создать структуру пакетов**
+- [x] **Task 0.4 — Создать структуру пакетов**
 
 Создать:
 
@@ -198,7 +198,7 @@ config
 
 На этом этапе не создавать пустые классы без необходимости.
 
-- [ ] **Task 0.5 — Настроить базовый application configuration**
+- [x] **Task 0.5 — Настроить базовый application configuration**
 
 Создать:
 
@@ -210,16 +210,16 @@ application-test.yml
 
 Определить:
 
-- [ ] port
-- [ ] datasource configuration
-- [ ] Redis configuration
-- [ ] cache TTL
-- [ ] counter flush interval
-- [ ] Base62 code length
+- [x] port
+- [x] datasource configuration
+- [x] Redis configuration
+- [x] cache TTL
+- [x] counter flush interval
+- [x] Base62 code length
 
 Критерий:
 
-конфигурация параметризуется через environment variables.
+- [x] конфигурация параметризуется через environment variables.
 
 ---
 
