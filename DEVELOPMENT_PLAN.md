@@ -252,7 +252,7 @@ docker compose up -d
 
 запускает оба сервиса.
 
-- [ ] **Task 1.2 — Docker Compose для разработки**
+- [x] **Task 1.2 — Docker Compose для разработки**
 
 Создать:
 
