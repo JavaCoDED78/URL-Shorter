@@ -6,9 +6,10 @@ build/
 
 # --- Java / IDE ---
 *.class
-*.jar
 *.war
 *.ear
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
 
 # IntelliJ IDEA
 .idea/
