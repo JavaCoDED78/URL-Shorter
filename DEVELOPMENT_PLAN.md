@@ -325,16 +325,16 @@ updated_at
 - [x] Проверить migration на чистой базе.
 - [x] Проверить повторный startup приложения.
 
-- [ ] **Task 2.3 — Создать JPA entity**
+- [x] **Task 2.3 — Создать JPA entity**
 
 Шаги:
 
-- [ ] Создать `LinkEntity`.
-- [ ] Замапить все колонки.
-- [ ] Корректно определить temporal types.
-- [ ] Проверить nullable поля.
-- [ ] Определить generated identity strategy только если она нужна.
-- [ ] Не помещать Redis-specific поля в JPA entity.
+- [x] Создать `LinkEntity`.
+- [x] Замапить все колонки.
+- [x] Корректно определить temporal types.
+- [x] Проверить nullable поля.
+- [x] Определить generated identity strategy только если она нужна.
+- [x] Не помещать Redis-specific поля в JPA entity.
 
 - [ ] **Task 2.4 — Создать repository**
 
