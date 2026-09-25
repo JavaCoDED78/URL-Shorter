@@ -1,4 +1,4 @@
 /**
- * Domain model: business-significant data only, no JPA/Redis/vendor annotations.
+ * Domain model: link representation and its persistence mapping.
  */
 package com.javaded78.urlshorter.domain.model;

@@ -1,4 +1,4 @@
-package com.javaded78.urlshorter.infra.persistence;
+package com.javaded78.urlshorter.domain.model;
 
 import java.time.Instant;
 
