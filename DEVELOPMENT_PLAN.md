@@ -288,7 +288,7 @@ docker compose -f docker-compose.dev.yml up -d
 
 Создать надёжную persistence model.
 
-- [ ] **Task 2.1 — Спроектировать таблицу links**
+- [x] **Task 2.1 — Спроектировать таблицу links**
 
 Определить:
 
@@ -305,25 +305,25 @@ updated_at
 
 Решения:
 
-- [ ] `code` — primary key.
-- [ ] `original_url` — обязательное поле.
-- [ ] `expires_at` — nullable.
-- [ ] `click_count` — non-negative.
-- [ ] `created_at` — обязательное.
-- [ ] `updated_at` — при необходимости.
-- [ ] Добавить уникальность code.
+- [x] `code` — primary key.
+- [x] `original_url` — обязательное поле.
+- [x] `expires_at` — nullable.
+- [x] `click_count` — non-negative.
+- [x] `created_at` — обязательное.
+- [x] `updated_at` — при необходимости.
+- [x] Добавить уникальность code.
 
-- [ ] **Task 2.2 — Создать Flyway baseline migration**
+- [x] **Task 2.2 — Создать Flyway baseline migration**
 
 Шаги:
 
-- [ ] Создать `V1__create_links.sql`.
-- [ ] Добавить таблицу.
-- [ ] Добавить primary key.
-- [ ] Добавить constraints.
-- [ ] Добавить индексы только там, где они реально нужны.
-- [ ] Проверить migration на чистой базе.
-- [ ] Проверить повторный startup приложения.
+- [x] Создать `V1__create_links.sql`.
+- [x] Добавить таблицу.
+- [x] Добавить primary key.
+- [x] Добавить constraints.
+- [x] Добавить индексы только там, где они реально нужны.
+- [x] Проверить migration на чистой базе.
+- [x] Проверить повторный startup приложения.
 
 - [ ] **Task 2.3 — Создать JPA entity**
 
