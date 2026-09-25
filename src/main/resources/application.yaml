@@ -27,3 +27,9 @@ shortener:
     ttl: ${SHORTENER_CACHE_TTL:1h}
   flush:
     interval: ${SHORTENER_FLUSH_INTERVAL:PT5S}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

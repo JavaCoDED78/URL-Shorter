@@ -268,17 +268,17 @@ docker-compose.dev.yml
 docker compose -f docker-compose.dev.yml up -d
 ```
 
-- [ ] **Task 1.3 — Проверить connectivity из приложения**
+- [x] **Task 1.3 — Проверить connectivity из приложения**
 
 Шаги:
 
-- [ ] Подключить PostgreSQL driver.
-- [ ] Подключить Redis.
-- [ ] Запустить приложение.
-- [ ] Проверить подключение к PostgreSQL.
-- [ ] Проверить подключение к Redis.
-- [ ] Добавить startup diagnostics только для dev/test.
-- [ ] Убедиться, что credentials не печатаются в лог.
+- [x] Подключить PostgreSQL driver.
+- [x] Подключить Redis.
+- [x] Запустить приложение.
+- [x] Проверить подключение к PostgreSQL.
+- [x] Проверить подключение к Redis.
+- [x] Добавить startup diagnostics только для dev/test.
+- [x] Убедиться, что credentials не печатаются в лог.
 
 ---
 
