@@ -4,6 +4,7 @@ import java.sql.Connection;
 
 import javax.sql.DataSource;
 
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -25,9 +26,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile({"local", "test"})
+@Slf4j
 public class StartupDiagnostics implements ApplicationRunner {
-
-    private static final Logger log = LoggerFactory.getLogger(StartupDiagnostics.class);
 
     private final DataSource dataSource;
     private final RedisConnectionFactory redisConnectionFactory;
