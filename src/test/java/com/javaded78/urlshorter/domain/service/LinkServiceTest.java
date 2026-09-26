@@ -135,4 +135,43 @@ class LinkServiceTest {
         assertThatThrownBy(() -> service.getByCode("missing"))
                 .isInstanceOf(LinkNotFoundException.class);
     }
+
+    // --- resolve: lookup + expiration (Tasks 5.1, 5.2, 5.4) ---
+
+    @Test
+    void resolvesActiveLink() {
+        LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com",
+                Instant.now().plusSeconds(60)));
+        when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+
+        Link link = service.resolve("abc1234");
+
+        assertThat(link.originalUrl()).isEqualTo("https://example.com");
+    }
+
+    @Test
+    void resolvesNeverExpiringLink() {
+        LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
+        when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+
+        assertThat(service.resolve("abc1234").originalUrl()).isEqualTo("https://example.com");
+    }
+
+    @Test
+    void resolveThrowsNotFoundForUnknownCode() {
+        when(repository.findByCodeIgnoreCase("missing")).thenReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> service.resolve("missing"))
+                .isInstanceOf(LinkNotFoundException.class);
+    }
+
+    @Test
+    void resolveThrowsGoneForExpiredLink() {
+        LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com",
+                Instant.now().minusSeconds(1)));
+        when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+
+        assertThatThrownBy(() -> service.resolve("abc1234"))
+                .isInstanceOf(LinkExpiredException.class);
+    }
 }

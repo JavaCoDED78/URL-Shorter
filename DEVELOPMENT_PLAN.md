@@ -533,18 +533,18 @@ GET details
 
 Сделать redirect полностью рабочим только на PostgreSQL.
 
-- [ ] **Task 5.1 — Реализовать GET /{code}**
+- [x] **Task 5.1 — Реализовать GET /{code}**
 
 Шаги:
 
-- [ ] Получить code из path variable.
-- [ ] Найти link.
-- [ ] Если нет → `404`.
-- [ ] Если expired → `410`.
-- [ ] Если active → вернуть `302`.
-- [ ] Установить `Location`.
+- [x] Получить code из path variable.
+- [x] Найти link.
+- [x] Если нет → `404`.
+- [x] Если expired → `410`.
+- [x] Если active → вернуть `302`.
+- [x] Установить `Location`.
 
-- [ ] **Task 5.2 — Реализовать expiration policy**
+- [x] **Task 5.2 — Реализовать expiration policy**
 
 Определить:
 
@@ -563,17 +563,17 @@ expiresAt <= now
 
 Рекомендуется хранить timestamps в UTC.
 
-- [ ] **Task 5.3 — Тесты redirect**
+- [x] **Task 5.3 — Тесты redirect**
 
 Проверить:
 
-- [ ] существующая ссылка;
-- [ ] неизвестная ссылка;
-- [ ] expired link;
-- [ ] ссылка без expiration;
-- [ ] точное поведение на boundary `expiresAt == now`.
+- [x] существующая ссылка;
+- [x] неизвестная ссылка;
+- [x] expired link;
+- [x] ссылка без expiration;
+- [x] точное поведение на boundary `expiresAt == now`.
 
-- [ ] **Task 5.4 — Разделить lookup и redirect logic**
+- [x] **Task 5.4 — Разделить lookup и redirect logic**
 
 Не перегружать controller.
 

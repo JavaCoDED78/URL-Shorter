@@ -65,4 +65,37 @@ class LinkTest {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new Link("abc1234", "https://example.com", null, 0, null));
     }
+
+    // --- expiration policy (Task 5.2): timestamps are UTC Instants ---
+
+    @Test
+    void nullExpirationNeverExpires() {
+        Link link = new Link("abc1234", "https://example.com", null, 0, NOW);
+
+        assertThat(link.isExpired(NOW)).isFalse();
+        assertThat(link.isExpired(NOW.plusSeconds(10_000_000))).isFalse();
+    }
+
+    @Test
+    void futureExpirationIsActive() {
+        Link link = new Link("abc1234", "https://example.com", NOW.plusSeconds(60), 0, NOW);
+
+        assertThat(link.isExpired(NOW)).isFalse();
+    }
+
+    @Test
+    void pastExpirationIsExpired() {
+        Link link = new Link("abc1234", "https://example.com", NOW.minusSeconds(1), 0, NOW);
+
+        assertThat(link.isExpired(NOW)).isTrue();
+    }
+
+    @Test
+    void expirationAtExactNowIsExpired() {
+        // Policy: expiresAt <= now -> expired. The boundary is deterministic
+        // only in the unit test; over HTTP "now" always advances.
+        Link link = new Link("abc1234", "https://example.com", NOW, 0, NOW);
+
+        assertThat(link.isExpired(NOW)).isTrue();
+    }
 }

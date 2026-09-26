@@ -29,4 +29,16 @@ public record Link(String code, String originalUrl, Instant expiresAt, long clic
             throw new IllegalArgumentException("createdAt must not be null");
         }
     }
+
+    /**
+     * Expiration policy (Task 5.2): {@code expiresAt == null} never expires;
+     * {@code expiresAt > now} is active; {@code expiresAt <= now} is expired.
+     * All timestamps are UTC {@link Instant}s.
+     *
+     * @param now the reference instant (pass {@code Instant.now()} in prod,
+     *            a fixed instant in tests)
+     */
+    public boolean isExpired(Instant now) {
+        return expiresAt != null && !expiresAt.isAfter(now);
+    }
 }

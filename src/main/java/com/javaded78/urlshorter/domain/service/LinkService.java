@@ -80,6 +80,24 @@ public class LinkService {
                 .orElseThrow(() -> new LinkNotFoundException(code));
     }
 
+    /**
+     * Resolves a code for redirection (Tasks 5.1, 5.2, 5.4): looks the link
+     * up case-insensitively, then enforces the expiration policy.
+     *
+     * @throws LinkNotFoundException if no such link exists (404)
+     * @throws LinkExpiredException  if the link's {@code expiresAt} has
+     *                               passed (410)
+     */
+    public Link resolve(String code) {
+        Link link = repository.findByCodeIgnoreCase(code)
+                .map(this::toDomain)
+                .orElseThrow(() -> new LinkNotFoundException(code));
+        if (link.isExpired(Instant.now())) {
+            throw new LinkExpiredException(code);
+        }
+        return link;
+    }
+
     private Link createWithAlias(String originalUrl, String alias, Instant expiresAt) {
         String code = aliasValidator.validateAndNormalize(alias);
         if (repository.existsByCode(code)) {

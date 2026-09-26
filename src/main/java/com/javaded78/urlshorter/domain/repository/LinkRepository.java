@@ -26,6 +26,14 @@ public interface LinkRepository extends JpaRepository<LinkEntity, String> {
 
     Optional<LinkEntity> findByCode(String code);
 
+    /**
+     * Case-insensitive lookup for the redirect endpoint (Sprint 5). Matches
+     * the {@code lower(code)} functional unique index from V2, so PostgreSQL
+     * can serve it from the index.
+     */
+    @Query("SELECT l FROM LinkEntity l WHERE lower(l.code) = lower(:code)")
+    Optional<LinkEntity> findByCodeIgnoreCase(@Param("code") String code);
+
     boolean existsByCode(String code);
 
     @Transactional

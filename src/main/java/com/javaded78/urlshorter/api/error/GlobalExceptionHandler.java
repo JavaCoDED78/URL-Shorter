@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.stream.Collectors;
 
 import com.javaded78.urlshorter.domain.service.AliasAlreadyExistsException;
+import com.javaded78.urlshorter.domain.service.LinkExpiredException;
 import com.javaded78.urlshorter.domain.service.LinkNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -56,6 +57,14 @@ public class GlobalExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problem.setType(URI.create("about:blank"));
         problem.setTitle("Link not found");
+        return problem;
+    }
+
+    @ExceptionHandler(LinkExpiredException.class)
+    public ProblemDetail handleExpired(LinkExpiredException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.GONE, ex.getMessage());
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Link expired");
         return problem;
     }
 
