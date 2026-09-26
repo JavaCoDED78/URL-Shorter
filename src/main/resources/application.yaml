@@ -23,6 +23,14 @@ server:
 shortener:
   code:
     length: 7
+  url:
+    max-length: ${SHORTENER_URL_MAX_LENGTH:2048}
+    allowed-schemes: http,https
+  alias:
+    max-length: ${SHORTENER_ALIAS_MAX_LENGTH:64}
+    reserved: api,actuator,swagger,swagger-ui,v3,favicon.ico
+  create:
+    max-collision-retries: ${SHORTENER_MAX_COLLISION_RETRIES:5}
   cache:
     ttl: ${SHORTENER_CACHE_TTL:1h}
   flush:

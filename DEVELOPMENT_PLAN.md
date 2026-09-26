@@ -429,7 +429,7 @@ POST /api/links
 → 201
 ```
 
-- [ ] **Task 4.1 — Создать request DTO**
+- [x] **Task 4.1 — Создать request DTO**
 
 Поля:
 
@@ -441,26 +441,26 @@ expiresAt
 
 Определить:
 
-- [ ] required/optional поля;
-- [ ] максимальную длину;
-- [ ] формат URL;
-- [ ] формат expiration;
-- [ ] ограничения alias.
+- [x] required/optional поля;
+- [x] максимальную длину;
+- [x] формат URL;
+- [x] формат expiration;
+- [x] ограничения alias.
 
-- [ ] **Task 4.2 — Реализовать URL validation**
+- [x] **Task 4.2 — Реализовать URL validation**
 
 Шаги:
 
-- [ ] Проверить наличие scheme.
-- [ ] Разрешить только необходимые schemes.
-- [ ] Проверить host.
-- [ ] Отклонить некорректные URL.
-- [ ] Ограничить длину URL.
-- [ ] Добавить unit tests на valid/invalid cases.
+- [x] Проверить наличие scheme.
+- [x] Разрешить только необходимые schemes.
+- [x] Проверить host.
+- [x] Отклонить некорректные URL.
+- [x] Ограничить длину URL.
+- [x] Добавить unit tests на valid/invalid cases.
 
 Не следует полагаться только на regex.
 
-- [ ] **Task 4.3 — Реализовать alias validation**
+- [x] **Task 4.3 — Реализовать alias validation**
 
 Определить допустимый формат:
 
@@ -472,29 +472,29 @@ expiresAt
 
 Отдельно определить:
 
-- [ ] запрещённые alias;
-- [ ] конфликт alias с системными endpoint;
-- [ ] регистр (`ABC` и `abc`) — должны ли считаться одинаковыми.
+- [x] запрещённые alias;
+- [x] конфликт alias с системными endpoint;
+- [x] регистр (`ABC` и `abc`) — должны ли считаться одинаковыми.
 
-- [ ] **Task 4.4 — Реализовать LinkService.create**
+- [x] **Task 4.4 — Реализовать LinkService.create**
 
 Алгоритм:
 
-- [ ] Валидировать request.
-- [ ] Если alias задан:
+- [x] Валидировать request.
+- [x] Если alias задан:
    - проверить допустимость;
    - проверить наличие;
    - создать link с alias;
    - обработать race condition через DB constraint.
-- [ ] Если alias отсутствует:
+- [x] Если alias отсутствует:
    - генерировать code;
    - попытаться сохранить;
    - при collision повторить генерацию;
    - ограничить число retry.
-- [ ] Сформировать domain object.
-- [ ] Вернуть response DTO.
+- [x] Сформировать domain object.
+- [x] Вернуть response DTO.
 
-- [ ] **Task 4.5 — Реализовать POST controller**
+- [x] **Task 4.5 — Реализовать POST controller**
 
 Endpoint:
 
@@ -504,12 +504,12 @@ POST /api/links
 
 Проверить:
 
-- [ ] `201 Created`;
-- [ ] response body;
-- [ ] Content-Type;
-- [ ] validation errors.
+- [x] `201 Created`;
+- [x] response body;
+- [x] Content-Type;
+- [x] validation errors.
 
-- [ ] **Task 4.6 — Integration test create flow**
+- [x] **Task 4.6 — Integration test create flow**
 
 Сценарий:
 

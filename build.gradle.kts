@@ -34,6 +34,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0")
 
+    // --- Bean Validation (request DTOs) ---
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+
     // --- Observability: health / connectivity checks ---
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
@@ -57,6 +60,9 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")
+
+    // TestRestTemplate auto-configuration needs RestTemplateBuilder (Boot 4 split artifact)
+    testImplementation("org.springframework.boot:spring-boot-restclient")
 }
 
 tasks.withType<JavaCompile> {
