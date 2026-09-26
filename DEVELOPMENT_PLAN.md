@@ -336,28 +336,28 @@ updated_at
 - [x] Определить generated identity strategy только если она нужна.
 - [x] Не помещать Redis-specific поля в JPA entity.
 
-- [ ] **Task 2.4 — Создать repository**
+- [x] **Task 2.4 — Создать repository**
 
 Добавить операции:
 
-- [ ] find by code
-- [ ] exists by code
-- [ ] insert/save
-- [ ] update click count
-- [ ] delete by code
+- [x] find by code
+- [x] exists by code
+- [x] insert/save
+- [x] update click count
+- [x] delete by code
 
 Отдельно определить, какие операции будут выполняться JPA, а какие bulk SQL.
 
-- [ ] **Task 2.5 — Написать persistence tests**
+- [x] **Task 2.5 — Написать persistence tests**
 
 Проверить:
 
-- [ ] insert;
-- [ ] find;
-- [ ] update clicks;
-- [ ] delete;
-- [ ] unique constraint;
-- [ ] nullable expiresAt.
+- [x] insert;
+- [x] find;
+- [x] update clicks;
+- [x] delete;
+- [x] unique constraint;
+- [x] nullable expiresAt.
 
 ---
 
