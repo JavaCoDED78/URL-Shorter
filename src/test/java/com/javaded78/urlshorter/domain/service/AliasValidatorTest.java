@@ -16,7 +16,8 @@ class AliasValidatorTest {
     private final ShortenerProperties properties = new ShortenerProperties(
             new ShortenerProperties.Url(2048, List.of("http", "https")),
             new ShortenerProperties.Alias(64, Set.of("api", "actuator", "swagger")),
-            new ShortenerProperties.Create(5));
+            new ShortenerProperties.Create(5),
+            new ShortenerProperties.Cache(java.time.Duration.ofHours(1)));
 
     private final AliasValidator validator = new AliasValidator(properties);
 

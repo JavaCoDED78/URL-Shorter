@@ -1,0 +1,155 @@
+package com.javaded78.urlshorter.infra.redis.cache;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import com.javaded78.urlshorter.TestcontainersConfiguration;
+import com.javaded78.urlshorter.domain.repository.LinkRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.http.client.HttpRedirects;
+import org.springframework.boot.resttestclient.TestRestTemplate;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.RequestEntity;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+/**
+ * Cache-aside behavior (Tasks 6.3, 6.5): miss hits PostgreSQL and populates
+ * Redis, hit serves from Redis without a DB query, TTL is bounded by the
+ * remaining link lifetime, expired links are never served from cache.
+ */
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
+@Import(TestcontainersConfiguration.class)
+class CacheAsideIT {
+
+    @Autowired
+    TestRestTemplate restTemplate;
+
+    @Autowired
+    StringRedisTemplate redis;
+
+    @Autowired
+    LinkCache linkCache;
+
+    @MockitoSpyBean
+    LinkRepository repository;
+
+    /** Redirect assertions need the raw 302; the default client follows. */
+    private TestRestTemplate rest;
+
+    @BeforeEach
+    void doNotFollowRedirects() {
+        rest = restTemplate.withRedirects(HttpRedirects.DONT_FOLLOW);
+    }
+
+    @Test
+    void missQueriesDbThenPopulatesCache() {
+        create("https://example.com/miss", "cache01");
+
+        assertThat(linkCache.get("cache01")).isEmpty();
+        redirect("cache01");
+        verify(repository, times(1)).findByCodeIgnoreCase("cache01");
+
+        assertThat(linkCache.get("cache01"))
+                .contains(new CachedLink("cache01", "https://example.com/miss", null));
+    }
+
+    @Test
+    void hitServesFromCacheWithoutDbQuery() {
+        create("https://example.com/hit", "cache02");
+        redirect("cache02");
+        redirect("cache02");
+        redirect("cache02");
+
+        // one DB lookup total despite three redirects
+        verify(repository, times(1)).findByCodeIgnoreCase("cache02");
+    }
+
+    @Test
+    void cacheEntryHasTtl() {
+        create("https://example.com/ttl", "cache03");
+        redirect("cache03");
+
+        Long ttl = redis.getExpire("link:cache03", TimeUnit.SECONDS);
+
+        assertThat(ttl).isNotNull().isGreaterThan(0L);
+    }
+
+    @Test
+    void expiringLinkGetsBoundedTtl() {
+        Instant expiresAt = Instant.now().plusSeconds(30);
+        create("https://example.com/bounded", "cache04", expiresAt.toString());
+        redirect("cache04");
+
+        Long ttl = redis.getExpire("link:cache04", TimeUnit.SECONDS);
+
+        assertThat(ttl).isNotNull().isBetween(1L, 30L);
+    }
+
+    @Test
+    void neverExpiringLinkGetsConfiguredTtl() {
+        create("https://example.com/full", "cache05");
+        redirect("cache05");
+
+        Long ttl = redis.getExpire("link:cache05", TimeUnit.SECONDS);
+
+        // configured cache TTL is 1h; allow slack for test execution time
+        assertThat(ttl).isNotNull().isGreaterThan(3500L);
+    }
+
+    @Test
+    void expiredLinkIsNotCachedAndReturnsGone() {
+        create("https://example.com/dead", "cache06",
+                Instant.now().minusSeconds(10).toString());
+
+        ResponseEntity<String> response = redirect("cache06");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.GONE);
+        assertThat(redis.hasKey("link:cache06")).isFalse();
+    }
+
+    @Test
+    void invalidCachedValueFallsBackToDb() {
+        create("https://example.com/garbage", "cache07");
+        redirect("cache07");
+        redis.opsForValue().set("link:cache07", "not-json{{{");
+
+        ResponseEntity<String> response = redirect("cache07");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
+        assertThat(response.getHeaders().getLocation()).hasToString("https://example.com/garbage");
+    }
+
+    private ResponseEntity<String> redirect(String code) {
+        return rest.getForEntity("/" + code, String.class);
+    }
+
+    private void create(String url, String alias) {
+        create(url, alias, null);
+    }
+
+    private void create(String url, String alias, String expiresAt) {
+        Map<String, ?> body = expiresAt == null
+                ? Map.of("originalUrl", url, "alias", alias)
+                : Map.of("originalUrl", url, "alias", alias, "expiresAt", expiresAt);
+        ResponseEntity<Map> created = restTemplate.exchange(
+                RequestEntity.post("/api/links").contentType(MediaType.APPLICATION_JSON).body(body),
+                Map.class);
+        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+}

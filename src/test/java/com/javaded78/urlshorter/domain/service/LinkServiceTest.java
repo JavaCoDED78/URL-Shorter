@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -23,14 +24,23 @@ class LinkServiceTest {
     private final ShortenerProperties properties = new ShortenerProperties(
             new ShortenerProperties.Url(2048, List.of("http", "https")),
             new ShortenerProperties.Alias(64, Set.of("api")),
-            new ShortenerProperties.Create(3));
+            new ShortenerProperties.Create(3),
+            new ShortenerProperties.Cache(java.time.Duration.ofHours(1)));
 
     private final com.javaded78.urlshorter.domain.repository.LinkRepository repository =
             mock(com.javaded78.urlshorter.domain.repository.LinkRepository.class);
     private final CodeGenerator codeGenerator = mock(CodeGenerator.class);
+    private final com.javaded78.urlshorter.infra.redis.cache.LinkCache linkCache =
+            mock(com.javaded78.urlshorter.infra.redis.cache.LinkCache.class);
 
     private final LinkService service = new LinkService(
-            repository, codeGenerator, new UrlValidator(properties), new AliasValidator(properties), properties);
+            repository, codeGenerator, new UrlValidator(properties), new AliasValidator(properties),
+            properties, linkCache);
+
+    public LinkServiceTest() {
+        // default: cache misses everywhere; cache-aware tests override
+        when(linkCache.get(any())).thenReturn(java.util.Optional.empty());
+    }
 
     private static LinkEntity persisted(LinkEntity entity) {
         entity.setCreatedAt(Instant.now());
@@ -144,9 +154,11 @@ class LinkServiceTest {
                 Instant.now().plusSeconds(60)));
         when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
 
-        Link link = service.resolve("abc1234");
+        com.javaded78.urlshorter.domain.model.ResolvedLink link = service.resolve("abc1234");
 
         assertThat(link.originalUrl()).isEqualTo("https://example.com");
+        verify(linkCache).put(new com.javaded78.urlshorter.infra.redis.cache.CachedLink(
+                "abc1234", "https://example.com", entity.getExpiresAt()));
     }
 
     @Test
@@ -155,6 +167,30 @@ class LinkServiceTest {
         when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
 
         assertThat(service.resolve("abc1234").originalUrl()).isEqualTo("https://example.com");
+    }
+
+    @Test
+    void resolveServesCacheHitWithoutTouchingDb() {
+        when(linkCache.get("abc1234")).thenReturn(java.util.Optional.of(
+                new com.javaded78.urlshorter.infra.redis.cache.CachedLink(
+                        "abc1234", "https://cached.example", null)));
+
+        com.javaded78.urlshorter.domain.model.ResolvedLink link = service.resolve("abc1234");
+
+        assertThat(link.originalUrl()).isEqualTo("https://cached.example");
+        verify(repository, never()).findByCodeIgnoreCase(any());
+        verify(linkCache, never()).put(any());
+    }
+
+    @Test
+    void resolveThrowsGoneForExpiredCacheHit() {
+        when(linkCache.get("abc1234")).thenReturn(java.util.Optional.of(
+                new com.javaded78.urlshorter.infra.redis.cache.CachedLink(
+                        "abc1234", "https://cached.example", Instant.now().minusSeconds(1))));
+
+        assertThatThrownBy(() -> service.resolve("abc1234"))
+                .isInstanceOf(LinkExpiredException.class);
+        verify(repository, never()).findByCodeIgnoreCase(any());
     }
 
     @Test
@@ -173,5 +209,6 @@ class LinkServiceTest {
 
         assertThatThrownBy(() -> service.resolve("abc1234"))
                 .isInstanceOf(LinkExpiredException.class);
+        verify(linkCache, never()).put(any());
     }
 }

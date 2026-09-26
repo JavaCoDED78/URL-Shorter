@@ -595,7 +595,7 @@ Repository
 
 Перенести hot redirect lookup в Redis.
 
-- [ ] **Task 6.1 — Определить Redis key model**
+- [x] **Task 6.1 — Определить Redis key model**
 
 Использовать:
 
@@ -615,7 +615,7 @@ expiresAt
 
 Не хранить данные, которые не нужны для redirect.
 
-- [ ] **Task 6.2 — Создать Redis cache abstraction**
+- [x] **Task 6.2 — Создать Redis cache abstraction**
 
 Например:
 
@@ -625,13 +625,13 @@ LinkCache
 
 Операции:
 
-- [ ] get
-- [ ] put
-- [ ] evict
+- [x] get
+- [x] put
+- [x] evict
 
 Service layer не должен знать Redis command details.
 
-- [ ] **Task 6.3 — Реализовать cache-aside lookup**
+- [x] **Task 6.3 — Реализовать cache-aside lookup**
 
 Алгоритм:
 
@@ -651,7 +651,7 @@ Redis GET
    redirect
 ```
 
-- [ ] **Task 6.4 — TTL calculation**
+- [x] **Task 6.4 — TTL calculation**
 
 TTL Redis должен учитывать:
 
@@ -663,17 +663,17 @@ min(configuredCacheTTL, remainingLinkLifetime)
 
 Для уже истёкшей ссылки не писать cache.
 
-- [ ] **Task 6.5 — Cache integration tests**
+- [x] **Task 6.5 — Cache integration tests**
 
 Проверить:
 
-- [ ] cache miss → DB query;
-- [ ] cache hit → DB query не выполняется;
-- [ ] cache entry имеет TTL;
-- [ ] expired link не возвращается;
-- [ ] invalid cached value корректно обрабатывается.
+- [x] cache miss → DB query;
+- [x] cache hit → DB query не выполняется;
+- [x] cache entry имеет TTL;
+- [x] expired link не возвращается;
+- [x] invalid cached value корректно обрабатывается.
 
-- [ ] **Task 6.6 — Cache stampede policy**
+- [x] **Task 6.6 — Cache stampede policy**
 
 Зафиксировать базовую стратегию.
 
@@ -686,9 +686,9 @@ min(configuredCacheTTL, remainingLinkLifetime)
 
 После основного MVP при необходимости добавить:
 
-- [ ] distributed lock;
-- [ ] request coalescing;
-- [ ] short local cache.
+- [x] distributed lock;
+- [x] request coalescing;
+- [x] short local cache.
 
 Не добавлять сложность раньше подтверждённой потребности.
 

@@ -15,7 +15,8 @@ class UrlValidatorTest {
     private final ShortenerProperties properties = new ShortenerProperties(
             new ShortenerProperties.Url(2048, List.of("http", "https")),
             new ShortenerProperties.Alias(64, java.util.Set.of("api")),
-            new ShortenerProperties.Create(5));
+            new ShortenerProperties.Create(5),
+            new ShortenerProperties.Cache(java.time.Duration.ofHours(1)));
 
     private final UrlValidator validator = new UrlValidator(properties);
 

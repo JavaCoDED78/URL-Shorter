@@ -2,7 +2,7 @@ package com.javaded78.urlshorter.api.controller;
 
 import java.net.URI;
 
-import com.javaded78.urlshorter.domain.model.Link;
+import com.javaded78.urlshorter.domain.model.ResolvedLink;
 import com.javaded78.urlshorter.domain.service.LinkService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +32,7 @@ public class RedirectController {
 
     @GetMapping("/{code}")
     public ResponseEntity<Void> redirect(@PathVariable String code) {
-        Link link = linkService.resolve(code);
+        ResolvedLink link = linkService.resolve(code);
         return ResponseEntity
                 .status(HttpStatus.FOUND)
                 .location(URI.create(link.originalUrl()))

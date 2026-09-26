@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * to mirror the YAML structure.
  */
 @ConfigurationProperties(prefix = "shortener")
-public record ShortenerProperties(Url url, Alias alias, Create create) {
+public record ShortenerProperties(Url url, Alias alias, Create create, Cache cache) {
 
     /**
      * @param maxLength       maximum accepted original URL length
@@ -32,5 +32,13 @@ public record ShortenerProperties(Url url, Alias alias, Create create) {
      *                             collides with an existing row
      */
     public record Create(int maxCollisionRetries) {
+    }
+
+    /**
+     * @param ttl  Redis TTL for cached links ({@code link:{code}}); for links
+     *             with {@code expiresAt} the effective TTL is the minimum of
+     *             this value and the remaining lifetime
+     */
+    public record Cache(java.time.Duration ttl) {
     }
 }

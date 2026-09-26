@@ -4,8 +4,11 @@ import java.time.Instant;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
 import com.javaded78.urlshorter.domain.model.Link;
+import com.javaded78.urlshorter.domain.model.ResolvedLink;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.infra.persistence.LinkEntity;
+import com.javaded78.urlshorter.infra.redis.cache.CachedLink;
+import com.javaded78.urlshorter.infra.redis.cache.LinkCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -39,14 +42,17 @@ public class LinkService {
     private final UrlValidator urlValidator;
     private final AliasValidator aliasValidator;
     private final int maxCollisionRetries;
+    private final LinkCache linkCache;
 
     public LinkService(LinkRepository repository, CodeGenerator codeGenerator,
-            UrlValidator urlValidator, AliasValidator aliasValidator, ShortenerProperties properties) {
+            UrlValidator urlValidator, AliasValidator aliasValidator, ShortenerProperties properties,
+            LinkCache linkCache) {
         this.repository = repository;
         this.codeGenerator = codeGenerator;
         this.urlValidator = urlValidator;
         this.aliasValidator = aliasValidator;
         this.maxCollisionRetries = properties.create().maxCollisionRetries();
+        this.linkCache = linkCache;
     }
 
     /**
@@ -81,21 +87,42 @@ public class LinkService {
     }
 
     /**
-     * Resolves a code for redirection (Tasks 5.1, 5.2, 5.4): looks the link
-     * up case-insensitively, then enforces the expiration policy.
+     * Resolves a code for redirection (Tasks 5.1, 5.2, 5.4; cache-aside from
+     * Sprint 6, Task 6.3):
+     *
+     * <pre>
+     * cache.get(code)
+     *   ├─ HIT  → re-check expiresAt from the cached value → redirect target
+     *   └─ MISS → PostgreSQL (case-insensitive) → 404 / 410
+     *             → active: cache.put(min(cacheTtl, remainingLifetime)) → target
+     * </pre>
+     *
+     * <p>Expiration is business logic, not a Redis TTL side effect: the
+     * cached value carries {@code expiresAt} and it is validated on every
+     * hit, so a link never stays usable because its cache entry outlived it.
      *
      * @throws LinkNotFoundException if no such link exists (404)
      * @throws LinkExpiredException  if the link's {@code expiresAt} has
      *                               passed (410)
      */
-    public Link resolve(String code) {
+    public ResolvedLink resolve(String code) {
+        java.util.Optional<CachedLink> cached = linkCache.get(code);
+        if (cached.isPresent()) {
+            CachedLink hit = cached.get();
+            if (hit.isExpired(Instant.now())) {
+                throw new LinkExpiredException(code);
+            }
+            return new ResolvedLink(hit.code(), hit.originalUrl());
+        }
         Link link = repository.findByCodeIgnoreCase(code)
                 .map(this::toDomain)
                 .orElseThrow(() -> new LinkNotFoundException(code));
         if (link.isExpired(Instant.now())) {
+            // Expired links are never cached (Task 6.4).
             throw new LinkExpiredException(code);
         }
-        return link;
+        linkCache.put(new CachedLink(link.code(), link.originalUrl(), link.expiresAt()));
+        return new ResolvedLink(link.code(), link.originalUrl());
     }
 
     private Link createWithAlias(String originalUrl, String alias, Instant expiresAt) {
