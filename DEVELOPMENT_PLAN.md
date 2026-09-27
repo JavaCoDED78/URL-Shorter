@@ -700,7 +700,7 @@ min(configuredCacheTTL, remainingLinkLifetime)
 
 Убрать click increment из PostgreSQL на каждый redirect.
 
-- [ ] **Task 7.1 — Определить Redis counter key**
+- [x] **Task 7.1 — Определить Redis counter key**
 
 Использовать:
 
@@ -714,7 +714,7 @@ clicks:{code}
 integer
 ```
 
-- [ ] **Task 7.2 — Реализовать increment**
+- [x] **Task 7.2 — Реализовать increment**
 
 На каждом успешном redirect:
 
@@ -726,21 +726,21 @@ INCR clicks:{code}
 
 Зафиксировать один формат и не смешивать две модели без причины.
 
-- [ ] **Task 7.3 — Определить семантику успешного клика**
+- [x] **Task 7.3 — Определить семантику успешного клика**
 
 Клик увеличивается только после:
 
-- [ ] link найден;
-- [ ] link не expired;
-- [ ] redirect подготовлен.
+- [x] link найден;
+- [x] link не expired;
+- [x] redirect подготовлен.
 
 Не увеличивать counter для:
 
-- [ ] `404`;
-- [ ] `410`;
-- [ ] malformed request.
+- [x] `404`;
+- [x] `410`;
+- [x] malformed request.
 
-- [ ] **Task 7.4 — Проверить concurrent increments**
+- [x] **Task 7.4 — Проверить concurrent increments**
 
 Запустить параллельные increments.
 

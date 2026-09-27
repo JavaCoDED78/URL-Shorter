@@ -9,6 +9,7 @@ import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.infra.persistence.LinkEntity;
 import com.javaded78.urlshorter.infra.redis.cache.CachedLink;
 import com.javaded78.urlshorter.infra.redis.cache.LinkCache;
+import com.javaded78.urlshorter.infra.redis.counter.ClickCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -43,16 +44,18 @@ public class LinkService {
     private final AliasValidator aliasValidator;
     private final int maxCollisionRetries;
     private final LinkCache linkCache;
+    private final ClickCounter clickCounter;
 
     public LinkService(LinkRepository repository, CodeGenerator codeGenerator,
             UrlValidator urlValidator, AliasValidator aliasValidator, ShortenerProperties properties,
-            LinkCache linkCache) {
+            LinkCache linkCache, ClickCounter clickCounter) {
         this.repository = repository;
         this.codeGenerator = codeGenerator;
         this.urlValidator = urlValidator;
         this.aliasValidator = aliasValidator;
         this.maxCollisionRetries = properties.create().maxCollisionRetries();
         this.linkCache = linkCache;
+        this.clickCounter = clickCounter;
     }
 
     /**
@@ -112,16 +115,19 @@ public class LinkService {
             if (hit.isExpired(Instant.now())) {
                 throw new LinkExpiredException(code);
             }
+            // Click counts only after the redirect target is validated (Task 7.3).
+            clickCounter.increment(code);
             return new ResolvedLink(hit.code(), hit.originalUrl());
         }
         Link link = repository.findByCodeIgnoreCase(code)
                 .map(this::toDomain)
                 .orElseThrow(() -> new LinkNotFoundException(code));
         if (link.isExpired(Instant.now())) {
-            // Expired links are never cached (Task 6.4).
+            // Expired links are never cached (Task 6.4) and never counted.
             throw new LinkExpiredException(code);
         }
         linkCache.put(new CachedLink(link.code(), link.originalUrl(), link.expiresAt()));
+        clickCounter.increment(code);
         return new ResolvedLink(link.code(), link.originalUrl());
     }
 

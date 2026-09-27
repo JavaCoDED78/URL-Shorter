@@ -32,10 +32,12 @@ class LinkServiceTest {
     private final CodeGenerator codeGenerator = mock(CodeGenerator.class);
     private final com.javaded78.urlshorter.infra.redis.cache.LinkCache linkCache =
             mock(com.javaded78.urlshorter.infra.redis.cache.LinkCache.class);
+    private final com.javaded78.urlshorter.infra.redis.counter.ClickCounter clickCounter =
+            mock(com.javaded78.urlshorter.infra.redis.counter.ClickCounter.class);
 
     private final LinkService service = new LinkService(
             repository, codeGenerator, new UrlValidator(properties), new AliasValidator(properties),
-            properties, linkCache);
+            properties, linkCache, clickCounter);
 
     public LinkServiceTest() {
         // default: cache misses everywhere; cache-aware tests override
@@ -159,6 +161,18 @@ class LinkServiceTest {
         assertThat(link.originalUrl()).isEqualTo("https://example.com");
         verify(linkCache).put(new com.javaded78.urlshorter.infra.redis.cache.CachedLink(
                 "abc1234", "https://example.com", entity.getExpiresAt()));
+        verify(clickCounter).increment("abc1234");
+    }
+
+    @Test
+    void resolveCountsClickOnCacheHit() {
+        when(linkCache.get("abc1234")).thenReturn(java.util.Optional.of(
+                new com.javaded78.urlshorter.infra.redis.cache.CachedLink(
+                        "abc1234", "https://cached.example", null)));
+
+        service.resolve("abc1234");
+
+        verify(clickCounter).increment("abc1234");
     }
 
     @Test
@@ -210,5 +224,26 @@ class LinkServiceTest {
         assertThatThrownBy(() -> service.resolve("abc1234"))
                 .isInstanceOf(LinkExpiredException.class);
         verify(linkCache, never()).put(any());
+        verify(clickCounter, never()).increment(any());
+    }
+
+    @Test
+    void resolveDoesNotCountClickForExpiredCacheHit() {
+        when(linkCache.get("abc1234")).thenReturn(java.util.Optional.of(
+                new com.javaded78.urlshorter.infra.redis.cache.CachedLink(
+                        "abc1234", "https://cached.example", Instant.now().minusSeconds(1))));
+
+        assertThatThrownBy(() -> service.resolve("abc1234"))
+                .isInstanceOf(LinkExpiredException.class);
+        verify(clickCounter, never()).increment(any());
+    }
+
+    @Test
+    void resolveDoesNotCountClickForUnknownCode() {
+        when(repository.findByCodeIgnoreCase("missing")).thenReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> service.resolve("missing"))
+                .isInstanceOf(LinkNotFoundException.class);
+        verify(clickCounter, never()).increment(any());
     }
 }
