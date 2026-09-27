@@ -132,6 +132,21 @@ class LinkServiceTest {
     }
 
     @Test
+    void rejectsExpirationInThePast() {
+        assertThatThrownBy(() -> service.create("https://example.com", null,
+                Instant.now().minusSeconds(60)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expiresAt");
+        verify(repository, never()).saveAndFlush(any(LinkEntity.class));
+    }
+
+    @Test
+    void rejectsExpirationEqualToNow() {
+        assertThatThrownBy(() -> service.create("https://example.com", null, Instant.now()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void returnsExistingLinkByCode() {
         LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
         when(repository.findByCode("abc1234")).thenReturn(java.util.Optional.of(entity));

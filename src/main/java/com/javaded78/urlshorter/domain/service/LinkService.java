@@ -73,6 +73,10 @@ public class LinkService {
      */
     public Link create(String originalUrl, String alias, Instant expiresAt) {
         urlValidator.validate(originalUrl);
+        if (expiresAt != null && !expiresAt.isAfter(Instant.now())) {
+            throw new IllegalArgumentException(
+                    "expiresAt must be in the future, got: " + expiresAt);
+        }
         if (alias == null || alias.isBlank()) {
             return createWithGeneratedCode(originalUrl, expiresAt);
         }

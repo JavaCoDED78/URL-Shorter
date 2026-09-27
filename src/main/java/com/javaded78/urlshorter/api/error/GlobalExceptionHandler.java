@@ -16,12 +16,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 /**
  * Maps application exceptions to RFC 9457 {@link ProblemDetail} responses.
  *
- * <p>Only stable, client-facing categories are exposed (400 invalid request,
- * 404 not found, 409 conflict); internals stay out of the response. Sprint 11
- * will formalize the full exception hierarchy and enrich these mappings.
+ * <p>Stable, client-facing categories (Task 11.2): 400 invalid request,
+ * 404 not found, 409 conflict, 410 gone, 500 internal error. Every response
+ * carries the same keys — {@code type}, {@code title}, {@code status},
+ * {@code detail}, {@code instance}. The unexpected-failure fallback
+ * (Task 11.4) logs the cause server-side but never exposes stack traces,
+ * SQL, connection URLs or Redis internals to the client.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
@@ -65,6 +71,21 @@ public class GlobalExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.GONE, ex.getMessage());
         problem.setType(URI.create("about:blank"));
         problem.setTitle("Link expired");
+        return problem;
+    }
+
+    /**
+     * Fallback for everything not covered above — infrastructure failures
+     * (PostgreSQL, Redis), unexpected runtime exceptions. The cause is logged
+     * server-side only (Task 11.4); the client gets a generic ProblemDetail.
+     */
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail handleUnexpected(Exception ex) {
+        log.error("unexpected error while handling request", ex);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.INTERNAL_SERVER_ERROR, "unexpected error");
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Internal error");
         return problem;
     }
 

@@ -68,8 +68,11 @@ class ClickCounterIT {
     }
 
     @Test
-    void expiredLinkDoesNotIncrement() {
-        create("https://example.com/old", "click02", Instant.now().minusSeconds(10).toString());
+    void expiredLinkDoesNotIncrement() throws InterruptedException {
+        // Links cannot be created already expired (Task 11.3): create with a
+        // near-future expiration and let it lapse.
+        create("https://example.com/old", "click02", Instant.now().plusSeconds(1).toString());
+        Thread.sleep(1100);
 
         ResponseEntity<String> response = redirect("click02");
 

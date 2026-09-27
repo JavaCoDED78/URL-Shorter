@@ -113,9 +113,12 @@ class CacheAsideIT {
     }
 
     @Test
-    void expiredLinkIsNotCachedAndReturnsGone() {
+    void expiredLinkIsNotCachedAndReturnsGone() throws InterruptedException {
+        // Links cannot be created already expired (Task 11.3): create with a
+        // near-future expiration and let it lapse.
         create("https://example.com/dead", "cache06",
-                Instant.now().minusSeconds(10).toString());
+                Instant.now().plusSeconds(1).toString());
+        Thread.sleep(1100);
 
         ResponseEntity<String> response = redirect("cache06");
 

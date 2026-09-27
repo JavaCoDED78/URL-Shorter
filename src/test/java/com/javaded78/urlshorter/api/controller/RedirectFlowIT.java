@@ -77,11 +77,14 @@ class RedirectFlowIT {
     }
 
     @Test
-    void returnsGoneForExpiredLink() {
+    void returnsGoneForExpiredLink() throws InterruptedException {
+        // Links cannot be created already expired (Task 11.3): create with a
+        // near-future expiration and let it lapse.
         post(Map.of(
                 "originalUrl", "https://example.com/old",
                 "alias", "expired01",
-                "expiresAt", Instant.now().minusSeconds(60).toString()));
+                "expiresAt", Instant.now().plusSeconds(1).toString()));
+        Thread.sleep(1100);
 
         ResponseEntity<String> response = rest.getForEntity("/expired01", String.class);
 

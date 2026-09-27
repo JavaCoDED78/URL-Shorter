@@ -986,7 +986,7 @@ clicks:{code}
 
 Все ошибки API должны иметь одинаковый формат.
 
-- [ ] **Task 11.1 — Определить exception hierarchy**
+- [x] **Task 11.1 — Определить exception hierarchy**
 
 Например:
 
@@ -1000,44 +1000,44 @@ ShortenerException
 
 Не создавать exception class для каждой мелочи.
 
-- [ ] **Task 11.2 — Реализовать ProblemDetail handler**
+- [x] **Task 11.2 — Реализовать ProblemDetail handler**
 
 Для каждой категории определить:
 
-- [ ] HTTP status;
-- [ ] title;
-- [ ] detail;
-- [ ] type;
-- [ ] instance.
+- [x] HTTP status;
+- [x] title;
+- [x] detail;
+- [x] type;
+- [x] instance.
 
-- [ ] **Task 11.3 — Validation errors**
+- [x] **Task 11.3 — Validation errors**
 
 Проверить обработку:
 
-- [ ] missing fields;
-- [ ] invalid URL;
-- [ ] invalid alias;
-- [ ] invalid expiration.
+- [x] missing fields;
+- [x] invalid URL;
+- [x] invalid alias;
+- [x] invalid expiration.
 
-- [ ] **Task 11.4 — Ошибки Redis/Postgres**
+- [x] **Task 11.4 — Ошибки Redis/Postgres**
 
 Не отдавать клиенту:
 
-- [ ] stack trace;
-- [ ] SQL;
-- [ ] Redis internals;
-- [ ] connection URLs;
-- [ ] credentials.
+- [x] stack trace;
+- [x] SQL;
+- [x] Redis internals;
+- [x] connection URLs;
+- [x] credentials.
 
-- [ ] **Task 11.5 — Error integration tests**
+- [x] **Task 11.5 — Error integration tests**
 
 Проверить контракт JSON для:
 
-- [ ] 400;
-- [ ] 404;
-- [ ] 409;
-- [ ] 410;
-- [ ] 500.
+- [x] 400;
+- [x] 404;
+- [x] 409;
+- [x] 410;
+- [x] 500.
 
 ---
 
