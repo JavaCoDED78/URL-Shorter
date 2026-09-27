@@ -4,7 +4,15 @@ import java.net.URI;
 
 import com.javaded78.urlshorter.domain.model.ResolvedLink;
 import com.javaded78.urlshorter.domain.service.LinkService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  * and {@code /swagger-ui/**} keep their own handlers.
  */
 @RestController
+@Tag(name = "Redirects", description = "Root redirect endpoint")
 public class RedirectController {
 
     private final LinkService linkService;
@@ -30,6 +39,17 @@ public class RedirectController {
         this.linkService = linkService;
     }
 
+    @Operation(summary = "Redirect to the original URL",
+            description = "302 Found with the destination in the Location header. "
+                    + "302 (not 301) is deliberate: a 301 can be cached by clients and "
+                    + "intermediaries, silently bypassing server-side click counting.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Redirect to the original URL",
+                    headers = @Header(name = "Location", description = "Original URL")),
+            @ApiResponse(responseCode = "404", description = "Link not found",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "410", description = "Link expired",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))})
     @GetMapping("/{code}")
     public ResponseEntity<Void> redirect(@PathVariable String code) {
         ResolvedLink link = linkService.resolve(code);

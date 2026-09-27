@@ -1047,24 +1047,24 @@ ShortenerException
 
 API должно быть понятно разработчику без чтения исходников.
 
-- [ ] **Task 12.1 — Подключить springdoc-openapi**
+- [x] **Task 12.1 — Подключить springdoc-openapi**
 
 Настроить:
 
-- [ ] OpenAPI JSON;
-- [ ] Swagger UI.
+- [x] OpenAPI JSON;
+- [x] Swagger UI.
 
-- [ ] **Task 12.2 — Описать API models**
+- [x] **Task 12.2 — Описать API models**
 
 Для каждого DTO определить:
 
-- [ ] description;
-- [ ] required;
-- [ ] examples;
-- [ ] constraints;
-- [ ] formats.
+- [x] description;
+- [x] required;
+- [x] examples;
+- [x] constraints;
+- [x] formats.
 
-- [ ] **Task 12.3 — Документировать endpoints**
+- [x] **Task 12.3 — Документировать endpoints**
 
 Добавить документацию для:
 
@@ -1076,16 +1076,16 @@ GET /api/links/{code}/stats
 DELETE /api/links/{code}
 ```
 
-- [ ] **Task 12.4 — Документировать errors**
+- [x] **Task 12.4 — Документировать errors**
 
 Для каждого endpoint описать:
 
-- [ ] 400;
-- [ ] 404;
-- [ ] 409;
-- [ ] 410.
+- [x] 400;
+- [x] 404;
+- [x] 409;
+- [x] 410.
 
-- [ ] **Task 12.5 — Contract smoke test**
+- [x] **Task 12.5 — Contract smoke test**
 
 Проверить, что OpenAPI endpoint доступен после запуска приложения.
 
