@@ -1097,20 +1097,20 @@ DELETE /api/links/{code}
 
 Сделать сервис наблюдаемым.
 
-- [ ] **Task 13.1 — Health endpoints**
+- [x] **Task 13.1 — Health endpoints**
 
 Настроить:
 
-- [ ] liveness;
-- [ ] readiness;
-- [ ] application health.
+- [x] liveness;
+- [x] readiness;
+- [x] application health.
 
 Проверить dependency health для:
 
-- [ ] PostgreSQL;
-- [ ] Redis.
+- [x] PostgreSQL;
+- [x] Redis.
 
-- [ ] **Task 13.2 — Сформировать бизнес-метрики**
+- [x] **Task 13.2 — Сформировать бизнес-метрики**
 
 Добавить counters/timers для:
 
@@ -1129,7 +1129,7 @@ clicks.flushed
 clicks.flush.failed
 ```
 
-- [ ] **Task 13.3 — Timer metrics**
+- [x] **Task 13.3 — Timer metrics**
 
 Добавить latency:
 
@@ -1139,22 +1139,22 @@ postgres.lookup.duration
 redis.lookup.duration
 ```
 
-- [ ] **Task 13.4 — Logging**
+- [x] **Task 13.4 — Logging**
 
 Логировать:
 
-- [ ] startup;
-- [ ] migrations;
-- [ ] flush cycle;
-- [ ] flush failures;
-- [ ] unexpected exceptions.
+- [x] startup;
+- [x] migrations;
+- [x] flush cycle;
+- [x] flush failures;
+- [x] unexpected exceptions.
 
 Не логировать:
 
-- [ ] credentials;
-- [ ] connection strings;
-- [ ] полные user-provided secrets;
-- [ ] чувствительные headers.
+- [x] credentials;
+- [x] connection strings;
+- [x] полные user-provided secrets;
+- [x] чувствительные headers.
 
 ---
 

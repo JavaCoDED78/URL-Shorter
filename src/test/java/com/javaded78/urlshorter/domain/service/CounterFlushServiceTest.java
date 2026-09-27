@@ -26,8 +26,10 @@ class CounterFlushServiceTest {
 
     private final ClickCounter clickCounter = mock(ClickCounter.class);
     private final LinkRepository repository = mock(LinkRepository.class);
+    private final MetricsRecorder metrics =
+            new MetricsRecorder(new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
 
-    private final CounterFlushService flushService = new CounterFlushService(clickCounter, repository);
+    private final CounterFlushService flushService = new CounterFlushService(clickCounter, repository, metrics);
 
     @Test
     void flushAppliesBatchUpdateForDrainedCounters() {

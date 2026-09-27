@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import com.javaded78.urlshorter.domain.service.MetricsRecorder;
 import com.javaded78.urlshorter.infra.redis.script.CounterDrainScript;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
@@ -25,15 +26,19 @@ public class RedisClickCounter implements ClickCounter {
 
     private final StringRedisTemplate redis;
     private final CounterDrainScript drainScript;
+    private final MetricsRecorder metrics;
 
-    public RedisClickCounter(StringRedisTemplate redis, CounterDrainScript drainScript) {
+    public RedisClickCounter(StringRedisTemplate redis, CounterDrainScript drainScript,
+            MetricsRecorder metrics) {
         this.redis = redis;
         this.drainScript = drainScript;
+        this.metrics = metrics;
     }
 
     @Override
     public void increment(String code) {
         redis.opsForValue().increment(key(code));
+        metrics.clickIncremented();
     }
 
     @Override

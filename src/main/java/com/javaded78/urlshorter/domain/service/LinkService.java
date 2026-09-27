@@ -46,10 +46,11 @@ public class LinkService {
     private final int maxCollisionRetries;
     private final LinkCache linkCache;
     private final ClickCounter clickCounter;
+    private final MetricsRecorder metrics;
 
     public LinkService(LinkRepository repository, CodeGenerator codeGenerator,
             UrlValidator urlValidator, AliasValidator aliasValidator, ShortenerProperties properties,
-            LinkCache linkCache, ClickCounter clickCounter) {
+            LinkCache linkCache, ClickCounter clickCounter, MetricsRecorder metrics) {
         this.repository = repository;
         this.codeGenerator = codeGenerator;
         this.urlValidator = urlValidator;
@@ -57,6 +58,7 @@ public class LinkService {
         this.maxCollisionRetries = properties.create().maxCollisionRetries();
         this.linkCache = linkCache;
         this.clickCounter = clickCounter;
+        this.metrics = metrics;
     }
 
     /**
@@ -78,9 +80,13 @@ public class LinkService {
                     "expiresAt must be in the future, got: " + expiresAt);
         }
         if (alias == null || alias.isBlank()) {
-            return createWithGeneratedCode(originalUrl, expiresAt);
+            Link link = createWithGeneratedCode(originalUrl, expiresAt);
+            metrics.linkCreated();
+            return link;
         }
-        return createWithAlias(originalUrl, alias, expiresAt);
+        Link link = createWithAlias(originalUrl, alias, expiresAt);
+        metrics.linkCreated();
+        return link;
     }
 
     /**
@@ -91,7 +97,7 @@ public class LinkService {
     public Link getByCode(String code) {
         return repository.findByCode(code)
                 .map(this::toDomain)
-                .orElseThrow(() -> new LinkNotFoundException(code));
+                .orElseThrow(() -> notFound(code));
     }
 
     /**
@@ -105,7 +111,7 @@ public class LinkService {
     public LinkStats getStats(String code) {
         Link link = repository.findByCodeIgnoreCase(code)
                 .map(this::toDomain)
-                .orElseThrow(() -> new LinkNotFoundException(code));
+                .orElseThrow(() -> notFound(code));
         long pending = clickCounter.get(link.code());
         return new LinkStats(link.code(), link.clickCount() + pending);
     }
@@ -135,10 +141,11 @@ public class LinkService {
     public void delete(String code) {
         Link link = repository.findByCodeIgnoreCase(code)
                 .map(this::toDomain)
-                .orElseThrow(() -> new LinkNotFoundException(code));
+                .orElseThrow(() -> notFound(code));
         linkCache.evict(link.code());
         clickCounter.delete(link.code());
         repository.deleteByCode(link.code());
+        metrics.linkDeleted();
         linkCache.evict(link.code());
     }
 
@@ -162,26 +169,37 @@ public class LinkService {
      *                               passed (410)
      */
     public ResolvedLink resolve(String code) {
-        java.util.Optional<CachedLink> cached = linkCache.get(code);
+        java.util.Optional<CachedLink> cached = metrics.timeRedisLookup(() -> linkCache.get(code));
         if (cached.isPresent()) {
+            metrics.cacheHit();
             CachedLink hit = cached.get();
             if (hit.isExpired(Instant.now())) {
+                metrics.linkExpired();
                 throw new LinkExpiredException(code);
             }
             // Click counts only after the redirect target is validated (Task 7.3).
             clickCounter.increment(code);
+            metrics.linkRedirected();
             return new ResolvedLink(hit.code(), hit.originalUrl());
         }
-        Link link = repository.findByCodeIgnoreCase(code)
+        metrics.cacheMiss();
+        Link link = metrics.timePostgresLookup(() -> repository.findByCodeIgnoreCase(code)
                 .map(this::toDomain)
-                .orElseThrow(() -> new LinkNotFoundException(code));
+                .orElseThrow(() -> notFound(code)));
         if (link.isExpired(Instant.now())) {
             // Expired links are never cached (Task 6.4) and never counted.
+            metrics.linkExpired();
             throw new LinkExpiredException(code);
         }
         linkCache.put(new CachedLink(link.code(), link.originalUrl(), link.expiresAt()));
         clickCounter.increment(code);
+        metrics.linkRedirected();
         return new ResolvedLink(link.code(), link.originalUrl());
+    }
+
+    private LinkNotFoundException notFound(String code) {
+        metrics.linkNotFound();
+        return new LinkNotFoundException(code);
     }
 
     private Link createWithAlias(String originalUrl, String alias, Instant expiresAt) {

@@ -25,10 +25,13 @@ public class CounterFlushService {
 
     private final ClickCounter clickCounter;
     private final LinkRepository repository;
+    private final MetricsRecorder metrics;
 
-    public CounterFlushService(ClickCounter clickCounter, LinkRepository repository) {
+    public CounterFlushService(ClickCounter clickCounter, LinkRepository repository,
+            MetricsRecorder metrics) {
         this.clickCounter = clickCounter;
         this.repository = repository;
+        this.metrics = metrics;
     }
 
     /**
@@ -48,10 +51,13 @@ public class CounterFlushService {
         Long[] increments = drained.values().toArray(Long[]::new);
         try {
             int updated = repository.batchIncrementClickCounts(codes, increments);
+            long totalClicks = drained.values().stream().mapToLong(Long::longValue).sum();
+            metrics.clicksFlushed(totalClicks);
             log.info("flushed {} click counters into {} link rows", drained.size(), updated);
             return updated;
         } catch (RuntimeException ex) {
             drained.forEach(clickCounter::restore);
+            metrics.clickFlushFailed();
             log.error("click flush failed; restored {} drained counters to Redis",
                     drained.size(), ex);
             throw new IllegalStateException("click flush failed; counters restored to Redis", ex);

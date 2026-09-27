@@ -38,7 +38,19 @@ class LinkServiceTest {
 
     private final LinkService service = new LinkService(
             repository, codeGenerator, new UrlValidator(properties), new AliasValidator(properties),
-            properties, linkCache, clickCounter);
+            properties, linkCache, clickCounter, metricsStub());
+
+    /** The metrics facade must pass calls through (timers wrap suppliers). */
+    private static MetricsRecorder metricsStub() {
+        MetricsRecorder metrics = mock(MetricsRecorder.class);
+        org.mockito.Mockito.when(metrics.timeRedisLookup(org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> ((java.util.function.Supplier<?>) invocation.getArgument(0)).get());
+        org.mockito.Mockito.when(metrics.timePostgresLookup(org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> ((java.util.function.Supplier<?>) invocation.getArgument(0)).get());
+        org.mockito.Mockito.when(metrics.timeRedirect(org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> ((java.util.function.Supplier<?>) invocation.getArgument(0)).get());
+        return metrics;
+    }
 
     public LinkServiceTest() {
         // default: cache misses everywhere; cache-aware tests override
