@@ -18,8 +18,16 @@ import java.util.Map;
  */
 public interface ClickCounter {
 
-    /** Increments the counter for the code; keys are case-insensitive. */
+    /**
+     * Increments the counter for the code; keys are case-insensitive.
+     */
     void increment(String code);
+
+    /**
+     * Returns the pending (not yet flushed) count for the code; keys are
+     * case-insensitive. Zero when no counter exists.
+     */
+    long get(String code);
 
     /**
      * Atomically drains every counter (read-and-reset per key, so increments

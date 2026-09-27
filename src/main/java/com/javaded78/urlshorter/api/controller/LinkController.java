@@ -4,6 +4,7 @@ import java.net.URI;
 
 import com.javaded78.urlshorter.api.dto.CreateLinkRequest;
 import com.javaded78.urlshorter.api.dto.LinkResponse;
+import com.javaded78.urlshorter.api.dto.LinkStatsResponse;
 import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.service.LinkService;
 import jakarta.validation.Valid;
@@ -41,5 +42,10 @@ public class LinkController {
     @GetMapping("/{code}")
     public LinkResponse getByCode(@PathVariable String code) {
         return LinkResponse.from(linkService.getByCode(code));
+    }
+
+    @GetMapping("/{code}/stats")
+    public LinkStatsResponse stats(@PathVariable String code) {
+        return LinkStatsResponse.from(linkService.getStats(code));
     }
 }

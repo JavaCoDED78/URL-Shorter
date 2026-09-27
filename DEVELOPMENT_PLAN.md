@@ -870,7 +870,7 @@ Redis counter уже drained,
 
 Предоставить актуальную статистику click count.
 
-- [ ] **Task 9.1 — Определить семантику stats**
+- [x] **Task 9.1 — Определить семантику stats**
 
 Важно решить:
 
@@ -888,31 +888,31 @@ unflushed Redis count
 DB clickCount + pending Redis counter
 ```
 
-- [ ] **Task 9.2 — Реализовать stats service**
+- [x] **Task 9.2 — Реализовать stats service**
 
 Алгоритм:
 
-- [ ] найти link в PostgreSQL;
-- [ ] если нет → `404`;
-- [ ] получить pending Redis counter;
-- [ ] сложить значения;
-- [ ] вернуть response.
+- [x] найти link в PostgreSQL;
+- [x] если нет → `404`;
+- [x] получить pending Redis counter;
+- [x] сложить значения;
+- [x] вернуть response.
 
-- [ ] **Task 9.3 — Реализовать endpoint**
+- [x] **Task 9.3 — Реализовать endpoint**
 
 ```http
 GET /api/links/{code}/stats
 ```
 
-- [ ] **Task 9.4 — Tests**
+- [x] **Task 9.4 — Tests**
 
 Проверить:
 
-- [ ] zero clicks;
-- [ ] persisted clicks;
-- [ ] pending clicks;
-- [ ] persisted + pending;
-- [ ] missing link.
+- [x] zero clicks;
+- [x] persisted clicks;
+- [x] pending clicks;
+- [x] persisted + pending;
+- [x] missing link.
 
 ---
 

@@ -15,6 +15,7 @@ import java.util.Set;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
 import com.javaded78.urlshorter.domain.model.Link;
+import com.javaded78.urlshorter.domain.model.LinkStats;
 import com.javaded78.urlshorter.infra.persistence.LinkEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -245,5 +246,50 @@ class LinkServiceTest {
         assertThatThrownBy(() -> service.resolve("missing"))
                 .isInstanceOf(LinkNotFoundException.class);
         verify(clickCounter, never()).increment(any());
+    }
+
+    // --- getStats: persisted DB count + pending Redis counter (Task 9.2) ---
+
+    @Test
+    void getStatsSumsPersistedAndPendingClicks() {
+        LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
+        entity.setClickCount(7);
+        when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+        when(clickCounter.get("abc1234")).thenReturn(3L);
+
+        LinkStats stats = service.getStats("abc1234");
+
+        assertThat(stats.code()).isEqualTo("abc1234");
+        assertThat(stats.clickCount()).isEqualTo(10);
+    }
+
+    @Test
+    void getStatsWithZeroClicks() {
+        LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
+        when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+        when(clickCounter.get("abc1234")).thenReturn(0L);
+
+        assertThat(service.getStats("abc1234").clickCount()).isZero();
+    }
+
+    @Test
+    void getStatsUsesStoredCodeForPendingLookup() {
+        LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
+        entity.setClickCount(5);
+        when(repository.findByCodeIgnoreCase("ABC1234")).thenReturn(java.util.Optional.of(entity));
+        when(clickCounter.get("abc1234")).thenReturn(2L);
+
+        LinkStats stats = service.getStats("ABC1234");
+
+        assertThat(stats.code()).isEqualTo("abc1234");
+        assertThat(stats.clickCount()).isEqualTo(7);
+    }
+
+    @Test
+    void getStatsForMissingLinkThrowsNotFound() {
+        when(repository.findByCodeIgnoreCase(any())).thenReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> service.getStats("missing1"))
+                .isInstanceOf(LinkNotFoundException.class);
     }
 }

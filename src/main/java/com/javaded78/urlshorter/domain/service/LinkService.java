@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
 import com.javaded78.urlshorter.domain.model.Link;
+import com.javaded78.urlshorter.domain.model.LinkStats;
 import com.javaded78.urlshorter.domain.model.ResolvedLink;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.infra.persistence.LinkEntity;
@@ -87,6 +88,22 @@ public class LinkService {
         return repository.findByCode(code)
                 .map(this::toDomain)
                 .orElseThrow(() -> new LinkNotFoundException(code));
+    }
+
+    /**
+     * Click statistics for a code (Task 9.2): persisted DB count plus the
+     * pending Redis counter — the logically current value, without waiting
+     * for the flush interval. Lookup is case-insensitive like redirects,
+     * because counters are keyed by the stored (lowercase) code.
+     *
+     * @throws LinkNotFoundException if no such link exists
+     */
+    public LinkStats getStats(String code) {
+        Link link = repository.findByCodeIgnoreCase(code)
+                .map(this::toDomain)
+                .orElseThrow(() -> new LinkNotFoundException(code));
+        long pending = clickCounter.get(link.code());
+        return new LinkStats(link.code(), link.clickCount() + pending);
     }
 
     /**

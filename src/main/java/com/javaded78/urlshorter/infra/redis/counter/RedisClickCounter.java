@@ -37,6 +37,12 @@ public class RedisClickCounter implements ClickCounter {
     }
 
     @Override
+    public long get(String code) {
+        String value = redis.opsForValue().get(key(code));
+        return value == null ? 0 : Long.parseLong(value);
+    }
+
+    @Override
     public Map<String, Long> drainAll() {
         Map<String, Long> drained = new HashMap<>();
         ScanOptions options = ScanOptions.scanOptions().match(KEY_PREFIX + "*").count(100).build();
