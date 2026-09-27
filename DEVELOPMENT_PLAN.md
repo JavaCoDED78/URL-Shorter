@@ -761,7 +761,7 @@ N requests
 
 Надёжно переносить накопленные clicks в PostgreSQL.
 
-- [ ] **Task 8.1 — Определить flush interval**
+- [x] **Task 8.1 — Определить flush interval**
 
 Config:
 
@@ -771,7 +771,7 @@ SHORTENER_FLUSH_INTERVAL=PT5S
 
 Сделать interval configurable.
 
-- [ ] **Task 8.2 — Определить атомарный алгоритм**
+- [x] **Task 8.2 — Определить атомарный алгоритм**
 
 Плохой вариант:
 
@@ -793,30 +793,30 @@ DEL
 
 increment может потеряться.
 
-- [ ] **Task 8.3 — Создать Lua script**
+- [x] **Task 8.3 — Создать Lua script**
 
 Скрипт должен атомарно:
 
-- [ ] получить текущее значение;
-- [ ] установить counter в 0 или удалить key;
-- [ ] вернуть drained value.
+- [x] получить текущее значение;
+- [x] установить counter в 0 или удалить key;
+- [x] вернуть drained value.
 
 Важно:
 
-- [ ] операции над одним Redis key выполняются атомарно;
-- [ ] script должен быть idempotent с точки зрения пустого counter.
+- [x] операции над одним Redis key выполняются атомарно;
+- [x] script должен быть idempotent с точки зрения пустого counter.
 
-- [ ] **Task 8.4 — Создать CounterFlushService**
+- [x] **Task 8.4 — Создать CounterFlushService**
 
 Алгоритм:
 
-- [ ] определить набор counters;
-- [ ] atomically drain;
-- [ ] преобразовать результат;
-- [ ] batch update PostgreSQL;
-- [ ] залогировать результат.
+- [x] определить набор counters;
+- [x] atomically drain;
+- [x] преобразовать результат;
+- [x] batch update PostgreSQL;
+- [x] залогировать результат.
 
-- [ ] **Task 8.5 — Batch update**
+- [x] **Task 8.5 — Batch update**
 
 Не выполнять:
 
@@ -830,7 +830,7 @@ UPDATE ...
 
 Использовать bulk/batch strategy.
 
-- [ ] **Task 8.6 — Обработать ошибки PostgreSQL**
+- [x] **Task 8.6 — Обработать ошибки PostgreSQL**
 
 Критический вопрос:
 
@@ -845,22 +845,22 @@ Redis counter уже drained,
 
 Варианты:
 
-- [ ] вернуть drained value в Redis;
-- [ ] durable outbox;
-- [ ] Redis pending buffer;
-- [ ] transaction-like application protocol.
+- [x] вернуть drained value в Redis;
+- [x] durable outbox;
+- [x] Redis pending buffer;
+- [x] transaction-like application protocol.
 
 Для MVP выбрать и явно задокументировать один вариант.
 
-- [ ] **Task 8.7 — Flush integration tests**
+- [x] **Task 8.7 — Flush integration tests**
 
 Проверить:
 
-- [ ] 10 clicks → flush → DB +10.
-- [ ] второй flush → +0.
-- [ ] concurrent increment во время flush не теряется.
-- [ ] несколько links flush одновременно.
-- [ ] DB error не приводит к silent data loss.
+- [x] 10 clicks → flush → DB +10.
+- [x] второй flush → +0.
+- [x] concurrent increment во время flush не теряется.
+- [x] несколько links flush одновременно.
+- [x] DB error не приводит к silent data loss.
 
 ---
 

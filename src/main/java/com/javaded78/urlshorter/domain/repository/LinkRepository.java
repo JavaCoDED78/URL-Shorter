@@ -45,4 +45,20 @@ public interface LinkRepository extends JpaRepository<LinkEntity, String> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM LinkEntity l WHERE l.code = :code")
     int deleteByCode(@Param("code") String code);
+
+    /**
+     * Batch click-count update for the flush (Task 8.5): one statement for
+     * all drained counters via {@code unnest}, not one UPDATE per code. The
+     * statement is atomic — on failure nothing is applied, which the flush
+     * recovery relies on.
+     */
+    @Transactional
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            UPDATE links l
+            SET click_count = l.click_count + batch.inc
+            FROM unnest(:codes, :increments) AS batch(code, inc)
+            WHERE l.code = batch.code
+            """, nativeQuery = true)
+    int batchIncrementClickCounts(@Param("codes") String[] codes, @Param("increments") Long[] increments);
 }
