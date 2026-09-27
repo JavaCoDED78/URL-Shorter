@@ -75,6 +75,21 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Unmapped paths (e.g. retired unversioned API routes) must be a plain
+     * 404 — without this, the generic fallback below would turn them into a
+     * misleading 500.
+     */
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ProblemDetail handleNoResource(
+            org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND,
+                "resource not found");
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Not found");
+        return problem;
+    }
+
+    /**
      * Fallback for everything not covered above — infrastructure failures
      * (PostgreSQL, Redis), unexpected runtime exceptions. The cause is logged
      * server-side only (Task 11.4); the client gets a generic ProblemDetail.

@@ -101,7 +101,7 @@ class RedirectFlowIT {
 
     private ResponseEntity<Map> post(Map<String, ?> body) {
         return restTemplate.exchange(
-                RequestEntity.post("/api/links")
+                RequestEntity.post("/api/v1/links")
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(body),
                 Map.class);

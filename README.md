@@ -77,7 +77,7 @@ The service uses PostgreSQL as the source of truth, Redis for low-latency redire
 #### Create link
 
 ```text
-POST /api/links
+POST /api/v1/links
       │
       ▼
 Validate request
@@ -208,18 +208,25 @@ Flyway migrations are applied automatically during application startup.
 
 ## 📡 API
 
+The management API is versioned by URL path: the current major version is
+`/api/v1`. Breaking contract changes ship under a new prefix (`/api/v2`),
+keeping `/api/v1` stable for existing clients. The public redirect endpoint
+`GET /{code}` is intentionally not versioned — it is the entry point short
+links are created for, and path versioning there would only make shared
+codes longer.
+
 | Method | Path | Description | Success / Error Codes |
 |---|---|---|---|
-| `POST` | `/api/links` | Create a short link | `201`, `400`, `409` |
+| `POST` | `/api/v1/links` | Create a short link | `201`, `400`, `409` |
 | `GET` | `/{code}` | Redirect to the original URL | `302`, `404`, `410` |
-| `GET` | `/api/links/{code}` | Get link details | `200`, `404` |
-| `GET` | `/api/links/{code}/stats` | Get click statistics | `200`, `404` |
-| `DELETE` | `/api/links/{code}` | Delete a link | `204`, `404` |
+| `GET` | `/api/v1/links/{code}` | Get link details | `200`, `404` |
+| `GET` | `/api/v1/links/{code}/stats` | Get click statistics | `200`, `404` |
+| `DELETE` | `/api/v1/links/{code}` | Delete a link | `204`, `404` |
 
 ### Create a link
 
 ```bash
-curl -X POST http://localhost:8080/api/links \
+curl -X POST http://localhost:8080/api/v1/links \
   -H "Content-Type: application/json" \
   -d '{
     "originalUrl": "https://example.com/very/long/path",
@@ -256,7 +263,7 @@ Location: https://example.com/very/long/path
 ### Statistics
 
 ```bash
-curl http://localhost:8080/api/links/aB3xK92/stats
+curl http://localhost:8080/api/v1/links/aB3xK92/stats
 ```
 
 Example response:
@@ -454,7 +461,7 @@ docker compose -f docker-compose.dev.yml up -d
 ## 🔄 End-to-End Example
 
 ```text
-1. POST /api/links
+1. POST /api/v1/links
    └─> PostgreSQL INSERT
        └─> 201 Created
 
@@ -472,7 +479,7 @@ docker compose -f docker-compose.dev.yml up -d
    └─> Lua read+reset
        └─> PostgreSQL batch UPDATE
 
-5. GET /api/links/aB3xK92/stats
+5. GET /api/v1/links/aB3xK92/stats
    └─> PostgreSQL / current persisted counter
 ```
 

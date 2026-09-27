@@ -146,7 +146,7 @@ class ClickFlushIT {
     }
 
     private int detailsClickCount(String code) {
-        ResponseEntity<Map> response = restTemplate.getForEntity("/api/links/" + code, Map.class);
+        ResponseEntity<Map> response = restTemplate.getForEntity("/api/v1/links/" + code, Map.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         return ((Number) response.getBody().get("clickCount")).intValue();
     }
@@ -165,7 +165,7 @@ class ClickFlushIT {
 
     private void create(String url, String alias) {
         ResponseEntity<Map> created = restTemplate.exchange(
-                RequestEntity.post("/api/links").contentType(MediaType.APPLICATION_JSON)
+                RequestEntity.post("/api/v1/links").contentType(MediaType.APPLICATION_JSON)
                         .body(Map.of("originalUrl", url, "alias", alias)),
                 Map.class);
         assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);

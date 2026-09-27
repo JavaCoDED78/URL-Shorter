@@ -22,7 +22,7 @@ import org.springframework.http.ResponseEntity;
 @Import(TestcontainersConfiguration.class)
 class LinkCreateFlowIT {
 
-    private static final String API = "/api/links";
+    private static final String API = "/api/v1/links";
 
     @Autowired
     TestRestTemplate restTemplate;

@@ -58,7 +58,7 @@ class DeleteFlowIT {
         assertThat(redis.hasKey("clicks:del01")).isTrue();
 
         ResponseEntity<Void> delete = rest.exchange(
-                url("/api/links/del01"), HttpMethod.DELETE, HttpEntity.EMPTY, Void.class);
+                url("/api/v1/links/del01"), HttpMethod.DELETE, HttpEntity.EMPTY, Void.class);
 
         assertThat(delete.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         // Redirect is gone: 404 from PostgreSQL, no stale cache involved.
@@ -68,9 +68,9 @@ class DeleteFlowIT {
         // Pending counter discarded with the link (Task 10.3 policy).
         assertThat(redis.hasKey("clicks:del01")).isFalse();
         // Details and stats are gone too.
-        assertThat(rest.exchange(url("/api/links/del01"), HttpMethod.GET,
+        assertThat(rest.exchange(url("/api/v1/links/del01"), HttpMethod.GET,
                 HttpEntity.EMPTY, Map.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(rest.exchange(url("/api/links/del01/stats"), HttpMethod.GET,
+        assertThat(rest.exchange(url("/api/v1/links/del01/stats"), HttpMethod.GET,
                 HttpEntity.EMPTY, Map.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
@@ -79,7 +79,7 @@ class DeleteFlowIT {
         create("https://example.com", "del02");
 
         ResponseEntity<Void> delete = rest.exchange(
-                url("/api/links/DEL02"), HttpMethod.DELETE, HttpEntity.EMPTY, Void.class);
+                url("/api/v1/links/DEL02"), HttpMethod.DELETE, HttpEntity.EMPTY, Void.class);
 
         assertThat(delete.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         assertThat(redirect("del02").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -88,7 +88,7 @@ class DeleteFlowIT {
     @Test
     void deleteForMissingLinkReturns404() {
         ResponseEntity<Map> response = rest.exchange(
-                url("/api/links/nope42"), HttpMethod.DELETE, HttpEntity.EMPTY, Map.class);
+                url("/api/v1/links/nope42"), HttpMethod.DELETE, HttpEntity.EMPTY, Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(response.getBody()).containsEntry("status", 404);
@@ -97,7 +97,7 @@ class DeleteFlowIT {
     @Test
     void deletedAliasCanBeRecreated() {
         create("https://example.com/old", "del03");
-        rest.exchange(url("/api/links/del03"), HttpMethod.DELETE, HttpEntity.EMPTY, Void.class);
+        rest.exchange(url("/api/v1/links/del03"), HttpMethod.DELETE, HttpEntity.EMPTY, Void.class);
 
         create("https://example.com/new", "del03");
 
@@ -108,7 +108,7 @@ class DeleteFlowIT {
 
     private void create(String originalUrl, String alias) {
         ResponseEntity<Map> response = rest.exchange(
-                url("/api/links"), HttpMethod.POST,
+                url("/api/v1/links"), HttpMethod.POST,
                 new HttpEntity<>(Map.of("originalUrl", originalUrl, "alias", alias), jsonHeaders()),
                 Map.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);

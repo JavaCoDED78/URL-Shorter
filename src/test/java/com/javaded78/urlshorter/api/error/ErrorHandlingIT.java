@@ -82,9 +82,22 @@ class ErrorHandlingIT {
     @Test
     void missingLinkProduces404ProblemDetail() {
         ResponseEntity<Map> response = restTemplate.exchange(
-                url("/api/links/nope11"), HttpMethod.GET, HttpEntity.EMPTY, Map.class);
+                url("/api/v1/links/nope11"), HttpMethod.GET, HttpEntity.EMPTY, Map.class);
 
         assertProblemContract(response, 404, "Link not found");
+    }
+
+    @Test
+    void retiredUnversionedPathProduces404Not500() {
+        // Management API lives under /api/v1 (Sprint 13 versioning); the old
+        // unversioned path must be a plain 404, not a misleading 500 from
+        // the generic fallback handler.
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        ResponseEntity<Map> response = restTemplate.exchange(url("/api/links"), HttpMethod.POST,
+                new HttpEntity<>(Map.of("originalUrl", "https://example.com"), headers), Map.class);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(404);
     }
 
     @Test
@@ -132,7 +145,7 @@ class ErrorHandlingIT {
     private ResponseEntity<Map> post(Map<String, Object> body) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(url("/api/links"), HttpMethod.POST,
+        return restTemplate.exchange(url("/api/v1/links"), HttpMethod.POST,
                 new HttpEntity<>(body, headers), Map.class);
     }
 

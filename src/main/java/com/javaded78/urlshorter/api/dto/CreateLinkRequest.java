@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * Request body for {@code POST /api/links} (Task 4.1).
+ * Request body for {@code POST /api/v1/links} (Task 4.1).
  *
  * @param originalUrl destination URL; required, validated structurally here
  *                    (non-blank, length) and semantically in the service

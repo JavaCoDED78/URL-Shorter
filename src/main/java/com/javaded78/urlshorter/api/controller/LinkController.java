@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "Links", description = "Create, read, get statistics and delete short links")
 @RestController
-@RequestMapping("/api/links")
+@RequestMapping("/api/v1/links")
 public class LinkController {
 
     private final LinkService linkService;
@@ -54,7 +54,7 @@ public class LinkController {
         Link created = linkService.create(request.originalUrl(), request.alias(), request.expiresAt());
         LinkResponse body = LinkResponse.from(created);
         return ResponseEntity
-                .created(URI.create("/api/links/" + created.code()))
+                .created(URI.create("/api/v1/links/" + created.code()))
                 .body(body);
     }
 

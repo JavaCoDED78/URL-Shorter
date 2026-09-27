@@ -136,11 +136,11 @@ Never hardcode connection strings or secrets — everything above must be overri
 
 | Method | Path | Description | Codes |
 |---|---|---|---|
-| `POST` | `/api/links` | Create a short link | `201`, `400`, `409` |
+| `POST` | `/api/v1/links` | Create a short link | `201`, `400`, `409` |
 | `GET` | `/{code}` | Redirect to the original URL | `302`, `404`, `410` |
-| `GET` | `/api/links/{code}` | Get link details | `200`, `404` |
-| `GET` | `/api/links/{code}/stats` | Get click statistics | `200`, `404` |
-| `DELETE` | `/api/links/{code}` | Delete a link | `204`, `404` |
+| `GET` | `/api/v1/links/{code}` | Get link details | `200`, `404` |
+| `GET` | `/api/v1/links/{code}/stats` | Get click statistics | `200`, `404` |
+| `DELETE` | `/api/v1/links/{code}` | Delete a link | `204`, `404` |
 
 Errors use Spring's `ProblemDetail` (RFC 9457): `type`, `title`, `status`, `detail`, `instance`. Keep `type`/`title`/`detail` stable enough for clients to rely on. Error categories: `400` invalid request/URL, `409` code/alias already taken, `404` link not found, `410` link expired, `500` unexpected failure.
 

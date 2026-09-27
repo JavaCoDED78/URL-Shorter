@@ -120,7 +120,7 @@ class StatsFlowIT {
 
     private void create(String originalUrl, String alias) {
         ResponseEntity<Map> response = rest.exchange(
-                url("/api/links"), HttpMethod.POST,
+                url("/api/v1/links"), HttpMethod.POST,
                 new HttpEntity<>(Map.of("originalUrl", originalUrl, "alias", alias), jsonHeaders()),
                 Map.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -135,7 +135,7 @@ class StatsFlowIT {
     }
 
     private ResponseEntity<Map> stats(String code) {
-        return rest.exchange(url("/api/links/" + code + "/stats"), HttpMethod.GET,
+        return rest.exchange(url("/api/v1/links/" + code + "/stats"), HttpMethod.GET,
                 HttpEntity.EMPTY, Map.class);
     }
 

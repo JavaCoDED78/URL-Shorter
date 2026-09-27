@@ -120,7 +120,7 @@ class ClickCounterIT {
                 ? Map.of("originalUrl", url, "alias", alias)
                 : Map.of("originalUrl", url, "alias", alias, "expiresAt", expiresAt);
         ResponseEntity<Map> created = restTemplate.exchange(
-                RequestEntity.post("/api/links").contentType(MediaType.APPLICATION_JSON).body(body),
+                RequestEntity.post("/api/v1/links").contentType(MediaType.APPLICATION_JSON).body(body),
                 Map.class);
         assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     }

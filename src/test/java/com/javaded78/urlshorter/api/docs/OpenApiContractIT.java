@@ -32,11 +32,11 @@ class OpenApiContractIT {
 
     /** path -> HTTP method -> response codes that must be documented. */
     private static final Map<String, Map<String, String[]>> DOCUMENTED_OPERATIONS = Map.of(
-            "/api/links", Map.of("post", new String[] {"201", "400", "409"}),
-            "/api/links/{code}", Map.of(
+            "/api/v1/links", Map.of("post", new String[] {"201", "400", "409"}),
+            "/api/v1/links/{code}", Map.of(
                     "get", new String[] {"200", "404"},
                     "delete", new String[] {"204", "404"}),
-            "/api/links/{code}/stats", Map.of("get", new String[] {"200", "404"}),
+            "/api/v1/links/{code}/stats", Map.of("get", new String[] {"200", "404"}),
             "/{code}", Map.of("get", new String[] {"302", "404", "410"}));
 
     @LocalServerPort
@@ -100,7 +100,7 @@ class OpenApiContractIT {
 
     @Test
     void documentedErrorsUseProblemDetailSchema() {
-        JsonNode postResponses = apiDocs.required("paths").required("/api/links")
+        JsonNode postResponses = apiDocs.required("paths").required("/api/v1/links")
                 .required("post").required("responses");
         for (String code : new String[] {"400", "409"}) {
             JsonNode content = postResponses.required(code).required("content");
