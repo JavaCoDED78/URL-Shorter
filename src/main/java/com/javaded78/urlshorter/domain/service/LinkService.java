@@ -107,6 +107,38 @@ public class LinkService {
     }
 
     /**
+     * Deletes a link (Tasks 10.1–10.3). Order of operations (Task 10.2):
+     *
+     * <pre>
+     * evict cache → discard pending counter → delete DB row → evict cache again
+     * </pre>
+     *
+     * <p>Evicting BEFORE the DB delete is the safe failure mode: if the
+     * delete fails, the row is still alive and the cache repopulates on the
+     * next read (self-healing) — a stale cached link is never served after a
+     * successful delete. The second evict closes the narrow race where a
+     * concurrent redirect re-populated the cache between the first evict
+     * and the delete.
+     *
+     * <p>Counter policy (Task 10.3): discard — pending clicks belong to the
+     * link row; once the row is gone there is no owner for them, and
+     * flushing before delete would persist counts just to remove them. An
+     * increment racing past the discard self-cleans on the next flush (the
+     * batch UPDATE matches 0 rows for a deleted code).
+     *
+     * @throws LinkNotFoundException if no such link exists
+     */
+    public void delete(String code) {
+        Link link = repository.findByCodeIgnoreCase(code)
+                .map(this::toDomain)
+                .orElseThrow(() -> new LinkNotFoundException(code));
+        linkCache.evict(link.code());
+        clickCounter.delete(link.code());
+        repository.deleteByCode(link.code());
+        linkCache.evict(link.code());
+    }
+
+    /**
      * Resolves a code for redirection (Tasks 5.1, 5.2, 5.4; cache-aside from
      * Sprint 6, Task 6.3):
      *

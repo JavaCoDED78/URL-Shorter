@@ -9,6 +9,7 @@ import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.service.LinkService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,5 +48,11 @@ public class LinkController {
     @GetMapping("/{code}/stats")
     public LinkStatsResponse stats(@PathVariable String code) {
         return LinkStatsResponse.from(linkService.getStats(code));
+    }
+
+    @DeleteMapping("/{code}")
+    public ResponseEntity<Void> delete(@PathVariable String code) {
+        linkService.delete(code);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -922,7 +922,7 @@ GET /api/links/{code}/stats
 
 Удаление ссылки должно быть согласованным между PostgreSQL и Redis.
 
-- [ ] **Task 10.1 — Реализовать DELETE**
+- [x] **Task 10.1 — Реализовать DELETE**
 
 Endpoint:
 
@@ -942,13 +942,13 @@ evict Redis link:{code}
 return 204
 ```
 
-- [ ] **Task 10.2 — Определить порядок операций**
+- [x] **Task 10.2 — Определить порядок операций**
 
 Зафиксировать поведение при частичной ошибке.
 
 Критически важно не оставить stale cached link после удаления.
 
-- [ ] **Task 10.3 — Counter cleanup**
+- [x] **Task 10.3 — Counter cleanup**
 
 Определить, что делать с:
 
@@ -960,23 +960,23 @@ clicks:{code}
 
 Варианты:
 
-- [ ] flush before delete;
-- [ ] archive;
-- [ ] discard;
-- [ ] persist pending clicks before deletion.
+- [x] flush before delete;
+- [x] archive;
+- [x] discard;
+- [x] persist pending clicks before deletion.
 
 Выбрать стратегию и покрыть её тестом.
 
-- [ ] **Task 10.4 — Integration tests**
+- [x] **Task 10.4 — Integration tests**
 
 Проверить:
 
-- [ ] create;
-- [ ] redirect;
-- [ ] delete;
-- [ ] second redirect → `404`;
-- [ ] cached entry отсутствует;
-- [ ] counter обработан согласно выбранной политике.
+- [x] create;
+- [x] redirect;
+- [x] delete;
+- [x] second redirect → `404`;
+- [x] cached entry отсутствует;
+- [x] counter обработан согласно выбранной политике.
 
 ---
 

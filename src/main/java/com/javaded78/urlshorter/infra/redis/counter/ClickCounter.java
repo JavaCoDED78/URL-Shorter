@@ -41,4 +41,10 @@ public interface ClickCounter {
      * Sums with any increments that arrived in the meantime.
      */
     void restore(String code, long value);
+
+    /**
+     * Removes the counter for the code (delete policy, Task 10.3);
+     * idempotent.
+     */
+    void delete(String code);
 }

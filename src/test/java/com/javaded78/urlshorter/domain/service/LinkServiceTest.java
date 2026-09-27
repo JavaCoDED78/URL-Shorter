@@ -292,4 +292,60 @@ class LinkServiceTest {
         assertThatThrownBy(() -> service.getStats("missing1"))
                 .isInstanceOf(LinkNotFoundException.class);
     }
+
+    // --- delete: cache eviction + counter cleanup (Tasks 10.1-10.3) ---
+
+    @Test
+    void deleteEvictsCacheAroundTheDatabaseDelete() {
+        LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
+        when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+
+        service.delete("abc1234");
+
+        // Evict BEFORE the DB delete (a failed delete leaves the row alive and
+        // the cache repopulates on the next read — self-healing), then evict
+        // AGAIN after it to close the repopulation race window.
+        org.mockito.InOrder order = org.mockito.Mockito.inOrder(linkCache, clickCounter, repository);
+        order.verify(linkCache).evict("abc1234");
+        order.verify(clickCounter).delete("abc1234");
+        order.verify(repository).deleteByCode("abc1234");
+        order.verify(linkCache).evict("abc1234");
+    }
+
+    @Test
+    void deleteUsesStoredLowercaseCode() {
+        LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
+        when(repository.findByCodeIgnoreCase("ABC1234")).thenReturn(java.util.Optional.of(entity));
+
+        service.delete("ABC1234");
+
+        verify(repository).deleteByCode("abc1234");
+        verify(linkCache, org.mockito.Mockito.times(2)).evict("abc1234");
+        verify(clickCounter).delete("abc1234");
+    }
+
+    @Test
+    void deleteForMissingLinkThrowsNotFoundAndTouchesNothing() {
+        when(repository.findByCodeIgnoreCase(any())).thenReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> service.delete("missing1"))
+                .isInstanceOf(LinkNotFoundException.class);
+        verify(repository, never()).deleteByCode(any());
+        verify(linkCache, never()).evict(any());
+        verify(clickCounter, never()).delete(any());
+    }
+
+    @Test
+    void deleteDoesNotEvictAgainWhenDatabaseDeleteFails() {
+        LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
+        when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+        org.mockito.Mockito.doThrow(new DataIntegrityViolationException("db down"))
+                .when(repository).deleteByCode("abc1234");
+
+        assertThatThrownBy(() -> service.delete("abc1234"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        // Only the pre-delete evict happened; the row is still alive, so the
+        // cache repopulates on the next read (self-healing, Task 10.2).
+        verify(linkCache).evict("abc1234");
+    }
 }

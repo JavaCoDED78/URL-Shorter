@@ -63,6 +63,11 @@ public class RedisClickCounter implements ClickCounter {
         redis.opsForValue().increment(key(code), value);
     }
 
+    @Override
+    public void delete(String code) {
+        redis.delete(key(code));
+    }
+
     static String key(String code) {
         return KEY_PREFIX + code.toLowerCase(Locale.ROOT);
     }
