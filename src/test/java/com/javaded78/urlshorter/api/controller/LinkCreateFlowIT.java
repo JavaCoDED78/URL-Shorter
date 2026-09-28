@@ -81,6 +81,41 @@ class LinkCreateFlowIT {
     }
 
     @Test
+    void concurrentDuplicateAliasCreatesYieldOneSuccessAndOneConflict() throws Exception {
+        // Task 15.6: two parallel creates with the same alias — the database
+        // UNIQUE constraint is the final arbiter, so exactly one request can
+        // win regardless of timing.
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicReference<ResponseEntity<Map>> first =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicReference<ResponseEntity<Map>> second =
+                new java.util.concurrent.atomic.AtomicReference<>();
+
+        Thread t1 = Thread.ofVirtual().start(() -> awaitAndCreate(start, first));
+        Thread t2 = Thread.ofVirtual().start(() -> awaitAndCreate(start, second));
+        start.countDown();
+        t1.join();
+        t2.join();
+
+        assertThat(java.util.List.of(
+                        first.get().getStatusCode().value(),
+                        second.get().getStatusCode().value()))
+                .containsExactlyInAnyOrder(201, 409);
+    }
+
+    private void awaitAndCreate(java.util.concurrent.CountDownLatch start,
+                                java.util.concurrent.atomic.AtomicReference<ResponseEntity<Map>> result) {
+        try {
+            start.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        }
+        result.set(post(Map.of(
+                "originalUrl", "https://example.com/concurrent", "alias", "race-alias")));
+    }
+
+    @Test
     void rejectsInvalidOriginalUrlWithBadRequest() {
         ResponseEntity<Map> response = post(Map.of("originalUrl", "not-a-url"));
 

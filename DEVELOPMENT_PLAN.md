@@ -1222,7 +1222,7 @@ virtual threads ON
 
 Получить воспроизводимую проверку всей системы на реальных PostgreSQL и Redis.
 
-- [ ] **Task 15.1 — Testcontainers infrastructure**
+- [x] **Task 15.1 — Testcontainers infrastructure**
 
 Создать shared test setup:
 
@@ -1233,11 +1233,11 @@ RedisContainer
 
 Определить:
 
-- [ ] lifecycle;
-- [ ] dynamic properties;
-- [ ] clean state between tests.
+- [x] lifecycle;
+- [x] dynamic properties;
+- [x] clean state between tests.
 
-- [ ] **Task 15.2 — Test create flow**
+- [x] **Task 15.2 — Test create flow**
 
 Сценарий:
 
@@ -1249,7 +1249,7 @@ POST
 
 Проверить persisted record.
 
-- [ ] **Task 15.3 — Test redirect cache miss**
+- [x] **Task 15.3 — Test redirect cache miss**
 
 Сценарий:
 
@@ -1261,7 +1261,7 @@ create
 → cache write
 ```
 
-- [ ] **Task 15.4 — Test redirect cache hit**
+- [x] **Task 15.4 — Test redirect cache hit**
 
 Сценарий:
 
@@ -1273,16 +1273,16 @@ create
 
 Проверить, что второй request не требует PostgreSQL lookup.
 
-- [ ] **Task 15.5 — Test expiration**
+- [x] **Task 15.5 — Test expiration**
 
 Проверить:
 
-- [ ] active link;
-- [ ] expired link;
-- [ ] immediate expiry;
-- [ ] Redis cached expired representation.
+- [x] active link;
+- [x] expired link;
+- [x] immediate expiry;
+- [x] Redis cached expired representation.
 
-- [ ] **Task 15.6 — Test alias conflict**
+- [x] **Task 15.6 — Test alias conflict**
 
 Параллельно отправить два create с одинаковым alias.
 
@@ -1293,7 +1293,7 @@ Expected:
 другой → 409
 ```
 
-- [ ] **Task 15.7 — Test deletion**
+- [x] **Task 15.7 — Test deletion**
 
 Проверить:
 
@@ -1304,7 +1304,7 @@ create
 → redirect == 404
 ```
 
-- [ ] **Task 15.8 — Test stats**
+- [x] **Task 15.8 — Test stats**
 
 Проверить:
 

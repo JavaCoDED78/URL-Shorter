@@ -7,6 +7,24 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+/**
+ * Shared test infrastructure (Task 15.1).
+ *
+ * <p>Lifecycle: the containers are Spring-managed singletons — Boot's
+ * Testcontainers lifecycle post-processor starts them with the application
+ * context and stops them when it closes.
+ *
+ * <p>Dynamic properties: {@code @ServiceConnection} detects PostgreSQL and
+ * Redis on the mapped ports and injects datasource/connection-factory
+ * settings, so no manual {@code @DynamicPropertySource} is needed.
+ *
+ * <p>Clean state: Spring caches application contexts per test class
+ * configuration — every IT class that imports this configuration gets its
+ * own fresh containers, and tests within a class use unique aliases/codes.
+ *
+ * <p>Image versions are pinned (postgres:17, redis:7) to match the
+ * production-like stacks in docker-compose and keep the suite reproducible.
+ */
 @TestConfiguration(proxyBeanMethods = false)
 public class TestcontainersConfiguration {
 
@@ -24,7 +42,7 @@ public class TestcontainersConfiguration {
 	@Bean
 	@ServiceConnection(name = "redis")
 	GenericContainer<?> redisContainer() {
-		return new GenericContainer<>(DockerImageName.parse("redis:latest")).withExposedPorts(6379);
+		return new GenericContainer<>(DockerImageName.parse("redis:7")).withExposedPorts(6379);
 	}
 
 }
