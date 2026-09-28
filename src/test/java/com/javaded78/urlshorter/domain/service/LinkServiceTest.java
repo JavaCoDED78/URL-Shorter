@@ -26,7 +26,8 @@ class LinkServiceTest {
             new ShortenerProperties.Url(2048, List.of("http", "https")),
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(3),
-            new ShortenerProperties.Cache(java.time.Duration.ofHours(1)));
+            new ShortenerProperties.Cache(java.time.Duration.ofHours(1)),
+            org.springframework.util.unit.DataSize.ofKilobytes(16));
 
     private final com.javaded78.urlshorter.domain.repository.LinkRepository repository =
             mock(com.javaded78.urlshorter.domain.repository.LinkRepository.class);

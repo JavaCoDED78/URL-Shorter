@@ -93,6 +93,44 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Body over the payload limit (Task 20.1): thrown by the bounded stream
+     * for chunked bodies; usually arrives wrapped by the message converter.
+     */
+    @ExceptionHandler(com.javaded78.urlshorter.config.PayloadTooLargeException.class)
+    public ProblemDetail handlePayloadTooLarge(
+            com.javaded78.urlshorter.config.PayloadTooLargeException ex) {
+        return payloadTooLarge(ex.getMessage());
+    }
+
+    /**
+     * Unreadable body: 400 for syntactically broken JSON, 413 when the
+     * cause chain shows the bounded stream hit the payload limit (chunked
+     * oversized bodies, Task 20.1).
+     */
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ProblemDetail handleUnreadableBody(
+            org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
+            if (cause instanceof com.javaded78.urlshorter.config.PayloadTooLargeException tooLarge) {
+                return payloadTooLarge(tooLarge.getMessage());
+            }
+        }
+        log.warn("unreadable request body: {}", ex.toString());
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "request body is not readable");
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Invalid request");
+        return problem;
+    }
+
+    private static ProblemDetail payloadTooLarge(String detail) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE, detail);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Payload too large");
+        return problem;
+    }
+
+    /**
      * Unmapped paths (e.g. retired unversioned API routes) must be a plain
      * 404 — without this, the generic fallback below would turn them into a
      * misleading 500.

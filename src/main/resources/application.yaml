@@ -46,6 +46,9 @@ shortener:
     ttl: ${SHORTENER_CACHE_TTL:1h}
   flush:
     interval: ${SHORTENER_FLUSH_INTERVAL:PT5S}
+  # Raw JSON body ceiling (Task 20.1) — far above the largest legitimate
+  # create request (2048-char URL plus JSON overhead).
+  max-payload-size: ${SHORTENER_MAX_PAYLOAD_SIZE:16KB}
 
 management:
   endpoints:

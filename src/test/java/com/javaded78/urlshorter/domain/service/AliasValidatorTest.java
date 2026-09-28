@@ -17,7 +17,8 @@ class AliasValidatorTest {
             new ShortenerProperties.Url(2048, List.of("http", "https")),
             new ShortenerProperties.Alias(64, Set.of("api", "actuator", "swagger")),
             new ShortenerProperties.Create(5),
-            new ShortenerProperties.Cache(java.time.Duration.ofHours(1)));
+            new ShortenerProperties.Cache(java.time.Duration.ofHours(1)),
+            org.springframework.util.unit.DataSize.ofKilobytes(16));
 
     private final AliasValidator validator = new AliasValidator(properties);
 

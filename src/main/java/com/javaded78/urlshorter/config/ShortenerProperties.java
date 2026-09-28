@@ -10,7 +10,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * to mirror the YAML structure.
  */
 @ConfigurationProperties(prefix = "shortener")
-public record ShortenerProperties(Url url, Alias alias, Create create, Cache cache) {
+public record ShortenerProperties(Url url, Alias alias, Create create, Cache cache,
+                                  org.springframework.util.unit.DataSize maxPayloadSize) {
 
     /**
      * @param maxLength       maximum accepted original URL length

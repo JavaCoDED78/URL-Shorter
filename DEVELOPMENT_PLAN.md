@@ -1528,15 +1528,15 @@ EVICT cache
 
 Минимизировать очевидные abuse-векторы.
 
-- [ ] **Task 20.1 — Ограничить размеры запросов**
+- [x] **Task 20.1 — Ограничить размеры запросов**
 
 Настроить максимальные:
 
-- [ ] URL length;
-- [ ] alias length;
-- [ ] JSON payload size.
+- [x] URL length;
+- [x] alias length;
+- [x] JSON payload size.
 
-- [ ] **Task 20.2 — SSRF analysis**
+- [x] **Task 20.2 — SSRF analysis**
 
 Сам redirect endpoint не должен серверно загружать destination URL.
 
@@ -1548,17 +1548,17 @@ EVICT cache
 
 а не выполняет HTTP request к original URL.
 
-- [ ] **Task 20.3 — Alias abuse**
+- [x] **Task 20.3 — Alias abuse**
 
 Проверить:
 
-- [ ] path traversal-like strings;
-- [ ] reserved routes;
-- [ ] Unicode edge cases;
-- [ ] whitespace;
-- [ ] control characters.
+- [x] path traversal-like strings;
+- [x] reserved routes;
+- [x] Unicode edge cases;
+- [x] whitespace;
+- [x] control characters.
 
-- [ ] **Task 20.4 — Rate limiting foundation**
+- [x] **Task 20.4 — Rate limiting foundation**
 
 Даже если Bucket4j пока не добавляется, подготовить abstraction:
 
