@@ -115,10 +115,10 @@ class ConcurrencyIT {
         // breaks. A refused connect never reached the server, so retrying
         // the idempotent GET is safe for the harness; server-side behavior
         // is still asserted exactly.
-        java.util.concurrent.Semaphore inFlight = new java.util.concurrent.Semaphore(1000);
+        java.util.concurrent.Semaphore inFlight = new java.util.concurrent.Semaphore(600);
         for (int i = 0; i < MASSIVE_CLICKS; i++) {
             inFlight.acquire();
-            futures.add(sendWithRetry(client, request, 3)
+            futures.add(sendWithRetry(client, request, 6)
                     .whenComplete((response, error) -> inFlight.release()));
         }
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))

@@ -75,6 +75,24 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Database unavailable (Tasks 18.1, 18.2): a data-access failure means a
+     * dependency is down, not a bug — 503 tells the client to retry later,
+     * distinct from both 409 (business conflict) and 500 (unexpected). The
+     * cause is logged server-side only; the connection-acquisition timeout
+     * is pinned at 5 s in application.yaml so the request cannot hang.
+     */
+    @ExceptionHandler(org.springframework.dao.DataAccessException.class)
+    public ProblemDetail handleDataAccessException(
+            org.springframework.dao.DataAccessException ex) {
+        log.error("data access failure while handling request", ex);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE, "database temporarily unavailable");
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Service unavailable");
+        return problem;
+    }
+
+    /**
      * Unmapped paths (e.g. retired unversioned API routes) must be a plain
      * 404 — without this, the generic fallback below would turn them into a
      * misleading 500.

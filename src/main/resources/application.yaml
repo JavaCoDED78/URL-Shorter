@@ -17,6 +17,9 @@ spring:
       # explicit ceiling for PostgreSQL access (Task 14.3) — it must not be
       # scaled up just because threads became cheap.
       maximum-pool-size: 10
+      # Bounds how long a request may wait for a connection (Task 18.1) —
+      # a database outage degrades to a fast 503, never a hung request.
+      connection-timeout: 5000
   data:
     redis:
       host: ${REDIS_HOST:localhost}

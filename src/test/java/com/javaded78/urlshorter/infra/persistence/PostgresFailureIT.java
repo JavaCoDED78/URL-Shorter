@@ -1,0 +1,176 @@
+package com.javaded78.urlshorter.infra.persistence;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.javaded78.urlshorter.TestcontainersConfiguration;
+import com.javaded78.urlshorter.domain.repository.LinkRepository;
+import com.javaded78.urlshorter.domain.service.CounterFlushService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.http.client.HttpRedirects;
+import org.springframework.boot.resttestclient.TestRestTemplate;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+
+/**
+ * PostgreSQL failure scenarios (Sprint 18) on real PostgreSQL and Redis.
+ *
+ * <p>Policies:
+ * <ul>
+ *   <li>18.1 — create with the database down: controlled 503 ProblemDetail
+ *   (dependency unavailable — distinct from a 409 business conflict), the
+ *   cause is logged server-side only, and the connection-acquisition timeout
+ *   (5 s, pinned in application.yaml) bounds the wait — the request can
+ *   never hang forever.</li>
+ *   <li>18.2 — cache miss with the database down: the redirect degrades to
+ *   the same controlled 503 instead of a misleading generic 500.</li>
+ *   <li>18.3 — flush with the database down: drained counters are restored
+ *   to Redis; once the database recovers the next flush persists them — no
+ *   silent click loss.</li>
+ * </ul>
+ */
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "shortener.flush.enabled=false")
+@AutoConfigureTestRestTemplate
+@Import(TestcontainersConfiguration.class)
+class PostgresFailureIT {
+
+    @LocalServerPort
+    private int port;
+
+    @Autowired
+    private TestRestTemplate restTemplate;
+
+    @Autowired
+    private CounterFlushService flushService;
+
+    @Autowired
+    private StringRedisTemplate redis;
+
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    @MockitoSpyBean
+    private LinkRepository repository;
+
+    private TestRestTemplate rest;
+
+    @BeforeEach
+    void setUp() {
+        rest = restTemplate.withRedirects(HttpRedirects.DONT_FOLLOW);
+    }
+
+    @Test
+    void createReturns503WhenDatabaseUnavailable() {
+        doThrow(new CannotGetJdbcConnectionException("simulated database outage"))
+                .when(repository).saveAndFlush(any());
+
+        long started = System.nanoTime();
+        ResponseEntity<Map> response = post("https://example.com/db-down", "s18create");
+        long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
+
+        // Task 18.1: controlled 503, not a 409 conflict and not a leaked 500
+        assertThat(response.getStatusCode().value()).isEqualTo(503);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("title")).isEqualTo("Service unavailable");
+        assertThat(response.getBody().get("status")).isEqualTo(503);
+        assertThat(response.getBody().get("detail").toString())
+                .doesNotContain("jdbc", "postgresql", "CannotGetJdbcConnection");
+        // bounded: connection acquisition timeout is pinned at 5 s
+        assertThat(elapsedMs).isLessThan(10_000);
+    }
+
+    @Test
+    void cacheMissReturns503WhenDatabaseUnavailable() {
+        create("https://example.com/db-down-miss", "s18miss");
+        redis.delete("link:s18miss");   // force the miss → PostgreSQL lookup
+
+        doThrow(new CannotGetJdbcConnectionException("simulated database outage"))
+                .when(repository).findByCodeIgnoreCase(org.mockito.ArgumentMatchers.anyString());
+
+        ResponseEntity<Map> response = rest.getForEntity(url("/s18miss"), Map.class);
+
+        // Task 18.2: controlled 503 instead of a misleading generic 500
+        assertThat(response.getStatusCode().value()).isEqualTo(503);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("title")).isEqualTo("Service unavailable");
+    }
+
+    @Test
+    void flushPersistsRestoredCountersAfterDatabaseRecovers() {
+        create("https://example.com/db-down-flush", "s18flush");
+        rest.getForEntity(url("/s18flush"), String.class);
+        rest.getForEntity(url("/s18flush"), String.class);
+        rest.getForEntity(url("/s18flush"), String.class);
+        rest.getForEntity(url("/s18flush"), String.class);
+        rest.getForEntity(url("/s18flush"), String.class);
+
+        AtomicBoolean dbDown = new AtomicBoolean(true);
+        // Mockito cannot callRealMethod on a Spring Data JDK-proxy method —
+        // the recovery branch applies the batch update via JdbcTemplate.
+        doAnswer(invocation -> {
+            if (dbDown.get()) {
+                throw new CannotGetJdbcConnectionException("simulated database outage");
+            }
+            String[] codes = invocation.getArgument(0);
+            Long[] increments = invocation.getArgument(1);
+            int updated = 0;
+            for (int i = 0; i < codes.length; i++) {
+                updated += jdbcTemplate.update(
+                        "UPDATE links SET click_count = click_count + ? WHERE code = ?",
+                        increments[i], codes[i]);
+            }
+            return updated;
+        }).when(repository).batchIncrementClickCounts(any(), any());
+
+        // DB down during flush: counters restored to Redis, failure surfaces
+        org.assertj.core.api.Assertions.assertThatThrownBy(flushService::flush)
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(redis.opsForValue().get("clicks:s18flush")).isEqualTo("5");
+
+        // recovery: next flush persists the restored counters — no silent loss
+        dbDown.set(false);
+        flushService.flush();
+
+        assertThat(redis.opsForValue().get("clicks:s18flush")).isNull();
+        ResponseEntity<Map> stats = restTemplate.getForEntity(
+                url("/api/v1/links/s18flush/stats"), Map.class);
+        assertThat(stats.getBody()).isNotNull();
+        assertThat(((Number) stats.getBody().get("clickCount")).longValue()).isEqualTo(5);
+    }
+
+    private ResponseEntity<Map> post(String originalUrl, String alias) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return restTemplate.exchange(url("/api/v1/links"), HttpMethod.POST,
+                new HttpEntity<>(Map.of("originalUrl", originalUrl, "alias", alias), headers),
+                Map.class);
+    }
+
+    private void create(String originalUrl, String alias) {
+        assertThat(post(originalUrl, alias).getStatusCode().value()).isEqualTo(201);
+    }
+
+    private String url(String path) {
+        return "http://localhost:" + port + path;
+    }
+}

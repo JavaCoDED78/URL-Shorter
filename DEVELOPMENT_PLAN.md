@@ -1439,15 +1439,15 @@ invalid JSON/value
 
 Проверить поведение при временной недоступности базы.
 
-- [ ] **Task 18.1 — DB unavailable during create**
+- [x] **Task 18.1 — DB unavailable during create**
 
 Ожидание:
 
-- [ ] controlled 500/503 policy;
-- [ ] понятный log;
-- [ ] request не зависает бесконечно.
+- [x] controlled 500/503 policy;
+- [x] понятный log;
+- [x] request не зависает бесконечно.
 
-- [ ] **Task 18.2 — DB unavailable during cache miss**
+- [x] **Task 18.2 — DB unavailable during cache miss**
 
 Определить:
 
@@ -1459,17 +1459,17 @@ DB DOWN
 
 → controlled error.
 
-- [ ] **Task 18.3 — DB unavailable during flush**
+- [x] **Task 18.3 — DB unavailable during flush**
 
 Это наиболее критический сценарий.
 
 Проверить:
 
-- [ ] Redis drained counter;
-- [ ] DB update fails;
-- [ ] recovery mechanism executes;
-- [ ] next flush can persist value;
-- [ ] no silent click loss.
+- [x] Redis drained counter;
+- [x] DB update fails;
+- [x] recovery mechanism executes;
+- [x] next flush can persist value;
+- [x] no silent click loss.
 
 ---
 
