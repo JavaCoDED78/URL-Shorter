@@ -1576,21 +1576,21 @@ RateLimiter
 
 Собрать reproducible application container.
 
-- [ ] **Task 21.1 — Создать Dockerfile**
+- [x] **Task 21.1 — Создать Dockerfile**
 
 Шаги:
 
-- [ ] Собрать приложение Gradle.
-- [ ] Использовать минимальный runtime image.
-- [ ] Не запускать приложение от root.
-- [ ] Expose только application port.
-- [ ] Передавать configuration через environment variables.
+- [x] Собрать приложение Gradle.
+- [x] Использовать минимальный runtime image.
+- [x] Не запускать приложение от root.
+- [x] Expose только application port.
+- [x] Передавать configuration через environment variables.
 
-- [ ] **Task 21.2 — Docker healthcheck**
+- [x] **Task 21.2 — Docker healthcheck**
 
 Добавить healthcheck на readiness/health endpoint.
 
-- [ ] **Task 21.3 — Integrate application into docker-compose**
+- [x] **Task 21.3 — Integrate application into docker-compose**
 
 Сценарий:
 
@@ -1606,7 +1606,7 @@ postgres
 redis
 ```
 
-- [ ] **Task 21.4 — Startup order**
+- [x] **Task 21.4 — Startup order**
 
 Не полагаться только на `depends_on`.
 

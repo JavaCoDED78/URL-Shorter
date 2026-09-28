@@ -41,6 +41,36 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+  app:
+    build: .
+    container_name: urlshorter-app
+    environment:
+      # configuration through environment only — never baked into the image
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-urlshortener}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SPRING_DATA_REDIS_HOST: redis
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      # Task 21.4: health conditions, not just startup order — Flyway and
+      # the cache must face ready infrastructure
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - urlshorter
+    healthcheck:
+      # Task 21.2: readiness probe — the app answers traffic only after
+      # Flyway and infrastructure are up
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/readiness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   redis-data:

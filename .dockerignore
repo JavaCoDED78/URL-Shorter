@@ -1,0 +1,14 @@
+# keep the build context small — sources and build files only
+.git
+.gradle
+build
+*.log
+.idea
+.vscode
+out
+docker-compose*.yml
+Dockerfile
+.dockerignore
+README.md
+DEVELOPMENT_PLAN.md
+AGENTS.md
