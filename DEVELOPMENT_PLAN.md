@@ -1164,7 +1164,7 @@ redis.lookup.duration
 
 Включить Java 25 virtual threads и проверить поведение приложения.
 
-- [ ] **Task 14.1 — Включить virtual threads**
+- [x] **Task 14.1 — Включить virtual threads**
 
 Configuration:
 
@@ -1175,28 +1175,28 @@ spring:
       enabled: true
 ```
 
-- [ ] **Task 14.2 — Проверить blocking operations**
+- [x] **Task 14.2 — Проверить blocking operations**
 
 Определить:
 
-- [ ] JPA calls;
-- [ ] Redis calls;
-- [ ] HTTP request lifecycle;
-- [ ] scheduled flush.
+- [x] JPA calls;
+- [x] Redis calls;
+- [x] HTTP request lifecycle;
+- [x] scheduled flush.
 
 Убедиться, что virtual threads не используются как способ скрыть проблемы с connection pool.
 
-- [ ] **Task 14.3 — Connection pool review**
+- [x] **Task 14.3 — Connection pool review**
 
 Проверить:
 
-- [ ] PostgreSQL pool size;
-- [ ] Redis connection model;
-- [ ] maximum concurrent DB access.
+- [x] PostgreSQL pool size;
+- [x] Redis connection model;
+- [x] maximum concurrent DB access.
 
 Нагрузка на виртуальные потоки не должна автоматически означать увеличение database connection pool.
 
-- [ ] **Task 14.4 — Benchmark comparison**
+- [x] **Task 14.4 — Benchmark comparison**
 
 Сделать локальное сравнение:
 
@@ -1208,11 +1208,11 @@ virtual threads ON
 
 Измерить:
 
-- [ ] latency;
-- [ ] throughput;
-- [ ] CPU;
-- [ ] memory;
-- [ ] DB saturation.
+- [x] latency;
+- [x] throughput;
+- [x] CPU;
+- [x] memory;
+- [x] DB saturation.
 
 ---
 

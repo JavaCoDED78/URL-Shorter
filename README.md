@@ -43,6 +43,37 @@ The service uses PostgreSQL as the source of truth, Redis for low-latency redire
 
 > **Versioning note:** pin exact dependency versions in Gradle and keep the README badge versions aligned with the actual build configuration.
 
+### Virtual threads (Sprint 14)
+
+Enabled via `spring.threads.virtual.enabled: true`. Verified by `VirtualThreadsIT`:
+
+- HTTP request lifecycle — one virtual thread per request (Tomcat);
+- `@Scheduled` click flush — runs on a virtual thread;
+- a 60-way concurrent burst does not inflate the server platform thread count.
+
+Blocking operations under virtual threads: JPA calls block on a Hikari checkout
+(pool pinned at **10** — cheap threads must not become a reason to widen the
+pool, see `ConnectionPoolIT`); Redis calls park the virtual thread on Lettuce's
+non-blocking Netty I/O.
+
+Local benchmark (cache-hit redirect, dev laptop, Python thread-pool client —
+`curl | xargs` was spawn-bound and useless above ~45 rps):
+
+| Scenario (workers × requests) | OFF: throughput / avg / p95 | ON: throughput / avg / p95 |
+|---|---|---|
+| 100 × 2000 | 4453 rps / 21 ms / 36 ms | 3279 rps / 29 ms / 66 ms |
+| 400 × 4000 | 4109 rps / 51 ms / 427 ms | 4217 rps / 50 ms / 420 ms |
+| CPU, 200 × 6000 | 4.0 s total | 3.0 s total |
+
+Memory at rest: ~337 MB (OFF) vs ~389 MB (ON, carrier + pinning arenas).
+DB saturation: identical — 10/10 Hikari connections in both modes.
+
+**Reading:** for the cache-hit redirect path both modes are within noise —
+the ceiling is Redis, not threads. Virtual threads buy headroom above the
+platform-thread limit without tuning `server.tomcat.threads.max`, at ~50 MB
+extra RSS. The PostgreSQL pool stays the hard concurrency ceiling for DB
+access in both modes.
+
 ## 🏛 Architecture
 
 ```text
