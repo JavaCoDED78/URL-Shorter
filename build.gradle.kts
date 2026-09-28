@@ -8,6 +8,12 @@ group = "com.javaded78"
 version = "0.0.1-SNAPSHOT"
 description = "URL-Shorter"
 
+// Security override (Sprint 22): Spring Boot 4.1.1 manages Tomcat 11.0.24,
+// which carries three CRITICAL CVEs fixed in 11.0.25 — pinned explicitly
+// until a Boot patch release manages it. Verified with Trivy (zero
+// CRITICAL findings on the production image).
+extra["tomcat.version"] = "11.0.25"
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)

@@ -1620,7 +1620,7 @@ redis
 
 Каждый push/PR должен автоматически проверять проект.
 
-- [ ] **Task 22.1 — GitHub Actions workflow**
+- [x] **Task 22.1 — GitHub Actions workflow**
 
 Создать:
 
@@ -1628,7 +1628,7 @@ redis
 .github/workflows/ci.yml
 ```
 
-- [ ] **Task 22.2 — Build stage**
+- [x] **Task 22.2 — Build stage**
 
 Проверять:
 
@@ -1636,27 +1636,27 @@ redis
 ./gradlew clean build
 ```
 
-- [ ] **Task 22.3 — Unit tests**
+- [x] **Task 22.3 — Unit tests**
 
 Запускать отдельно для быстрой диагностики.
 
-- [ ] **Task 22.4 — Integration tests**
+- [x] **Task 22.4 — Integration tests**
 
 CI runner должен иметь Docker capability.
 
 Проверить, что Testcontainers реально запускается.
 
-- [ ] **Task 22.5 — Architecture/security checks**
+- [x] **Task 22.5 — Architecture/security checks**
 
 Добавить при необходимости:
 
-- [ ] dependency vulnerability scan;
-- [ ] formatting/checkstyle;
-- [ ] static analysis.
+- [x] dependency vulnerability scan;
+- [x] formatting/checkstyle;
+- [x] static analysis.
 
 Не подключать десятки quality tools одновременно без практической причины.
 
-- [ ] **Task 22.6 — Docker build check**
+- [x] **Task 22.6 — Docker build check**
 
 CI должен собирать production image.
 
