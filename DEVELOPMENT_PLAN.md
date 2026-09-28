@@ -1388,7 +1388,7 @@ GET /{code}
 
 Определить поведение приложения при частичной недоступности Redis.
 
-- [ ] **Task 17.1 — Redis down during redirect**
+- [x] **Task 17.1 — Redis down during redirect**
 
 Проверить:
 
@@ -1399,24 +1399,24 @@ Redis unavailable
 
 или документировать, почему fallback не используется.
 
-- [ ] **Task 17.2 — Redis down during click increment**
+- [x] **Task 17.2 — Redis down during click increment**
 
 Определить:
 
-- [ ] redirect succeeds or fails;
-- [ ] click is lost or persisted elsewhere.
+- [x] redirect succeeds or fails;
+- [x] click is lost or persisted elsewhere.
 
 Выбрать policy.
 
-- [ ] **Task 17.3 — Redis down during flush**
+- [x] **Task 17.3 — Redis down during flush**
 
 Проверить:
 
-- [ ] scheduled task recovery;
-- [ ] no application crash;
-- [ ] retry behavior.
+- [x] scheduled task recovery;
+- [x] no application crash;
+- [x] retry behavior.
 
-- [ ] **Task 17.4 — Cache corruption**
+- [x] **Task 17.4 — Cache corruption**
 
 Смоделировать:
 
@@ -1426,10 +1426,10 @@ invalid JSON/value
 
 Проверить, что application:
 
-- [ ] не падает;
-- [ ] evicts bad cache entry;
-- [ ] читает PostgreSQL;
-- [ ] восстанавливает cache.
+- [x] не падает;
+- [x] evicts bad cache entry;
+- [x] читает PostgreSQL;
+- [x] восстанавливает cache.
 
 ---
 

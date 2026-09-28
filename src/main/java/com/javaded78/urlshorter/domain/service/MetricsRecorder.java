@@ -31,6 +31,7 @@ public class MetricsRecorder {
     private final Counter cacheHit;
     private final Counter cacheMiss;
     private final Counter clicksIncremented;
+    private final Counter clicksIncrementFailed;
     private final Counter clicksFlushed;
     private final Counter clicksFlushFailed;
 
@@ -47,6 +48,7 @@ public class MetricsRecorder {
         cacheHit = registry.counter("cache.hit");
         cacheMiss = registry.counter("cache.miss");
         clicksIncremented = registry.counter("clicks.incremented");
+        clicksIncrementFailed = registry.counter("clicks.increment.failed");
         clicksFlushed = registry.counter("clicks.flushed");
         clicksFlushFailed = registry.counter("clicks.flush.failed");
 
@@ -85,6 +87,11 @@ public class MetricsRecorder {
 
     public void clickIncremented() {
         clicksIncremented.increment();
+    }
+
+    /** A click could not be counted because Redis was unavailable (17.2). */
+    public void clickIncrementFailed() {
+        clicksIncrementFailed.increment();
     }
 
     public void clicksFlushed(long count) {

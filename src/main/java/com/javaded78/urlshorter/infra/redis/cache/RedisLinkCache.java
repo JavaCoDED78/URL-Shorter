@@ -14,6 +14,7 @@ import com.javaded78.urlshorter.config.ShortenerProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,10 @@ import org.springframework.stereotype.Component;
  *
  * <p>Uses a dedicated {@link ObjectMapper} rather than the web one: cache
  * serialization must not depend on HTTP message-converter configuration.
+ *
+ * <p>Redis unavailability degrades the cache to a pass-through (Task 17.1):
+ * reads miss, writes are skipped, evictions are skipped — every access then
+ * flows through PostgreSQL, which remains the source of truth.
  */
 @Component
 public class RedisLinkCache implements LinkCache {
@@ -58,7 +63,16 @@ public class RedisLinkCache implements LinkCache {
 
     @Override
     public Optional<CachedLink> get(String code) {
-        String json = redis.opsForValue().get(key(code));
+        final String key = key(code);
+        final String json;
+        try {
+            json = redis.opsForValue().get(key);
+        } catch (DataAccessException ex) {
+            // Redis down: degrade to a miss so the caller falls back to
+            // PostgreSQL (Task 17.1).
+            log.warn("redis unavailable on cache read for {}: {}", key, ex.toString());
+            return Optional.empty();
+        }
         if (json == null) {
             return Optional.empty();
         }
@@ -67,8 +81,8 @@ public class RedisLinkCache implements LinkCache {
         } catch (JsonProcessingException | RuntimeException ex) {
             // Corrupted entry: evict and fall back to the database rather
             // than failing the redirect (Task 6.5).
-            log.warn("evicting unreadable cache entry {}: {}", key(code), ex.toString());
-            redis.delete(key(code));
+            log.warn("evicting unreadable cache entry {}: {}", key, ex.toString());
+            evict(code);
             return Optional.empty();
         }
     }
@@ -81,13 +95,22 @@ public class RedisLinkCache implements LinkCache {
                         redis.opsForValue().set(key(link.code()), objectMapper.writeValueAsString(link), ttl);
                     } catch (JsonProcessingException ex) {
                         throw new IllegalStateException("failed to serialize cached link " + link.code(), ex);
+                    } catch (DataAccessException ex) {
+                        // Redis down: the redirect itself is unaffected —
+                        // PostgreSQL serves the reads (Task 17.1).
+                        log.warn("redis unavailable on cache write for {}: {}",
+                                key(link.code()), ex.toString());
                     }
                 });
     }
 
     @Override
     public void evict(String code) {
-        redis.delete(key(code));
+        try {
+            redis.delete(key(code));
+        } catch (DataAccessException ex) {
+            log.warn("redis unavailable on cache evict for {}: {}", key(code), ex.toString());
+        }
     }
 
     static String key(String code) {

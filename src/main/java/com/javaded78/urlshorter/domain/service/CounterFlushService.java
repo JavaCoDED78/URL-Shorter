@@ -43,7 +43,17 @@ public class CounterFlushService {
      *                               click is lost silently
      */
     public int flush() {
-        Map<String, Long> drained = clickCounter.drainAll();
+        Map<String, Long> drained;
+        try {
+            drained = clickCounter.drainAll();
+        } catch (RuntimeException ex) {
+            // Redis down mid-drain (Task 17.3): nothing was drained, so
+            // counters are still intact in Redis — count the failure and let
+            // the scheduler retry next cycle.
+            metrics.clickFlushFailed();
+            log.error("click drain failed; counters remain in Redis, retry next cycle", ex);
+            throw new IllegalStateException("click drain failed; counters remain in Redis", ex);
+        }
         if (drained.isEmpty()) {
             return 0;
         }

@@ -18,11 +18,19 @@ import org.springframework.stereotype.Component;
  * <p>Drain uses SCAN (not blocking KEYS) to find counters and executes the
  * {@link CounterDrainScript} per key — read-and-reset happens atomically
  * inside one Lua run.
+ *
+ * <p>Increment failure policy (Task 17.2): redirect availability wins. If
+ * Redis is unavailable the click is dropped and counted via the
+ * {@code clicks.increment.failed} metric — click counting is best-effort
+ * analytics, the redirect itself is the product.
  */
 @Component
 public class RedisClickCounter implements ClickCounter {
 
     static final String KEY_PREFIX = "clicks:";
+
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(RedisClickCounter.class);
 
     private final StringRedisTemplate redis;
     private final CounterDrainScript drainScript;
@@ -37,8 +45,15 @@ public class RedisClickCounter implements ClickCounter {
 
     @Override
     public void increment(String code) {
-        redis.opsForValue().increment(key(code));
-        metrics.clickIncremented();
+        try {
+            redis.opsForValue().increment(key(code));
+            metrics.clickIncremented();
+        } catch (org.springframework.dao.DataAccessException ex) {
+            // Task 17.2: the redirect must survive a dead Redis; the click is
+            // dropped and counted so the loss is observable.
+            metrics.clickIncrementFailed();
+            log.warn("click counter unavailable for {} — click dropped: {}", key(code), ex.toString());
+        }
     }
 
     @Override

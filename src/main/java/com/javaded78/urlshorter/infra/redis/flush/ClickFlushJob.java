@@ -30,9 +30,11 @@ public class ClickFlushJob {
     public void flushClicks() {
         try {
             flushService.flush();
-        } catch (IllegalStateException ex) {
-            // flush() already restored drained counters; keep the scheduler alive
-            log.warn("scheduled click flush failed; counters restored to Redis", ex);
+        } catch (RuntimeException ex) {
+            // flush() counts the failure via metrics and either restored the
+            // drained counters or left them untouched in Redis — keep the
+            // scheduler alive; the next cycle retries (Task 17.3).
+            log.warn("scheduled click flush failed; will retry next cycle", ex);
         }
     }
 }
