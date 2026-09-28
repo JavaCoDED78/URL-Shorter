@@ -1323,7 +1323,7 @@ redirect × N
 
 Проверить систему под конкурентной нагрузкой.
 
-- [ ] **Task 16.1 — Concurrent click test**
+- [x] **Task 16.1 — Concurrent click test**
 
 Запустить:
 
@@ -1337,7 +1337,7 @@ redirect × N
 successful redirects == 10,000
 ```
 
-- [ ] **Task 16.2 — Counter exactness**
+- [x] **Task 16.2 — Counter exactness**
 
 После flush проверить:
 
@@ -1345,17 +1345,17 @@ successful redirects == 10,000
 DB count == 10,000
 ```
 
-- [ ] **Task 16.3 — Concurrent create test**
+- [x] **Task 16.3 — Concurrent create test**
 
 Создать большое число links параллельно.
 
 Проверить:
 
-- [ ] отсутствие duplicate codes;
-- [ ] отсутствие потерянных successful requests;
-- [ ] bounded collision retries.
+- [x] отсутствие duplicate codes;
+- [x] отсутствие потерянных successful requests;
+- [x] bounded collision retries.
 
-- [ ] **Task 16.4 — Concurrent alias test**
+- [x] **Task 16.4 — Concurrent alias test**
 
 100 concurrent requests с одним alias.
 
@@ -1366,7 +1366,7 @@ DB count == 10,000
 N-1 conflicts
 ```
 
-- [ ] **Task 16.5 — Delete vs redirect race**
+- [x] **Task 16.5 — Delete vs redirect race**
 
 Запустить одновременно:
 
