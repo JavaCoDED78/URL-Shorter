@@ -1479,7 +1479,7 @@ DB DOWN
 
 Закрыть неочевидные проблемы cache-aside.
 
-- [ ] **Task 19.1 — Cache TTL меньше business TTL**
+- [x] **Task 19.1 — Cache TTL меньше business TTL**
 
 Проверить:
 
@@ -1489,7 +1489,7 @@ cache expires first
 → cache repopulate
 ```
 
-- [ ] **Task 19.2 — Business TTL меньше cache TTL**
+- [x] **Task 19.2 — Business TTL меньше cache TTL**
 
 Проверить:
 
@@ -1500,7 +1500,7 @@ link expires
 → no redirect
 ```
 
-- [ ] **Task 19.3 — Cache deletion race**
+- [x] **Task 19.3 — Cache deletion race**
 
 Проверить sequence:
 
@@ -1512,7 +1512,7 @@ EVICT cache
 
 зафиксировать допустимую race semantics.
 
-- [ ] **Task 19.4 — Cache serialization compatibility**
+- [x] **Task 19.4 — Cache serialization compatibility**
 
 Определить версионирование serialized object.
 
