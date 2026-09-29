@@ -74,6 +74,49 @@ platform-thread limit without tuning `server.tomcat.threads.max`, at ~50 MB
 extra RSS. The PostgreSQL pool stays the hard concurrency ceiling for DB
 access in both modes.
 
+### Performance baseline (Sprint 23)
+
+Measured with k6 (scripts in `benchmarks/`) against the dev stack on a
+desktop machine — an anchor for future comparisons, not an absolute claim.
+All runs: **0% errors**.
+
+Per-endpoint (30 s each; k6 `http_req_duration`; RPS = requests/30 s):
+
+| Scenario | RPS | avg | p95 | Notes |
+|---|---|---|---|---|
+| Redirect — Redis hit | ~5 090 | 9.6 ms | 13.0 ms | 152 779 requests |
+| Redirect — PostgreSQL miss | ~3 210 | 9.1 ms | 13.1 ms | 96 327 requests, uncached pool |
+| Create link | ~1 267 | 23.5 ms | 32.2 ms | write path + Hikari checkout |
+| Stats | ~4 954 | 9.7 ms | 14.5 ms | PostgreSQL read |
+| Delete | ~1 244 calls/s | 15.9 ms | 21.5 ms | create + delete per iteration |
+| 10 000 concurrent redirects | ~2 999 | 2.4 ms | 4.6 ms | 12 001 requests / 4 s, 0 dropped |
+
+Full load profile (warm-up → sustained → 500-VU spike → cool-down,
+4 min): **1 104 481 requests**, 4 602 rps avg, p95 86 ms, 0 failures.
+Resource ceilings observed during the profile: CPU ≈ 2.4 cores avg /
+3.6 cores at the spike; RSS ≈ 523 MB avg / 809 MB peak; PostgreSQL
+connections peaked at 11 (10-connection pool + the monitoring session);
+Redis traffic ≈ 2 ops per redirect (GET + INCR) — measured 24 040 Redis
+commands for 12 001 spike requests, exactly consistent.
+
+Flush interval comparison (60 s, 50 VUs, cache-hit redirect):
+
+| `SHORTENER_FLUSH_INTERVAL` | Requests | p95 | Flushes/min |
+|---|---|---|---|
+| PT1S | 335 438 | 12.50 ms | 53 |
+| PT5S (default) | 352 193 | 12.04 ms | 12 |
+| PT10S | 342 727 | 12.46 ms | 6 |
+
+Flush runs off the request path — redirect latency is identical within
+noise at every interval; the interval only trades click-count freshness
+against PostgreSQL write frequency. The **default stays PT5S**: sub-second
+stats lag is not a stated requirement, and 5 s already bounds the loss
+window (Sprint 8) at a quarter of the write load of PT1S.
+
+Reproduce: `python benchmarks/prepare.py` then
+`k6 run -e SCENARIO=<hit|miss|create|stats|delete|spike10k> benchmarks/k6-scenario.js`
+or `k6 run benchmarks/k6-main.js` for the full profile.
+
 ## 🏛 Architecture
 
 ```text

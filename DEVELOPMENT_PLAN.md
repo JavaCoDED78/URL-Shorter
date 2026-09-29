@@ -1668,7 +1668,7 @@ CI должен собирать production image.
 
 Получить измеримые характеристики системы до оптимизации.
 
-- [ ] **Task 23.1 — Определить benchmark scenarios**
+- [x] **Task 23.1 — Определить benchmark scenarios**
 
 Минимум:
 
@@ -1681,21 +1681,21 @@ delete
 10k concurrent redirects
 ```
 
-- [ ] **Task 23.2 — Определить метрики**
+- [x] **Task 23.2 — Определить метрики**
 
 Собирать:
 
-- [ ] RPS;
-- [ ] p50;
-- [ ] p95;
-- [ ] p99;
-- [ ] error rate;
-- [ ] CPU;
-- [ ] memory;
-- [ ] Redis ops;
-- [ ] PostgreSQL connections.
+- [x] RPS;
+- [x] p50;
+- [x] p95;
+- [x] p99;
+- [x] error rate;
+- [x] CPU;
+- [x] memory;
+- [x] Redis ops;
+- [x] PostgreSQL connections.
 
-- [ ] **Task 23.3 — Load test**
+- [x] **Task 23.3 — Load test**
 
 Использовать k6.
 
@@ -1708,7 +1708,7 @@ warm-up
 → cool-down
 ```
 
-- [ ] **Task 23.4 — Cache hit benchmark**
+- [x] **Task 23.4 — Cache hit benchmark**
 
 Сравнить:
 
@@ -1718,13 +1718,13 @@ vs
 PostgreSQL MISS
 ```
 
-- [ ] **Task 23.5 — Counter flush benchmark**
+- [x] **Task 23.5 — Counter flush benchmark**
 
 Измерить влияние:
 
-- [ ] flush every 1s;
-- [ ] 5s;
-- [ ] 10s.
+- [x] flush every 1s;
+- [x] 5s;
+- [x] 10s.
 
 Не менять default только на основании synthetic benchmark — решение должно соответствовать требованиям точности и latency.
 
