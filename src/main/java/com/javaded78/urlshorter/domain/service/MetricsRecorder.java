@@ -12,13 +12,19 @@ import org.springframework.stereotype.Component;
  * timers behind typed methods, so application code never touches Micrometer
  * APIs directly.
  *
- * <p>Counters: {@code links.created}, {@code links.redirected},
- * {@code links.not_found}, {@code links.expired}, {@code links.deleted},
- * {@code cache.hit}, {@code cache.miss}, {@code clicks.incremented},
- * {@code clicks.flushed}, {@code clicks.flush.failed}.
+ * <p>Counters: {@code urlshorter.linksCreated}, {@code urlshorter.linksRedirected},
+ * {@code urlshorter.linksNotFound}, {@code urlshorter.linksExpired},
+ * {@code urlshorter.linksDeleted}, {@code urlshorter.cacheHit},
+ * {@code urlshorter.cacheMiss}, {@code urlshorter.clicksIncremented},
+ * {@code urlshorter.clicksFlushed}, {@code urlshorter.clicksFlushFailed},
+ * {@code urlshorter.clicksIncrementFailed}.
  *
- * <p>Timers: {@code redirect.duration}, {@code postgres.lookup.duration},
- * {@code redis.lookup.duration}.
+ * <p>Timers: {@code urlshorter.redirectDuration},
+ * {@code urlshorter.postgresLookupDuration}, {@code urlshorter.redisLookupDuration}.
+ *
+ * <p>The {@code urlshorter.} prefix is a Micrometer namespace separator that
+ * converts to underscore in Prometheus format
+ * (e.g. {@code urlshorter.linksCreated} → {@code urlshorter_linksCreated_total}).
  */
 @Component
 public class MetricsRecorder {
@@ -40,21 +46,21 @@ public class MetricsRecorder {
     private final Timer redisLookupDuration;
 
     public MetricsRecorder(MeterRegistry registry) {
-        linksCreated = registry.counter("links.created");
-        linksRedirected = registry.counter("links.redirected");
-        linksNotFound = registry.counter("links.not_found");
-        linksExpired = registry.counter("links.expired");
-        linksDeleted = registry.counter("links.deleted");
-        cacheHit = registry.counter("cache.hit");
-        cacheMiss = registry.counter("cache.miss");
-        clicksIncremented = registry.counter("clicks.incremented");
-        clicksIncrementFailed = registry.counter("clicks.increment.failed");
-        clicksFlushed = registry.counter("clicks.flushed");
-        clicksFlushFailed = registry.counter("clicks.flush.failed");
+        linksCreated = registry.counter("urlshorter.linksCreated");
+        linksRedirected = registry.counter("urlshorter.linksRedirected");
+        linksNotFound = registry.counter("urlshorter.linksNotFound");
+        linksExpired = registry.counter("urlshorter.linksExpired");
+        linksDeleted = registry.counter("urlshorter.linksDeleted");
+        cacheHit = registry.counter("urlshorter.cacheHit");
+        cacheMiss = registry.counter("urlshorter.cacheMiss");
+        clicksIncremented = registry.counter("urlshorter.clicksIncremented");
+        clicksIncrementFailed = registry.counter("urlshorter.clicksIncrementFailed");
+        clicksFlushed = registry.counter("urlshorter.clicksFlushed");
+        clicksFlushFailed = registry.counter("urlshorter.clicksFlushFailed");
 
-        redirectDuration = Timer.builder("redirect.duration").register(registry);
-        postgresLookupDuration = Timer.builder("postgres.lookup.duration").register(registry);
-        redisLookupDuration = Timer.builder("redis.lookup.duration").register(registry);
+        redirectDuration = Timer.builder("urlshorter.redirectDuration").register(registry);
+        postgresLookupDuration = Timer.builder("urlshorter.postgresLookupDuration").register(registry);
+        redisLookupDuration = Timer.builder("urlshorter.redisLookupDuration").register(registry);
     }
 
     public void linkCreated() {

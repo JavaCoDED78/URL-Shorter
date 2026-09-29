@@ -1,34 +1,36 @@
 # Observability Contract
 
-**Version:** 1.0.0 — Sprint 29, Task 29.1
+**Version:** 1.1.0 — Sprint 29, Task 29.2 (Prometheus format fix)
 **Status:** approved
 **Date:** 2026-09-29
 
 All business metrics are exposed through `MetricsRecorder` in `domain.service`.
 Every metric has a stable name, type, unit, and an explicit set of labels.
-Prometheus exposition via `/actuator/prometheus` follows Micrometer conventions
-(underscores replace dots in names, no high-cardinality labels).
+Prometheus exposition via `/actuator/prometheus` follows Micrometer conventions.
+The `urlshorter.` prefix is used as a Micrometer namespace separator, which gets
+converted to `_` in Prometheus format (e.g. `urlshorter.linksCreated` →
+`urlshorter_linksCreated_total`).
 
 ---
 
 ## 1. Business counters
 
 All counters are **monotonically increasing** `io.micrometer.core.instrument.Counter`.
-The Prometheus name replaces dots with underscores (e.g. `links_created_total`).
+Prometheus name is the Micrometer name plus the `_total` suffix for counters.
 
 | Metric name (Micrometer) | Prometheus name | Type | Unit | Labels | Semantics |
 |---|---|---|---|---|---|
-| `links.created` | `links_created_total` | counter | total | `application` | A short link was successfully created (both generated code and custom alias paths). |
-| `links.redirected` | `links_redirect_total` | counter | total | `application` | A valid, non-expired link was resolved and returned 302. One increment per redirect, regardless of cache hit or miss. |
-| `links.not_found` | `links_not_found_total` | counter | total | `application` | Redirect or details request returned 404 — no link found for the given code. |
-| `links.expired` | `links_expired_total` | counter | total | `application` | A redirect was attempted on a link whose `expiresAt` has passed (410 Gone). |
-| `links.deleted` | `links_deleted_total` | counter | total | `application` | A link was successfully deleted. |
-| `cache.hit` | `cache_hit_total` | counter | total | `application` | A redirect resolved the link from the Redis cache (cache-aside hit). |
-| `cache.miss` | `cache_miss_total` | counter | total | `application` | A redirect did not find the link in Redis and had to fall through to PostgreSQL. |
-| `clicks.incremented` | `clicks_incremented_total` | counter | total | `application` | A click counter was successfully incremented in Redis. |
-| `clicks.increment.failed` | `clicks_increment_failed_total` | counter | total | `application` | A click could not be counted because Redis was unavailable (best-effort analytics drop). |
-| `clicks.flushed` | `clicks_flushed_total` | counter | total | `application` | Total drained click count persisted to PostgreSQL. Each flush call increments by the sum of drained counters (task 8.4, `CounterFlushService`). |
-| `clicks.flush.failed` | `clicks_flush_failed_total` | counter | total | `application` | A flush cycle failed (either Redis drain or PostgreSQL batch update). |
+| `urlshorter.linksCreated` | `urlshorter_linksCreated_total` | counter | total | `application` | A short link was successfully created (both generated code and custom alias paths). |
+| `urlshorter.linksRedirected` | `urlshorter_linksRedirected_total` | counter | total | `application` | A valid, non-expired link was resolved and returned 302. One increment per redirect, regardless of cache hit or miss. |
+| `urlshorter.linksNotFound` | `urlshorter_linksNotFound_total` | counter | total | `application` | Redirect or details request returned 404 — no link found for the given code. |
+| `urlshorter.linksExpired` | `urlshorter_linksExpired_total` | counter | total | `application` | A redirect was attempted on a link whose `expiresAt` has passed (410 Gone). |
+| `urlshorter.linksDeleted` | `urlshorter_linksDeleted_total` | counter | total | `application` | A link was successfully deleted. |
+| `urlshorter.cacheHit` | `urlshorter_cacheHit_total` | counter | total | `application` | A redirect resolved the link from the Redis cache (cache-aside hit). |
+| `urlshorter.cacheMiss` | `urlshorter_cacheMiss_total` | counter | total | `application` | A redirect did not find the link in Redis and had to fall through to PostgreSQL. |
+| `urlshorter.clicksIncremented` | `urlshorter_clicksIncremented_total` | counter | total | `application` | A click counter was successfully incremented in Redis. |
+| `urlshorter.clicksIncrementFailed` | `urlshorter_clicksIncrementFailed_total` | counter | total | `application` | A click could not be counted because Redis was unavailable (best-effort analytics drop). |
+| `urlshorter.clicksFlushed` | `urlshorter_clicksFlushed_total` | counter | total | `application` | Total drained click count persisted to PostgreSQL. Each flush call increments by the sum of drained counters (task 8.4, `CounterFlushService`). |
+| `urlshorter.clicksFlushFailed` | `urlshorter_clicksFlushFailed_total` | counter | total | `application` | A flush cycle failed (either Redis drain or PostgreSQL batch update). |
 
 ---
 
@@ -38,9 +40,9 @@ All timers use Micrometer `Timer` (prometheus: `*_seconds` bucket histogram + `*
 
 | Metric name (Micrometer) | Prometheus name | Unit | Labels | Semantics |
 |---|---|---|---|---|
-| `redirect.duration` | `redirect_duration_seconds` | seconds | `application` | End-to-end time for a redirect resolution (controller → `LinkService.resolve`), including cache, DB, and Redis lookups. |
-| `postgres.lookup.duration` | `postgres_lookup_duration_seconds` | seconds | `application` | Time spent in a PostgreSQL lookup during a redirect cache-miss path. |
-| `redis.lookup.duration` | `redis_lookup_duration_seconds` | seconds | `application` | Time spent in a Redis cache-aside lookup during a redirect. |
+| `urlshorter.redirectDuration` | `urlshorter_redirectDuration_seconds` | seconds | `application` | End-to-end time for a redirect resolution (controller → `LinkService.resolve`), including cache, DB, and Redis lookups. |
+| `urlshorter.postgresLookupDuration` | `urlshorter_postgresLookupDuration_seconds` | seconds | `application` | Time spent in a PostgreSQL lookup during a redirect cache-miss path. |
+| `urlshorter.redisLookupDuration` | `urlshorter_redisLookupDuration_seconds` | seconds | `application` | Time spent in a Redis cache-aside lookup during a redirect. |
 
 ---
 

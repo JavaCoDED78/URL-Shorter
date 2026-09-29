@@ -46,6 +46,9 @@ dependencies {
     // --- Observability: health / connectivity checks ---
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
+    // --- Observability: Prometheus exposition (Sprint 29) ---
+    implementation("io.micrometer:micrometer-registry-prometheus")
+
     // --- Code generation: Lombok + config metadata ---
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

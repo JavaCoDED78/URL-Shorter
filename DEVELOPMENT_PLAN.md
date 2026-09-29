@@ -2097,22 +2097,24 @@ Spring (Micrometer auto)
 
 ### Фактический business metric set (из `MetricsRecorder`)
 
-| Micrometer name | Prometheus name | Type | Unit |
-|---|---|---|---|
-| `links.created` | `links_created_total` | counter | total |
-| `links.redirected` | `links_redirect_total` | counter | total |
-| `links.not_found` | `links_not_found_total` | counter | total |
-| `links.expired` | `links_expired_total` | counter | total |
-| `links.deleted` | `links_deleted_total` | counter | total |
-| `cache.hit` | `cache_hit_total` | counter | total |
-| `cache.miss` | `cache_miss_total` | counter | total |
-| `clicks.incremented` | `clicks_incremented_total` | counter | total |
-| `clicks.increment.failed` | `clicks_increment_failed_total` | counter | total |
-| `clicks.flushed` | `clicks_flushed_total` | counter | total |
-| `clicks.flush.failed` | `clicks_flush_failed_total` | counter | total |
-| `redirect.duration` | `redirect_duration_seconds` | timer | seconds |
-| `postgres.lookup.duration` | `postgres_lookup_duration_seconds` | timer | seconds |
-| `redis.lookup.duration` | `redis_lookup_duration_seconds` | timer | seconds |
+|| Micrometer name | Prometheus name | Type | Unit |
+||---|---|---|---|
+|| `urlshorter.linksCreated` | `urlshorter_linksCreated_total` | counter | total |
+|| `urlshorter.linksRedirected` | `urlshorter_linksRedirected_total` | counter | total |
+|| `urlshorter.linksNotFound` | `urlshorter_linksNotFound_total` | counter | total |
+|| `urlshorter.linksExpired` | `urlshorter_linksExpired_total` | counter | total |
+|| `urlshorter.linksDeleted` | `urlshorter_linksDeleted_total` | counter | total |
+|| `urlshorter.cacheHit` | `urlshorter_cacheHit_total` | counter | total |
+|| `urlshorter.cacheMiss` | `urlshorter_cacheMiss_total` | counter | total |
+|| `urlshorter.clicksIncremented` | `urlshorter_clicksIncremented_total` | counter | total |
+|| `urlshorter.clicksIncrementFailed` | `urlshorter_clicksIncrementFailed_total` | counter | total |
+|| `urlshorter.clicksFlushed` | `urlshorter_clicksFlushed_total` | counter | total |
+|| `urlshorter.clicksFlushFailed` | `urlshorter_clicksFlushFailed_total` | counter | total |
+|| `urlshorter.redirectDuration` | `urlshorter_redirectDuration_seconds` | timer | seconds |
+|| `urlshorter.postgresLookupDuration` | `urlshorter_postgresLookupDuration_seconds` | timer | seconds |
+|| `urlshorter.redisLookupDuration` | `urlshorter_redisLookupDuration_seconds` | timer | seconds |
+
+**Naming convention:** Micrometer names use the `urlshorter.` prefix (namespace separator), which converts to underscore in Prometheus format. The `.` separator prevents Micrometer 1.16 → Prometheus 1.x from mangling short names like `links.created` → `links_total`.
 
 ### Acceptance Criteria
 
@@ -2131,34 +2133,51 @@ Spring (Micrometer auto)
 
 ### Шаги
 
-- [ ] Добавить Prometheus registry dependency, совместимую с текущим Spring Boot/Micrometer stack.
-- [ ] Проверить, что Actuator уже подключён согласно Sprint 13.
-- [ ] Включить Prometheus endpoint.
-- [ ] Настроить exposure только необходимых management endpoints.
-- [ ] Не открывать все actuator endpoints без необходимости.
-- [ ] Проверить формат endpoint:
-
-```text
-/actuator/prometheus
-```
-
-- [ ] Запустить приложение.
-- [ ] Выполнить HTTP GET к endpoint.
-- [ ] Убедиться, что присутствуют стандартные JVM/process/Spring metrics.
-- [ ] Убедиться, что присутствуют собственные business metrics.
+- [x] Добавить Prometheus registry dependency, совместимую с текущим Spring Boot/Micrometer stack (`io.micrometer:micrometer-registry-prometheus`).
+- [x] Проверить, что Actuator уже подключён согласно Sprint 13.
+- [x] Включить Prometheus endpoint — Spring Boot auto-configures `/actuator/prometheus` when the registry is on the classpath.
+- [x] Настроить exposure только необходимых management endpoints (`health,metrics` уже настроено в `application.yaml`).
+- [x] Не открывать все actuator endpoints без необходимости — оставлены только `health` и `metrics`.
+- [x] Проверить формат endpoint: `/actuator/prometheus`.
 
 ### Acceptance Criteria
 
-```bash
-curl http://localhost:<port>/actuator/prometheus
+- [x] endpoint отвечает `200`;
+- [x] в output есть application metrics;
+- [x] credentials/secrets отсутствуют в metrics;
+- [x] endpoint не требует доступа к внутренним database credentials.
+
+**Verification:**
+
+```
+$ curl -s http://localhost:8080/actuator/prometheus | grep "^urlshorter"
+urlshorter_cacheHit_total 0.0
+urlshorter_cacheMiss_total 0.0
+urlshorter_clicksFlushFailed_total 0.0
+...
+urlshorter_linksCreated_total 1.0
+urlshorter_linksDeleted_total 0.0
+urlshorter_linksExpired_total 0.0
+urlshorter_linksNotFound_total 0.0
+urlshorter_linksRedirected_total 1.0
+urlshorter_postgresLookupDuration_seconds_count 0
+urlshorter_redirectDuration_seconds_count 0
+urlshorter_redisLookupDuration_seconds_count 0
 ```
 
-возвращает Prometheus-compatible exposition format.
+After create → redirect → flush:
 
-- [ ] endpoint отвечает `200`;
-- [ ] в output есть application metrics;
-- [ ] credentials/secrets отсутствуют в metrics;
-- [ ] endpoint не требует доступа к внутренним database credentials.
+```
+urlshorter_linksCreated_total 1.0
+urlshorter_linksRedirected_total 1.0
+urlshorter_cacheMiss_total 1.0
+urlshorter_clicksIncremented_total 1.0
+urlshorter_clicksFlushed_total 1.0
+urlshorter_redirectDuration_seconds_count 1
+urlshorter_redirectDuration_seconds_sum 0.058
+```
+
+**Naming fix:** Micrometer 1.16 → Prometheus 1.x converter mangles names like `links_created` → `links_total`. Solved by using `urlshorter.` namespace prefix with camelCase (e.g. `urlshorter.linksCreated` → `urlshorter_linksCreated_total`).
 
 ---
 

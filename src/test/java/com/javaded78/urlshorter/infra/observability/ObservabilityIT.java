@@ -36,7 +36,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
  * Actuator contract (Tasks 13.1–13.3): liveness/readiness/application
  * health with PostgreSQL and Redis dependency checks, business counters
  * (links.*, cache.*, clicks.*) and latency timers
- * (redirect.duration, postgres.lookup.duration, redis.lookup.duration).
+ * (links_redirected, links_not_found, links_expired, etc.) and latency
+ * timers (redirect_duration, postgres_lookup_duration, redis_lookup_duration).
  * The scheduled flush is disabled; the test controls flushing explicitly.
  */
 @SpringBootTest(
@@ -85,22 +86,22 @@ class ObservabilityIT {
 
     @Test
     void businessCountersAndTimersAreRecorded() throws Exception {
-        long createdBefore = metric("links.created");
+        long createdBefore = metric("urlshorter.linksCreated");
         post(Map.of("originalUrl", "https://example.com", "alias", "obs01"));
 
         redirect("obs01");           // cache miss
         redirect("obs01");           // cache hit
         redirect("no-such-code");    // not found
 
-        assertThat(metric("links.created")).isEqualTo(createdBefore + 1);
-        assertThat(metric("links.redirected")).isGreaterThanOrEqualTo(2);
-        assertThat(metric("links.not_found")).isGreaterThanOrEqualTo(1);
-        assertThat(metric("cache.miss")).isGreaterThanOrEqualTo(1);
-        assertThat(metric("cache.hit")).isGreaterThanOrEqualTo(1);
-        assertThat(metric("clicks.incremented")).isGreaterThanOrEqualTo(2);
-        assertThat(metric("redirect.duration")).isGreaterThanOrEqualTo(2);
-        assertThat(metric("redis.lookup.duration")).isGreaterThanOrEqualTo(1);
-        assertThat(metric("postgres.lookup.duration")).isGreaterThanOrEqualTo(1);
+        assertThat(metric("urlshorter.linksCreated")).isEqualTo(createdBefore + 1);
+        assertThat(metric("urlshorter.linksRedirected")).isGreaterThanOrEqualTo(2);
+        assertThat(metric("urlshorter.linksNotFound")).isGreaterThanOrEqualTo(1);
+        assertThat(metric("urlshorter.cacheMiss")).isGreaterThanOrEqualTo(1);
+        assertThat(metric("urlshorter.cacheHit")).isGreaterThanOrEqualTo(1);
+        assertThat(metric("urlshorter.clicksIncremented")).isGreaterThanOrEqualTo(2);
+        assertThat(metric("urlshorter.redirectDuration")).isGreaterThanOrEqualTo(2);
+        assertThat(metric("urlshorter.redisLookupDuration")).isGreaterThanOrEqualTo(1);
+        assertThat(metric("urlshorter.postgresLookupDuration")).isGreaterThanOrEqualTo(1);
     }
 
     @Test
@@ -113,8 +114,8 @@ class ObservabilityIT {
         post(Map.of("originalUrl", "https://example.com", "alias", "obs03"));
         delete("obs03");
 
-        assertThat(metric("links.expired")).isGreaterThanOrEqualTo(1);
-        assertThat(metric("links.deleted")).isGreaterThanOrEqualTo(1);
+        assertThat(metric("urlshorter.linksExpired")).isGreaterThanOrEqualTo(1);
+        assertThat(metric("urlshorter.linksDeleted")).isGreaterThanOrEqualTo(1);
     }
 
     @Test
@@ -125,13 +126,13 @@ class ObservabilityIT {
         redirect("obs04");
 
         flushService.flush();
-        assertThat(metric("clicks.flushed")).isGreaterThanOrEqualTo(3);
+        assertThat(metric("urlshorter.clicksFlushed")).isGreaterThanOrEqualTo(3);
 
         doThrow(new DataAccessException("db down") {
         }).when(repository).batchIncrementClickCounts(any(), any());
         redirect("obs04");
         assertThatThrownBy(flushService::flush).isNotNull();
-        assertThat(metric("clicks.flush.failed")).isEqualTo(1);
+        assertThat(metric("urlshorter.clicksFlushFailed")).isEqualTo(1);
     }
 
     private JsonNode health(String group) throws Exception {
