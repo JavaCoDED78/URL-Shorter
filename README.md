@@ -11,16 +11,19 @@ The service uses PostgreSQL as the source of truth, Redis for low-latency redire
 
 ## ✨ Features
 
-- **URL shortening** with a random 7-character Base62 code.
+- **URL shortening** with a random 7-character Base62 code (configurable via `SHORTENER_CODE_LENGTH`).
+- **Case-insensitive codes**: `GET /AbC1234` resolves the same link as `abc1234`.
 - **Custom aliases**, for example `/my-link`.
 - **Link expiration (TTL)** with `expiresAt`.
-- **Cache-aside redirects**: hot links are served from Redis without a PostgreSQL query.
-- **Click buffering in Redis** using atomic `HINCRBY`.
-- **Atomic click flush** to PostgreSQL every 5 seconds using a Redis Lua script.
+- **Cache-aside redirects**: hot links are served from Redis without a PostgreSQL query; the cached value carries `expiresAt`, so expiry is always re-checked on a hit.
+- **Click buffering in Redis** with atomic `INCR`, flushed to PostgreSQL every 5 seconds by a Lua script (`GET`+`DEL` atomic — no lost increments).
+- **Stats without flush lag**: `clickCount` = persisted PostgreSQL count + pending Redis counter.
+- **Graceful infrastructure degradation**: a PostgreSQL outage answers create/miss lookups with a fast `503` (bounded by a 5 s pool timeout) while Redis cache hits keep redirecting; a failed flush restores counters instead of losing clicks.
+- **Request size limit**: oversized bodies are rejected with `413` before parsing.
 - **RFC 9457 error responses** based on Spring's `ProblemDetail`.
 - **OpenAPI 3 documentation** with interactive Swagger UI.
 - **Java virtual threads** enabled through a single Spring Boot property.
-- **Integration testing with Testcontainers** against real PostgreSQL and Redis.
+- **Integration testing with Testcontainers** against real PostgreSQL and Redis, including live failure injection (stopping the real containers).
 - **One-command local startup** using Docker Compose.
 
 ## 🛠 Tech Stack
@@ -179,7 +182,7 @@ failure leaves counters intact and surfaces as `clicks.flush.failed`
                                              │
                          ┌───────────────────┴───────────────────┐
                          │                                       │
-                     Cache-aside                              HINCRBY
+                     Cache-aside                                INCR
                          │                                       │
                          ▼                                       ▼
                 ┌─────────────────┐                    ┌─────────────────┐
@@ -256,43 +259,54 @@ The cached representation contains `expiresAt`, so an expired link is not accide
 Redirect request
       │
       ▼
-Redis HINCRBY
+Redis INCR
       │
       │ every 5 seconds
       ▼
 Lua script
-(HGET + reset atomically)
+(GET + DEL atomically)
       │
       ▼
 Batch UPDATE PostgreSQL
 ```
 
-The Lua script prevents the classic `HGETALL + DEL` race where increments arriving between the two commands can be lost.
+The Lua script prevents the classic read-then-delete race where increments
+arriving between the two commands can be lost. The flush discovers counters
+by non-blocking `SCAN` (never `KEYS`) and batches the persistence as one
+`unnest` `UPDATE` — measured ~4× faster than per-click updates.
 
 ## 📁 Project Structure
 
 ```text
-src/main/java/com/example/shortener/
+src/main/java/com/javaded78/urlshorter/
 ├── api/
-│   ├── controller/       # REST endpoints
+│   ├── controller/       # REST endpoints (thin: validate → service → DTO)
 │   ├── dto/              # request/response DTOs
 │   └── error/            # ProblemDetail / exception handling
 │
 ├── domain/
-│   ├── model/            # domain objects
-│   ├── repository/       # persistence ports/repositories
+│   ├── model/            # domain objects (no Redis/JPA specifics)
+│   ├── cache/            # cache port: CachedLink (stable wire format) + LinkCache
+│   ├── counter/          # counter port: ClickCounter (no Redis types in signatures)
+│   ├── repository/       # persistence port (Spring Data repository = JPA boundary)
 │   └── service/          # application/domain services
 │
 ├── infra/
+│   ├── persistence/      # JPA entity, LinkRepository implementation concerns
 │   └── redis/
-│       ├── cache/        # Redis cache implementation
-│       ├── counter/      # click counters
+│       ├── cache/        # Redis cache implementation (RedisLinkCache)
+│       ├── counter/      # Redis click counters (RedisClickCounter)
 │       ├── script/       # Lua scripts
 │       └── flush/        # scheduled flush job
 │
-└── config/
-    └── ...               # application configuration
+└── config/               # properties, filters, OpenAPI, startup diagnostics
 ```
+
+The service layer talks to Redis only through the `domain/cache` and
+`domain/counter` ports — never through Redis command details. The
+`domain/repository` port is a Spring Data repository, which is the
+deliberate JPA boundary of the domain (see
+[`docs/adr/`](docs/adr/) for the recorded decisions).
 
 ## 🚀 Quick Start
 
@@ -332,6 +346,9 @@ Or start the application directly from the IDE.
 
 Flyway migrations are applied automatically during application startup.
 
+See [DEVELOPMENT.md](DEVELOPMENT.md) for the full developer guide (IDE
+setup, debugging, Redis/PostgreSQL inspection, common failures, benchmarks).
+
 ## 📡 API
 
 The management API is versioned by URL path: the current major version is
@@ -360,16 +377,65 @@ curl -X POST http://localhost:8080/api/v1/links \
   }'
 ```
 
-Example response:
+Response `201 Created`:
 
 ```json
 {
   "code": "aB3xK92",
   "originalUrl": "https://example.com/very/long/path",
-  "shortUrl": "http://localhost:8080/aB3xK92",
-  "clickCount": 0,
   "expiresAt": "2026-12-31T23:59:59Z",
+  "clickCount": 0,
   "createdAt": "2026-01-15T10:15:30Z"
+}
+```
+
+`expiresAt` is optional — omit it (or pass `null`) for a link that never
+expires. A custom alias can be requested with `"alias": "my-link"`;
+`code` in the response is the alias. Codes are case-insensitive.
+
+Error cases:
+
+```json
+// 400 — invalid URL or malformed request (detail carries the validator message)
+{
+  "type": "about:blank",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "URL scheme must be one of [http, https]: ftp://example.com",
+  "instance": "/api/v1/links"
+}
+```
+
+```json
+// 409 — generated code collision after bounded retries, or alias taken
+{
+  "type": "about:blank",
+  "title": "Conflict",
+  "status": 409,
+  "detail": "code already taken: my-link",
+  "instance": "/api/v1/links"
+}
+```
+
+```json
+// 413 — request body over the configured limit (default 16 KB)
+{
+  "type": "about:blank",
+  "title": "Payload Too Large",
+  "status": 413,
+  "detail": "request body exceeds the maximum of 16384 bytes",
+  "instance": "/api/v1/links"
+}
+```
+
+```json
+// 503 — PostgreSQL unavailable (bounded by a 5 s pool timeout)
+{
+  "type": "about:blank",
+  "title": "Service unavailable",
+  "status": 503,
+  "detail": "database temporarily unavailable",
+  "instance": "/api/v1/links"
 }
 ```
 
@@ -386,6 +452,39 @@ HTTP/1.1 302 Found
 Location: https://example.com/very/long/path
 ```
 
+Error cases:
+
+```json
+// 404 — unknown code
+{
+  "type": "about:blank",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "link not found: aB3xK92",
+  "instance": "/aB3xK92"
+}
+```
+
+```json
+// 410 — link existed but expired (also on cache hit; expiry is re-checked)
+{
+  "type": "about:blank",
+  "title": "Gone",
+  "status": 410,
+  "detail": "link expired: aB3xK92",
+  "instance": "/aB3xK92"
+}
+```
+
+### Get link details
+
+```bash
+curl http://localhost:8080/api/v1/links/aB3xK92
+```
+
+Response `200 OK` — same `LinkResponse` shape as create. Error case:
+`404` with the same ProblemDetail shape as the redirect's 404.
+
 ### Statistics
 
 ```bash
@@ -401,19 +500,23 @@ Example response:
 }
 ```
 
+`clickCount` is the persisted PostgreSQL count plus clicks still pending in
+Redis, so it is current without waiting for the next flush. Error case:
+`404` for an unknown code.
+
+### Delete
+
+```bash
+curl -i -X DELETE http://localhost:8080/api/v1/links/aB3xK92
+```
+
+Response: `204 No Content` with an empty body; the Redis cache entry is
+evicted immediately. Error case: `404` for an unknown code.
+
 ### Error response
 
 Errors use Spring's `ProblemDetail` representation following RFC 9457.
-
-```json
-{
-  "type": "about:blank",
-  "title": "Not Found",
-  "status": 404,
-  "detail": "Short link 'aB3xK92' not found",
-  "instance": "/aB3xK92"
-}
-```
+`type`, `title`, `status`, `detail` and `instance` are always present.
 
 ## 🧪 Testing
 
@@ -433,14 +536,20 @@ The test suite uses Testcontainers to run real PostgreSQL and Redis instances. D
 - **Integration tests**
   - create → redirect → stats
   - PostgreSQL persistence
-  - Redis cache interaction
+  - Redis cache interaction (hit/miss, TTL, wire-format forward compatibility)
   - expiration behavior
   - deletion and cache invalidation
+
+- **Failure injection (live, via Testcontainers)**
+  - Redis outage → graceful degradation, counters survive and recover
+  - PostgreSQL outage → fast `503` on create/miss, cache hits keep serving `302`, flush failure restores counters
 
 - **Error scenarios**
   - unknown code → `404`
   - expired link → `410`
   - taken custom alias → `409`
+  - oversized body → `413`
+  - database outage → `503`
 
 - **Cache behavior**
   - repeated redirect requests hit Redis
@@ -455,6 +564,10 @@ The test suite uses Testcontainers to run real PostgreSQL and Redis instances. D
   - 10,000 parallel clicks
   - final persisted count must equal the number of successful redirects
 
+CI runs the unit suites (`*Test`) and the full Testcontainers build as
+separate jobs, plus a Trivy scan of the application image
+(`.github/workflows/ci.yml`).
+
 ## ⚙️ Configuration
 
 The following environment variables are used by the application.
@@ -462,11 +575,22 @@ The following environment variables are used by the application.
 | Variable | Default | Description |
 |---|---|---|
 | `SERVER_PORT` | `8080` | Application HTTP port |
-| `SPRING_DATASOURCE_URL` | — | PostgreSQL JDBC URL |
-| `SPRING_DATA_REDIS_HOST` | `localhost` | Redis host |
-| `SHORTENER_CACHE_TTL` | `PT1H` | Redis TTL for cached links |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/urlshortener` | PostgreSQL JDBC URL |
+| `DB_USERNAME` | `postgres` | PostgreSQL user |
+| `DB_PASSWORD` | `postgres` | PostgreSQL password |
+| `REDIS_HOST` | `localhost` | Redis host |
+| `REDIS_PORT` | `6379` | Redis port |
+| `REDIS_TIMEOUT` | `2s` | Redis command timeout |
+| `SHORTENER_CODE_LENGTH` | `7` | Generated Base62 code length (1–11) |
+| `SHORTENER_URL_MAX_LENGTH` | `2048` | Maximum accepted original URL length |
+| `SHORTENER_ALIAS_MAX_LENGTH` | `64` | Maximum custom alias length |
+| `SHORTENER_MAX_COLLISION_RETRIES` | `5` | Bounded retries on generated-code collision |
+| `SHORTENER_CACHE_TTL` | `1h` | Redis TTL for cached links |
 | `SHORTENER_FLUSH_INTERVAL` | `PT5S` | Click counter flush interval |
-| `SHORTENER_CODE_LENGTH` | `7` | Generated Base62 code length |
+| `SHORTENER_MAX_PAYLOAD_SIZE` | `16KB` | Raw request body ceiling |
+
+All values also follow Spring relaxed binding — e.g. `SPRING_DATASOURCE_URL`
+overrides `DB_URL` the same way `spring.datasource.url` would.
 
 ### Virtual threads
 
@@ -542,6 +666,8 @@ Recommended application-level error categories include:
 | Short code or alias already exists | `409` |
 | Link does not exist | `404` |
 | Link exists but has expired | `410` |
+| Request body over the size limit | `413` |
+| Database temporarily unavailable | `503` |
 | Unexpected server failure | `500` |
 
 The exact `type`, `title`, and `detail` values should remain stable enough for clients to consume reliably.
@@ -593,32 +719,33 @@ docker compose -f docker-compose.dev.yml up -d
 
 2. GET /aB3xK92
    └─> Redis HIT
-       └─> Redis HINCRBY
+       └─> Redis INCR
            └─> 302 Redirect
 
 3. GET /aB3xK92
    └─> Redis HIT
-       └─> Redis HINCRBY
+       └─> Redis INCR
            └─> 302 Redirect
 
 4. Every 5 seconds
-   └─> Lua read+reset
+   └─> Lua GET+DEL (atomic)
        └─> PostgreSQL batch UPDATE
 
 5. GET /api/v1/links/aB3xK92/stats
-   └─> PostgreSQL / current persisted counter
+   └─> PostgreSQL count + pending Redis counter
 ```
 
 ## 🗺 Roadmap
 
 - [ ] Click analytics: user agent, referrer, country/device metadata
 - [ ] Daily click statistics and aggregation
-- [ ] Rate limiting for link creation using Bucket4j + Redis
+- [ ] Rate limiting for link creation: the `RateLimiter` port exists with a
+      no-op default — replace the bean with a Bucket4j + Redis implementation
 - [ ] Authentication and "my links"
 - [ ] QR code generation
 - [ ] GraalVM native image startup/memory comparison
-- [ ] k6 load tests for redirect throughput
-- [ ] Benchmark cache-hit vs cache-miss latency
+- [x] ~~k6 load tests for redirect throughput~~ — done (Sprint 23, see *Performance baseline*)
+- [x] ~~Benchmark cache-hit vs cache-miss latency~~ — done (Sprint 23/24)
 - [ ] Distributed deployment and horizontal scaling
 - [ ] Metrics dashboard with Prometheus + Grafana
 

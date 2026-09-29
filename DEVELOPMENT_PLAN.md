@@ -1881,19 +1881,19 @@ retry count
 
 Новый разработчик должен поднять проект без автора.
 
-- [ ] **Task 27.1 — Обновить README**
+- [x] **Task 27.1 — Обновить README**
 
 Проверить:
 
-- [ ] feature list;
-- [ ] architecture;
-- [ ] local startup;
-- [ ] Docker startup;
-- [ ] API;
-- [ ] testing;
-- [ ] configuration.
+- [x] feature list;
+- [x] architecture;
+- [x] local startup;
+- [x] Docker startup;
+- [x] API;
+- [x] testing;
+- [x] configuration.
 
-- [ ] **Task 27.2 — Добавить DEVELOPMENT.md**
+- [x] **Task 27.2 — Добавить DEVELOPMENT.md**
 
 Документировать:
 
@@ -1907,15 +1907,15 @@ PostgreSQL inspection
 common failures
 ```
 
-- [ ] **Task 27.3 — Добавить API examples**
+- [x] **Task 27.3 — Добавить API examples**
 
 Для каждого endpoint показать:
 
-- [ ] request;
-- [ ] response;
-- [ ] error case.
+- [x] request;
+- [x] response;
+- [x] error case.
 
-- [ ] **Task 27.4 — Добавить architecture decision records**
+- [x] **Task 27.4 — Добавить architecture decision records**
 
 Зафиксировать минимум:
 
