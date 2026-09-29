@@ -1,5 +1,8 @@
 package com.javaded78.urlshorter.infra.redis.cache;
 
+import com.javaded78.urlshorter.domain.cache.CachedLink;
+import com.javaded78.urlshorter.domain.cache.LinkCache;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;

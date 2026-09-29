@@ -3,7 +3,7 @@ package com.javaded78.urlshorter.domain.service;
 import java.util.Map;
 
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
-import com.javaded78.urlshorter.infra.redis.counter.ClickCounter;
+import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

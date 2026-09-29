@@ -4,8 +4,9 @@ import java.security.SecureRandom;
 import java.util.random.RandomGenerator;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import com.javaded78.urlshorter.config.ShortenerProperties;
 
 /**
  * Base62 code generator (Task 3.4 implementation).
@@ -26,9 +27,8 @@ public class Base62CodeGenerator implements CodeGenerator {
     private final long lowerBound;
 
     @Autowired
-    public Base62CodeGenerator(Base62Codec codec,
-            @Value("${shortener.code.length:7}") int codeLength) {
-        this(codec, new SecureRandom(), codeLength);
+    public Base62CodeGenerator(Base62Codec codec, ShortenerProperties properties) {
+        this(codec, new SecureRandom(), properties.code().length());
     }
 
     /** Package-visible for deterministic tests with a seeded generator. */

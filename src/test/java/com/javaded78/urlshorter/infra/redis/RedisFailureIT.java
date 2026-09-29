@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
-import com.javaded78.urlshorter.infra.redis.counter.ClickCounter;
+import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;

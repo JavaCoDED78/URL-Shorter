@@ -1,5 +1,7 @@
 package com.javaded78.urlshorter.infra.redis.cache;
 
+import com.javaded78.urlshorter.domain.cache.CachedLink;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -32,6 +34,7 @@ class RedisLinkCacheTest {
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(5),
             new ShortenerProperties.Cache(Duration.ofHours(1)),
+            new ShortenerProperties.Code(7),
             org.springframework.util.unit.DataSize.ofKilobytes(16));
 
     private final RedisLinkCache cache = new RedisLinkCache(redis, objectMapper, properties);

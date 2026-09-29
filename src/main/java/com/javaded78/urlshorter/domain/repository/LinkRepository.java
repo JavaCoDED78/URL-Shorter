@@ -10,7 +10,11 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Persistence operations for {@link LinkEntity}.
+ * Persistence operations for {@link LinkEntity} (Task 2.2). The interface
+ * lives in the domain; {@code LinkEntity} and the JPA mappings stay in
+ * {@code infra.persistence} — this import is the deliberate JPA boundary of
+ * the domain: the port is a Spring Data repository, so the domain already
+ * speaks JPA through it and the entity type appears in signatures.
  *
  * <p>Operation split (Task 2.4):
  * <ul>

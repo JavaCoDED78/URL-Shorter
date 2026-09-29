@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.domain.service.CounterFlushService;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
-import com.javaded78.urlshorter.infra.redis.counter.ClickCounter;
+import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;

@@ -1820,37 +1820,37 @@ clicks:{code}
 
 Перед production-ready milestone убрать накопленный технический долг.
 
-- [ ] **Task 26.1 — Controller review**
+- [x] **Task 26.1 — Controller review**
 
 Controller должен:
 
-- [ ] принимать request;
-- [ ] валидировать;
-- [ ] вызывать service;
-- [ ] формировать HTTP response.
+- [x] принимать request;
+- [x] валидировать;
+- [x] вызывать service;
+- [x] формировать HTTP response.
 
 Business logic в controller быть не должно.
 
-- [ ] **Task 26.2 — Service review**
+- [x] **Task 26.2 — Service review**
 
 Service должен координировать:
 
-- [ ] domain;
-- [ ] repository;
-- [ ] cache;
-- [ ] counter.
+- [x] domain;
+- [x] repository;
+- [x] cache;
+- [x] counter.
 
 Не смешивать HTTP concepts с persistence logic.
 
-- [ ] **Task 26.3 — Infrastructure boundary review**
+- [x] **Task 26.3 — Infrastructure boundary review**
 
 Проверить, что domain model не зависит от:
 
-- [ ] Redis classes;
-- [ ] Jackson annotations без необходимости;
-- [ ] JPA APIs без необходимости.
+- [x] Redis classes;
+- [x] Jackson annotations без необходимости;
+- [x] JPA APIs без необходимости.
 
-- [ ] **Task 26.4 — Configuration review**
+- [x] **Task 26.4 — Configuration review**
 
 Проверить, что magic numbers отсутствуют:
 
@@ -1864,14 +1864,14 @@ retry count
 
 должны быть конфигурируемыми или явно константными бизнес-правилами.
 
-- [ ] **Task 26.5 — Dead code cleanup**
+- [x] **Task 26.5 — Dead code cleanup**
 
 Удалить:
 
-- [ ] unused classes;
-- [ ] obsolete configs;
-- [ ] experimental code;
-- [ ] старые scripts.
+- [x] unused classes;
+- [x] obsolete configs;
+- [x] experimental code;
+- [x] старые scripts.
 
 ---
 

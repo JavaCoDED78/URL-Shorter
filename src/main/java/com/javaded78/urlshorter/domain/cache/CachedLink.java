@@ -1,4 +1,4 @@
-package com.javaded78.urlshorter.infra.redis.cache;
+package com.javaded78.urlshorter.domain.cache;
 
 import java.time.Instant;
 

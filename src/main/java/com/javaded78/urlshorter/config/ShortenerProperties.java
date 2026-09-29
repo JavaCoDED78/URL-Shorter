@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * to mirror the YAML structure.
  */
 @ConfigurationProperties(prefix = "shortener")
-public record ShortenerProperties(Url url, Alias alias, Create create, Cache cache,
+public record ShortenerProperties(Url url, Alias alias, Create create, Cache cache, Code code,
                                   org.springframework.util.unit.DataSize maxPayloadSize) {
 
     /**
@@ -41,5 +41,13 @@ public record ShortenerProperties(Url url, Alias alias, Create create, Cache cac
      *             this value and the remaining lifetime
      */
     public record Cache(java.time.Duration ttl) {
+    }
+
+    /**
+     * @param length  number of characters in generated Base62 codes;
+     *                bounded by {@code [1, 11]} — a {@code long} holds at
+     *                most 11 base62 digits
+     */
+    public record Code(int length) {
     }
 }

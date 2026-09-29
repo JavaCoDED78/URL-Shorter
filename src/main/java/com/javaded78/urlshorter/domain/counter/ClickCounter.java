@@ -1,4 +1,4 @@
-package com.javaded78.urlshorter.infra.redis.counter;
+package com.javaded78.urlshorter.domain.counter;
 
 import java.util.Map;
 

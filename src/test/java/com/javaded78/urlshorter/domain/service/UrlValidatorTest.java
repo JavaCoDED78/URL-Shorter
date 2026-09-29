@@ -17,6 +17,7 @@ class UrlValidatorTest {
             new ShortenerProperties.Alias(64, java.util.Set.of("api")),
             new ShortenerProperties.Create(5),
             new ShortenerProperties.Cache(java.time.Duration.ofHours(1)),
+            new ShortenerProperties.Code(7),
             org.springframework.util.unit.DataSize.ofKilobytes(16));
 
     private final UrlValidator validator = new UrlValidator(properties);

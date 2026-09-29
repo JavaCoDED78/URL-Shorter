@@ -27,15 +27,16 @@ class LinkServiceTest {
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(3),
             new ShortenerProperties.Cache(java.time.Duration.ofHours(1)),
+            new ShortenerProperties.Code(7),
             org.springframework.util.unit.DataSize.ofKilobytes(16));
 
     private final com.javaded78.urlshorter.domain.repository.LinkRepository repository =
             mock(com.javaded78.urlshorter.domain.repository.LinkRepository.class);
     private final CodeGenerator codeGenerator = mock(CodeGenerator.class);
-    private final com.javaded78.urlshorter.infra.redis.cache.LinkCache linkCache =
-            mock(com.javaded78.urlshorter.infra.redis.cache.LinkCache.class);
-    private final com.javaded78.urlshorter.infra.redis.counter.ClickCounter clickCounter =
-            mock(com.javaded78.urlshorter.infra.redis.counter.ClickCounter.class);
+    private final com.javaded78.urlshorter.domain.cache.LinkCache linkCache =
+            mock(com.javaded78.urlshorter.domain.cache.LinkCache.class);
+    private final com.javaded78.urlshorter.domain.counter.ClickCounter clickCounter =
+            mock(com.javaded78.urlshorter.domain.counter.ClickCounter.class);
 
     private final LinkService service = new LinkService(
             repository, codeGenerator, new UrlValidator(properties), new AliasValidator(properties),
@@ -188,7 +189,7 @@ class LinkServiceTest {
         com.javaded78.urlshorter.domain.model.ResolvedLink link = service.resolve("abc1234");
 
         assertThat(link.originalUrl()).isEqualTo("https://example.com");
-        verify(linkCache).put(new com.javaded78.urlshorter.infra.redis.cache.CachedLink(
+        verify(linkCache).put(new com.javaded78.urlshorter.domain.cache.CachedLink(
                 "abc1234", "https://example.com", entity.getExpiresAt()));
         verify(clickCounter).increment("abc1234");
     }
@@ -196,7 +197,7 @@ class LinkServiceTest {
     @Test
     void resolveCountsClickOnCacheHit() {
         when(linkCache.get("abc1234")).thenReturn(java.util.Optional.of(
-                new com.javaded78.urlshorter.infra.redis.cache.CachedLink(
+                new com.javaded78.urlshorter.domain.cache.CachedLink(
                         "abc1234", "https://cached.example", null)));
 
         service.resolve("abc1234");
@@ -215,7 +216,7 @@ class LinkServiceTest {
     @Test
     void resolveServesCacheHitWithoutTouchingDb() {
         when(linkCache.get("abc1234")).thenReturn(java.util.Optional.of(
-                new com.javaded78.urlshorter.infra.redis.cache.CachedLink(
+                new com.javaded78.urlshorter.domain.cache.CachedLink(
                         "abc1234", "https://cached.example", null)));
 
         com.javaded78.urlshorter.domain.model.ResolvedLink link = service.resolve("abc1234");
@@ -228,7 +229,7 @@ class LinkServiceTest {
     @Test
     void resolveThrowsGoneForExpiredCacheHit() {
         when(linkCache.get("abc1234")).thenReturn(java.util.Optional.of(
-                new com.javaded78.urlshorter.infra.redis.cache.CachedLink(
+                new com.javaded78.urlshorter.domain.cache.CachedLink(
                         "abc1234", "https://cached.example", Instant.now().minusSeconds(1))));
 
         assertThatThrownBy(() -> service.resolve("abc1234"))
@@ -259,7 +260,7 @@ class LinkServiceTest {
     @Test
     void resolveDoesNotCountClickForExpiredCacheHit() {
         when(linkCache.get("abc1234")).thenReturn(java.util.Optional.of(
-                new com.javaded78.urlshorter.infra.redis.cache.CachedLink(
+                new com.javaded78.urlshorter.domain.cache.CachedLink(
                         "abc1234", "https://cached.example", Instant.now().minusSeconds(1))));
 
         assertThatThrownBy(() -> service.resolve("abc1234"))

@@ -1,5 +1,7 @@
 package com.javaded78.urlshorter.infra.redis.counter;
 
+import com.javaded78.urlshorter.domain.counter.ClickCounter;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;

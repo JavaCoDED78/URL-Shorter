@@ -33,7 +33,7 @@ server:
 
 shortener:
   code:
-    length: 7
+    length: ${SHORTENER_CODE_LENGTH:7}
   url:
     max-length: ${SHORTENER_URL_MAX_LENGTH:2048}
     allowed-schemes: http,https

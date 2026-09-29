@@ -59,6 +59,8 @@ src/main/java/com/example/shortener/
 │   └── error/            # ProblemDetail / exception handling
 ├── domain/
 │   ├── model/            # domain objects (no Redis-specific fields here)
+│   ├── cache/            # cache port: CachedLink (stable wire format) + LinkCache
+│   ├── counter/          # counter port: ClickCounter (no Redis types in signatures)
 │   ├── repository/       # persistence ports/repositories
 │   └── service/          # application/domain services
 ├── infra/

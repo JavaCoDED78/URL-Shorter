@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.stream.IntStream;
 
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
-import com.javaded78.urlshorter.infra.redis.counter.ClickCounter;
+import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataAccessException;
