@@ -771,6 +771,11 @@ Keeping screenshots inside the repository is preferable to linking to temporary 
 
 MIT — see [`LICENSE`](LICENSE).
 
+## 📋 Changelog
+
+Release notes and the release verification record:
+[`CHANGELOG.md`](CHANGELOG.md).
+
 ## 👤 Project Status
 
 This repository is intended as a production-oriented pet project demonstrating:

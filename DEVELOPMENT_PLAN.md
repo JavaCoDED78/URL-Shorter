@@ -1936,7 +1936,7 @@ ADR-006 expiration semantics
 
 Провести финальную проверку системы как единого продукта.
 
-- [ ] **Task 28.1 — Functional checklist**
+- [x] **Task 28.1 — Functional checklist**
 
 Проверить весь API:
 
@@ -1948,7 +1948,7 @@ GET stats
 DELETE
 ```
 
-- [ ] **Task 28.2 — Consistency checklist**
+- [x] **Task 28.2 — Consistency checklist**
 
 Проверить:
 
@@ -1959,7 +1959,7 @@ expiration
 deletion
 ```
 
-- [ ] **Task 28.3 — Failure checklist**
+- [x] **Task 28.3 — Failure checklist**
 
 Проверить:
 
@@ -1971,7 +1971,7 @@ DB flush failure
 concurrent traffic
 ```
 
-- [ ] **Task 28.4 — Performance checklist**
+- [x] **Task 28.4 — Performance checklist**
 
 Зафиксировать baseline:
 
@@ -1984,30 +1984,30 @@ create throughput
 10k concurrent click result
 ```
 
-- [ ] **Task 28.5 — Security checklist**
+- [x] **Task 28.5 — Security checklist**
 
 Проверить:
 
-- [ ] dependency vulnerabilities;
-- [ ] exposed actuator endpoints;
-- [ ] container user;
-- [ ] request limits;
-- [ ] log sanitization;
-- [ ] secrets handling.
+- [x] dependency vulnerabilities;
+- [x] exposed actuator endpoints;
+- [x] container user;
+- [x] request limits;
+- [x] log sanitization;
+- [x] secrets handling.
 
-- [ ] **Task 28.6 — Release checklist**
+- [x] **Task 28.6 — Release checklist**
 
 Перед релизом:
 
-- [ ] `./gradlew clean build`
-- [ ] `./gradlew test`
-- [ ] integration tests
-- [ ] Docker image build
-- [ ] Docker Compose smoke test
-- [ ] OpenAPI smoke test
-- [ ] health check
-- [ ] README update
-- [ ] changelog/release notes
+- [x] `./gradlew clean build`
+- [x] `./gradlew test`
+- [x] integration tests
+- [x] Docker image build
+- [x] Docker Compose smoke test
+- [x] OpenAPI smoke test
+- [x] health check
+- [x] README update
+- [x] changelog/release notes
 
 ---
 
