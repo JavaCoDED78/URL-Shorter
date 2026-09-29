@@ -93,6 +93,27 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Transaction-begin failure with the database unreachable (found in the
+     * Sprint 28 live review): when the container is down, the JPA
+     * transaction manager cannot even open an EntityManager, so the failure
+     * surfaces as {@link org.springframework.transaction.CannotCreateTransactionException}
+     * — which is NOT a {@code DataAccessException} and would otherwise leak
+     * through as a misleading 500. This is the same "database temporarily
+     * unavailable" contract as above; rollback/commit failures after a
+     * running transaction are a different class and still fall to 500.
+     */
+    @ExceptionHandler(org.springframework.transaction.CannotCreateTransactionException.class)
+    public ProblemDetail handleCannotCreateTransaction(
+            org.springframework.transaction.CannotCreateTransactionException ex) {
+        log.error("transaction begin failure while handling request", ex);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE, "database temporarily unavailable");
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Service unavailable");
+        return problem;
+    }
+
+    /**
      * Body over the payload limit (Task 20.1): thrown by the bounded stream
      * for chunked bodies; usually arrives wrapped by the message converter.
      */

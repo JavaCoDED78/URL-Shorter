@@ -100,6 +100,29 @@ class PostgresFailureIT {
     }
 
     @Test
+    void createReturns503WhenTransactionBeginFails() {
+        // Real outage mode (found in Sprint 28 live review): with the
+        // container down, the failure happens at transaction BEGIN —
+        // JpaTransactionManager cannot open an EntityManager — which
+        // surfaces as CannotCreateTransactionException, NOT a
+        // DataAccessException. A stubbed DataAccessException alone (above)
+        // does not reproduce this path.
+        doThrow(new org.springframework.transaction.CannotCreateTransactionException(
+                "Could not open JPA EntityManager for transaction",
+                new CannotGetJdbcConnectionException("simulated database outage")))
+                .when(repository).saveAndFlush(any());
+
+        ResponseEntity<Map> response = post("https://example.com/db-down-tx", "s18txbegin");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(503);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("title")).isEqualTo("Service unavailable");
+        assertThat(response.getBody().get("status")).isEqualTo(503);
+        assertThat(response.getBody().get("detail").toString())
+                .doesNotContain("jdbc", "postgresql", "CannotGetJdbcConnection", "EntityManager");
+    }
+
+    @Test
     void cacheMissReturns503WhenDatabaseUnavailable() {
         create("https://example.com/db-down-miss", "s18miss");
         redis.delete("link:s18miss");   // force the miss → PostgreSQL lookup

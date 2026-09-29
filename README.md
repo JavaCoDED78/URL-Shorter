@@ -43,6 +43,9 @@ The service uses PostgreSQL as the source of truth, Redis for low-latency redire
 | Build | Gradle Kotlin DSL |
 | CI | GitHub Actions |
 | Runtime | Java virtual threads |
+| Metrics | Micrometer + Spring Boot Actuator + Prometheus |
+| Dashboards | Grafana |
+| Monitoring configuration | Prometheus/Grafana configuration as code |
 
 > **Versioning note:** pin exact dependency versions in Gradle and keep the README badge versions aligned with the actual build configuration.
 
@@ -201,6 +204,51 @@ failure leaves counters intact and surfaces as `clicks.flush.failed`
                     schema migrations
 ```
 
+### Monitoring flow (Sprint 29)
+
+The monitoring pipeline is fully reproducible from Git and requires no manual
+Prometheus or Grafana configuration:
+
+```text
+Spring Boot application
+        │
+        ▼
+Spring Boot Actuator
+/actuator/prometheus
+        │
+        │ scrape
+        ▼
+Prometheus
+├── recording rules
+└── alert rules
+        │
+        │ PromQL
+        ▼
+Grafana
+├── datasource provisioning
+└── dashboard provisioning
+
+Repository
+└── monitoring/
+    ├── prometheus/
+    │   ├── prometheus.yml
+    │   └── rules/
+    │       ├── recording-rules.yml
+    │       └── alert-rules.yml
+    └── grafana/
+        ├── dashboards/
+        │   └── url-shortener-overview.json
+        └── provisioning/
+            ├── datasources/
+            │   └── prometheus.yml
+            └── dashboards/
+                └── dashboards.yml
+```
+
+The repository version controls scrape configuration, rules, Grafana
+datasource provisioning and dashboards. A clean local environment must
+reproduce the monitoring setup from these files alone.
+
 ### Main request flows
 
 #### Create link
@@ -299,7 +347,22 @@ src/main/java/com/javaded78/urlshorter/
 │       ├── script/       # Lua scripts
 │       └── flush/        # scheduled flush job
 │
-└── config/               # properties, filters, OpenAPI, startup diagnostics
+├── config/               # properties, filters, OpenAPI, startup diagnostics
+│
+└── monitoring/            # Prometheus/Grafana configuration as code
+    ├── prometheus/
+    │   ├── prometheus.yml
+    │   └── rules/
+    │       ├── recording-rules.yml
+    │       └── alert-rules.yml
+    └── grafana/
+        ├── dashboards/
+        │   └── url-shortener-overview.json
+        └── provisioning/
+            ├── datasources/
+            │   └── prometheus.yml
+            └── dashboards/
+                └── dashboards.yml
 ```
 
 The service layer talks to Redis only through the `domain/cache` and
@@ -327,10 +390,17 @@ cd url-shortener
 docker compose up --build
 ```
 
+The local stack includes the application, PostgreSQL, Redis, Prometheus and Grafana.
+
 The application will be available at:
 
 - **Swagger UI:** http://localhost:8080/swagger-ui.html
 - **Health:** http://localhost:8080/actuator/health
+- **Prometheus metrics:** http://localhost:8080/actuator/prometheus
+
+Prometheus and Grafana are provisioned automatically by Docker Compose. Their
+host ports are defined in `docker-compose.yml`; no manual datasource or
+dashboard setup is required.
 
 ## 💻 Local Development
 
@@ -564,8 +634,14 @@ The test suite uses Testcontainers to run real PostgreSQL and Redis instances. D
   - 10,000 parallel clicks
   - final persisted count must equal the number of successful redirects
 
+Monitoring is also covered by a dedicated smoke/integration validation path:
+the application exposes metrics, Prometheus scrapes them, recording rules are
+evaluated, and Grafana provisioning is verified from a clean state. The full
+monitoring stack does not need to run for every unit test.
+
 CI runs the unit suites (`*Test`) and the full Testcontainers build as
-separate jobs, plus a Trivy scan of the application image
+separate jobs, plus validation of Prometheus configuration/rules, Grafana
+provisioning/dashboard JSON, and a Trivy scan of the application image
 (`.github/workflows/ci.yml`).
 
 ## ⚙️ Configuration
@@ -591,6 +667,12 @@ The following environment variables are used by the application.
 
 All values also follow Spring relaxed binding — e.g. `SPRING_DATASOURCE_URL`
 overrides `DB_URL` the same way `spring.datasource.url` would.
+
+Prometheus and Grafana operational configuration is intentionally file-based
+under `monitoring/` rather than represented as application environment
+variables. Secrets, including Grafana administrative credentials for
+environments that require them, must be injected through environment variables
+or the deployment secrets mechanism rather than stored in Git.
 
 ### Virtual threads
 
@@ -674,19 +756,139 @@ The exact `type`, `title`, and `detail` values should remain stable enough for c
 
 ## 📊 Observability
 
-Actuator is enabled for operational endpoints.
+Sprint 13 provides the application-level observability foundation with
+Actuator, health indicators and Micrometer business metrics. Sprint 29 extends
+that foundation into a complete Prometheus + Grafana metrics pipeline.
 
-A production deployment should expose, at minimum:
+### Metrics pipeline
 
-- application health
-- readiness/liveness indicators
-- request metrics
-- Redis latency/error metrics
-- PostgreSQL connection-pool metrics
-- click flush success/failure metrics
-- cache hit/miss metrics
+```text
+Application metrics
+      ↓
+Micrometer
+      ↓
+Spring Boot Actuator
+      ↓
+/actuator/prometheus
+      ↓
+Prometheus
+      ↓
+Recording / alert rules
+      ↓
+Grafana dashboards
+```
 
-Sensitive values and internal infrastructure details should not be exposed through public management endpoints.
+### Metrics contract
+
+The minimum business metric set is:
+
+```text
+links_created_total
+links_redirected_total
+links_not_found_total
+links_expired_total
+links_deleted_total
+
+cache_hits_total
+cache_misses_total
+
+clicks_incremented_total
+clicks_flushed_total
+clicks_flush_failures_total
+```
+
+The Prometheus exposition may contain additional JVM, process, Spring and
+infrastructure metrics supplied by the Micrometer registry.
+
+Metrics use only low-cardinality dimensions such as application/service and
+environment. User-specific or request-specific values such as usernames,
+aliases, original URLs, request IDs and short-link codes must not be used as
+metric labels.
+
+### Configuration as code
+
+All monitoring configuration is versioned in Git:
+
+```text
+monitoring/
+├── prometheus/
+│   ├── prometheus.yml
+│   └── rules/
+│       ├── recording-rules.yml
+│       └── alert-rules.yml
+└── grafana/
+    ├── dashboards/
+    │   └── url-shortener-overview.json
+    └── provisioning/
+        ├── datasources/
+        │   └── prometheus.yml
+        └── dashboards/
+            └── dashboards.yml
+```
+
+Manual setup through the Prometheus or Grafana UI is not part of the target
+workflow. A clean environment must recreate the datasource, dashboard,
+recording rules and alert rules from the repository.
+
+### Dashboard coverage
+
+The main URL Shortener dashboard covers:
+
+- service traffic and request rate;
+- redirect, `404` and `410` activity;
+- p50/p95/p99 HTTP latency;
+- Redis cache hit/miss and failure signals;
+- click increments, flush rate, failures and pending backlog;
+- PostgreSQL lookup, connection-pool and error signals;
+- JVM/process CPU, memory, GC, threads and uptime.
+
+### Operational alerts
+
+Alert rules are stored in Git and should cover the operational conditions
+defined by the project baseline and failure scenarios, including:
+
+```text
+application target unavailable
+elevated HTTP error rate
+elevated redirect latency
+Redis/cache failures
+continued click-flush failures
+stuck pending flush backlog
+PostgreSQL availability/connectivity problems
+```
+
+Alert thresholds are based on the measured performance baseline from Sprint 23
+and the failure/operational behaviour validated in Sprints 17–18 rather than
+being arbitrary dashboard values.
+
+### Validation
+
+The monitoring stack has its own quality gates:
+
+```text
+prometheus.yml
+recording-rules.yml
+alert-rules.yml
+Grafana provisioning YAML
+dashboard JSON
+```
+
+must all pass automated validation in CI.
+
+At least one automated smoke/integration scenario verifies the complete path:
+
+```text
+request
+  → application metric changes
+  → /actuator/prometheus
+  → Prometheus scrape
+  → PromQL / recording rule
+  → Grafana query
+```
+
+The monitoring endpoints and dashboards must not expose secrets or
+user-provided sensitive values.
+
 
 ## 🐳 Docker
 
@@ -702,7 +904,18 @@ Recommended containers:
 url-shortener-app
 postgres
 redis
+prometheus
+grafana
 ```
+
+Prometheus is connected to the application through the Docker network and
+scrapes `/actuator/prometheus`. Grafana receives its Prometheus datasource and
+dashboard definitions through provisioning files in `monitoring/grafana/`.
+
+The monitoring stack is intended to be disposable and reproducible: deleting
+the Grafana/Prometheus containers and starting the Compose stack again must
+recreate the configured datasource, dashboards and scrape/rule configuration
+from Git.
 
 The development compose file may omit the application container:
 
@@ -733,6 +946,13 @@ docker compose -f docker-compose.dev.yml up -d
 
 5. GET /api/v1/links/aB3xK92/stats
    └─> PostgreSQL count + pending Redis counter
+
+6. Monitoring
+   └─> Micrometer
+       └─> /actuator/prometheus
+           └─> Prometheus scrape
+               └─> recording / alert rules
+                   └─> Grafana dashboard
 ```
 
 ## 🗺 Roadmap
@@ -747,7 +967,29 @@ docker compose -f docker-compose.dev.yml up -d
 - [x] ~~k6 load tests for redirect throughput~~ — done (Sprint 23, see *Performance baseline*)
 - [x] ~~Benchmark cache-hit vs cache-miss latency~~ — done (Sprint 23/24)
 - [ ] Distributed deployment and horizontal scaling
-- [ ] Metrics dashboard with Prometheus + Grafana
+- [x] ~~Metrics dashboard with Prometheus + Grafana~~ — done (Sprint 29, configuration and dashboards as code)
+
+### Sprint 29 milestone — Metrics platform
+
+The production-oriented roadmap now includes a reproducible monitoring stack:
+
+```text
+Spring Boot / Micrometer
+        ↓
+Actuator /actuator/prometheus
+        ↓
+Prometheus
+├── recording rules
+└── alert rules
+        ↓
+Grafana
+├── datasource provisioning
+└── dashboard provisioning
+```
+
+The target is **metrics pipeline as code**: monitoring configuration is
+versioned, validated in CI, and restored automatically from Git without manual
+UI configuration.
 
 ## 📸 Screenshots
 
@@ -788,3 +1030,7 @@ This repository is intended as a production-oriented pet project demonstrating:
 - virtual-thread based request handling
 - integration testing with Testcontainers
 - API documentation and operational endpoints
+- Prometheus metrics export and scrape-based monitoring
+- Grafana dashboards with datasource/dashboard provisioning as code
+- Prometheus recording and alert rules stored in Git
+- CI validation of monitoring configuration and dashboard artifacts

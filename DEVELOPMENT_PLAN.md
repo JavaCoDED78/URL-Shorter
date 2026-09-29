@@ -2011,6 +2011,878 @@ create throughput
 
 ---
 
+# Sprint 29 — Prometheus + Grafana: Metrics Pipeline as Code
+
+## Цель
+
+Превратить существующие Actuator/Micrometer-метрики в полноценный воспроизводимый monitoring stack, полностью описанный в Git:
+
+```text
+Spring Boot
+    ↓
+Actuator
+    ↓
+Micrometer
+    ↓
+/actuator/prometheus
+    ↓
+Prometheus
+    ↓
+Grafana
+```
+
+Все operational configuration, scrape configuration, recording/alerting rules, Grafana datasource и dashboards должны создаваться из файлов репозитория без ручной настройки UI.
+
+Главный принцип спринта:
+
+```text
+No manual Grafana configuration
+No manual Prometheus configuration
+No dashboard-only changes in UI
+```
+
+---
+
+## Результат Sprint 29
+
+К концу спринта должно быть возможно:
+
+- [ ] запустить приложение и monitoring stack одной командой;
+- [ ] открыть Prometheus и увидеть target приложения в состоянии `UP`;
+- [ ] получить Spring Boot metrics через `/actuator/prometheus`;
+- [ ] проверить, что Prometheus хранит application metrics;
+- [ ] открыть Grafana без ручного добавления datasource;
+- [ ] автоматически получить готовый dashboard URL Shortener;
+- [ ] видеть traffic, latency, errors, cache, Redis, PostgreSQL и click flush metrics;
+- [ ] воспроизвести весь monitoring setup на чистой машине только из Git;
+- [ ] тестировать конфигурацию Prometheus и Grafana в CI;
+- [ ] версионировать dashboards и rules как обычный код.
+
+---
+
+## Task 29.1 — Зафиксировать observability contract
+
+### Цель
+
+Определить единый контракт метрик перед подключением Prometheus и Grafana.
+
+### Шаги
+
+- [x] Провести инвентаризацию уже существующих metrics из Sprint 13.
+- [x] Разделить метрики на категории:
+
+```text
+HTTP (Spring Boot built-in)
+Application (links.*)
+Cache (cache.*)
+Click Counter (clicks.incremented, clicks.increment.failed)
+Click Flush (clicks.flushed, clicks.flush.failed)
+JVM (Micrometer auto)
+Process (Micrometer auto)
+Spring (Micrometer auto)
+```
+
+- [x] Зафиксировать названия бизнес-метрик (11 counters + 3 timers).
+- [x] Зафиксировать units (`total`, `seconds`).
+- [x] Для counters использовать монотонную семантику.
+- [x] Для timers использовать Micrometer timer/histogram semantics.
+- [x] Определить минимальный набор labels (`application`).
+- [x] Проверить, что labels не содержат:
+    - [x] username;
+    - [x] original URL;
+    - [x] arbitrary alias;
+    - [x] request ID;
+    - [x] user-provided values.
+- [x] Не использовать high-cardinality labels.
+
+### Фактический business metric set (из `MetricsRecorder`)
+
+| Micrometer name | Prometheus name | Type | Unit |
+|---|---|---|---|
+| `links.created` | `links_created_total` | counter | total |
+| `links.redirected` | `links_redirect_total` | counter | total |
+| `links.not_found` | `links_not_found_total` | counter | total |
+| `links.expired` | `links_expired_total` | counter | total |
+| `links.deleted` | `links_deleted_total` | counter | total |
+| `cache.hit` | `cache_hit_total` | counter | total |
+| `cache.miss` | `cache_miss_total` | counter | total |
+| `clicks.incremented` | `clicks_incremented_total` | counter | total |
+| `clicks.increment.failed` | `clicks_increment_failed_total` | counter | total |
+| `clicks.flushed` | `clicks_flushed_total` | counter | total |
+| `clicks.flush.failed` | `clicks_flush_failed_total` | counter | total |
+| `redirect.duration` | `redirect_duration_seconds` | timer | seconds |
+| `postgres.lookup.duration` | `postgres_lookup_duration_seconds` | timer | seconds |
+| `redis.lookup.duration` | `redis_lookup_duration_seconds` | timer | seconds |
+
+### Acceptance Criteria
+
+- [x] для каждой метрики определены name, type, unit и labels;
+- [x] high-cardinality labels отсутствуют;
+- [x] список metric names отражён в документации проекта (`docs/observability-contract.md`);
+- [x] Grafana dashboard будет строиться только на зафиксированном контракте.
+
+---
+
+## Task 29.2 — Подключить Prometheus registry
+
+### Цель
+
+Экспортировать Micrometer metrics в Prometheus exposition format.
+
+### Шаги
+
+- [ ] Добавить Prometheus registry dependency, совместимую с текущим Spring Boot/Micrometer stack.
+- [ ] Проверить, что Actuator уже подключён согласно Sprint 13.
+- [ ] Включить Prometheus endpoint.
+- [ ] Настроить exposure только необходимых management endpoints.
+- [ ] Не открывать все actuator endpoints без необходимости.
+- [ ] Проверить формат endpoint:
+
+```text
+/actuator/prometheus
+```
+
+- [ ] Запустить приложение.
+- [ ] Выполнить HTTP GET к endpoint.
+- [ ] Убедиться, что присутствуют стандартные JVM/process/Spring metrics.
+- [ ] Убедиться, что присутствуют собственные business metrics.
+
+### Acceptance Criteria
+
+```bash
+curl http://localhost:<port>/actuator/prometheus
+```
+
+возвращает Prometheus-compatible exposition format.
+
+- [ ] endpoint отвечает `200`;
+- [ ] в output есть application metrics;
+- [ ] credentials/secrets отсутствуют в metrics;
+- [ ] endpoint не требует доступа к внутренним database credentials.
+
+---
+
+## Task 29.3 — Проверить naming и tags Micrometer
+
+### Цель
+
+Избежать хаотичной структуры metric names после подключения Prometheus.
+
+### Шаги
+
+- [ ] Проверить naming convention Micrometer → Prometheus.
+- [ ] Убедиться, что counters и timers экспортируются предсказуемо.
+- [ ] Проверить common tags.
+- [ ] Добавить только низкокардинальные tags:
+
+```text
+application
+service
+environment
+```
+
+- [ ] Не добавлять `code`, `alias`, `url`, `username` и подобные идентификаторы.
+- [ ] Зафиксировать environment tag для local/test/prod.
+- [ ] Проверить, что одно и то же приложение не создаёт несогласованные metric names.
+
+### Acceptance Criteria
+
+- [ ] naming convention документирована;
+- [ ] common tags единообразны;
+- [ ] количество уникальных time series контролируемо;
+- [ ] Prometheus scrape не создаёт неожиданный рост cardinality.
+
+---
+
+## Task 29.4 — Создать Prometheus configuration as code
+
+### Цель
+
+Полностью вынести Prometheus configuration в Git.
+
+### Файловая структура
+
+Создать примерно:
+
+```text
+monitoring/
+└── prometheus/
+    ├── prometheus.yml
+    └── rules/
+        ├── recording-rules.yml
+        └── alert-rules.yml
+```
+
+### Шаги
+
+- [ ] Создать `prometheus.yml`.
+- [ ] Зафиксировать global configuration.
+- [ ] Настроить `scrape_interval`.
+- [ ] Настроить `evaluation_interval`.
+- [ ] Добавить scrape job для Spring Boot application.
+- [ ] Указать hostname/port приложения через Docker networking.
+- [ ] Добавить `metrics_path: /actuator/prometheus`.
+- [ ] Добавить необходимый scrape timeout.
+- [ ] Настроить labels для окружения.
+- [ ] Не использовать hard-coded production secrets.
+- [ ] Не хранить credentials в Git.
+
+### Acceptance Criteria
+
+Prometheus configuration:
+
+- [ ] находится в repository;
+- [ ] читается контейнером Prometheus;
+- [ ] проходит syntax/config validation;
+- [ ] после запуска автоматически обнаруживает application target;
+- [ ] не требует ручной настройки через Web UI.
+
+---
+
+## Task 29.5 — Добавить Prometheus recording rules as code
+
+### Цель
+
+Подготовить производные запросы, которые используются несколькими dashboard panels и alert rules.
+
+### Шаги
+
+- [ ] Создать `recording-rules.yml`.
+- [ ] Не дублировать сложные PromQL expressions в каждом panel.
+- [ ] Определить агрегированные series для:
+    - [ ] request rate;
+    - [ ] redirect rate;
+    - [ ] error rate;
+    - [ ] cache hit ratio;
+    - [ ] click flush rate;
+    - [ ] flush failure rate;
+    - [ ] request latency quantiles/aggregations.
+- [ ] Имена recording rules сделать предсказуемыми.
+- [ ] Использовать только метрики, которые реально существуют в application metrics contract.
+
+### Пример логической структуры
+
+```text
+recorded:http_requests:rate5m
+recorded:http_errors:rate5m
+recorded:cache_hit_ratio:5m
+recorded:click_flush_failures:rate5m
+```
+
+Имена можно адаптировать под фактически выбранную metric naming convention.
+
+### Acceptance Criteria
+
+- [ ] rules загружаются Prometheus;
+- [ ] все expressions синтаксически корректны;
+- [ ] recording rules появляются в Prometheus;
+- [ ] dashboard использует recording rules там, где это уменьшает дублирование PromQL.
+
+---
+
+## Task 29.6 — Добавить alert rules as code
+
+### Цель
+
+Зафиксировать минимальный набор operational conditions в Git.
+
+### Шаги
+
+Создать правила для сигналов, которые имеют понятную операционную семантику:
+
+- [ ] application target недоступен;
+- [ ] HTTP error rate превышает согласованный threshold;
+- [ ] redirect latency существенно выросла;
+- [ ] Redis/cache failure rate выросла;
+- [ ] click flush failures продолжаются;
+- [ ] pending flush backlog не уменьшается;
+- [ ] PostgreSQL connectivity/availability signal указывает на проблему.
+
+Для каждого alert определить:
+
+```text
+alert name
+expr
+for
+severity
+summary
+description
+labels
+annotations
+```
+
+### Важный принцип
+
+Threshold должен быть основан на performance baseline из Sprint 23 и operational behaviour Sprint 17–18, а не выбран произвольно.
+
+### Acceptance Criteria
+
+- [ ] alert rules хранятся в Git;
+- [ ] правила проходят validation;
+- [ ] Prometheus их загружает;
+- [ ] alert имеет понятное описание и severity;
+- [ ] нет alerts на каждую отдельную transient ошибку без cooldown.
+
+---
+
+## Task 29.7 — Добавить Prometheus в Docker Compose
+
+### Цель
+
+Сделать локальный monitoring stack воспроизводимым.
+
+### Шаги
+
+- [ ] Добавить Prometheus service в основной Compose stack.
+- [ ] Определить отдельный named volume для Prometheus data.
+- [ ] Подключить monitoring configuration через read-only bind mounts.
+- [ ] Подключить rules directory.
+- [ ] Настроить dependency/startup conditions.
+- [ ] Добавить healthcheck для Prometheus.
+- [ ] Проверить network connectivity:
+
+```text
+prometheus → app:actuator/prometheus
+```
+
+- [ ] Открыть Prometheus UI локально только на dev environment.
+- [ ] Проверить lifecycle после `docker compose down` и повторного `up`.
+
+### Acceptance Criteria
+
+```bash
+docker compose up -d
+```
+
+запускает application, PostgreSQL, Redis и Prometheus без ручной configuration.
+
+---
+
+## Task 29.8 — Создать Grafana datasource provisioning as code
+
+### Цель
+
+Grafana должна автоматически подключаться к Prometheus после старта.
+
+### Файловая структура
+
+```text
+monitoring/
+└── grafana/
+    ├── dashboards/
+    │   └── url-shortener-overview.json
+    └── provisioning/
+        ├── datasources/
+        │   └── prometheus.yml
+        └── dashboards/
+            └── dashboards.yml
+```
+
+### Шаги
+
+- [ ] Добавить Grafana service в Docker Compose.
+- [ ] Создать datasource provisioning file.
+- [ ] Указать Prometheus URL по имени Docker service, а не `localhost` внутри container.
+- [ ] Сделать datasource default.
+- [ ] Отключить необходимость ручного ввода datasource через UI.
+- [ ] Настроить provisioning path.
+- [ ] Проверить startup с пустой Grafana state.
+
+### Acceptance Criteria
+
+После первого запуска:
+
+```text
+Grafana
+  ↓
+Datasource exists automatically
+  ↓
+Prometheus connection = healthy
+```
+
+- [ ] datasource создан автоматически;
+- [ ] datasource URL корректен внутри Compose network;
+- [ ] отсутствие ручных UI steps подтверждено на чистом volume.
+
+---
+
+## Task 29.9 — Создать Grafana dashboard as code
+
+### Цель
+
+Получить production-oriented dashboard для URL Shortener.
+
+### Шаги
+
+Создать dashboard JSON под Git control.
+
+### Dashboard sections
+
+#### 1. Service overview
+
+Показывать:
+
+```text
+Requests/sec
+Redirects/sec
+Error rate
+Active targets
+```
+
+#### 2. HTTP latency
+
+Показывать:
+
+```text
+p50
+p95
+p99
+```
+
+для ключевых HTTP операций.
+
+#### 3. Redirect flow
+
+Показывать:
+
+```text
+redirected
+not_found
+expired
+```
+
+#### 4. Redis
+
+Показывать:
+
+```text
+cache hit rate
+cache misses
+Redis operation failures
+```
+
+#### 5. Click buffering
+
+Показывать:
+
+```text
+click increments
+flush rate
+flush failures
+pending backlog
+```
+
+#### 6. PostgreSQL
+
+Показывать доступные и полезные application-level DB signals:
+
+```text
+lookup latency
+connection pool usage
+DB errors
+```
+
+#### 7. JVM / process
+
+Показывать:
+
+```text
+heap usage
+GC activity
+CPU
+threads
+process uptime
+```
+
+### Dashboard requirements
+
+- [ ] Использовать template variables только для low-cardinality dimensions.
+- [ ] Добавить environment variable.
+- [ ] Добавить service/application variable при необходимости.
+- [ ] Использовать разумные dashboard refresh intervals.
+- [ ] Не делать dashboard зависимым от ручно созданных queries.
+- [ ] Добавить units к panel values.
+- [ ] Для ratios использовать проценты.
+- [ ] Для latency явно указывать milliseconds/seconds.
+- [ ] Добавить description panel/row там, где metric semantics неочевидна.
+
+### Acceptance Criteria
+
+- [ ] dashboard импортируется автоматически;
+- [ ] все panels отображают данные при работающем приложении;
+- [ ] ни один panel не содержит broken query;
+- [ ] после `git clone` dashboard доступен без ручного import.
+
+---
+
+## Task 29.10 — Настроить Grafana dashboard provisioning
+
+### Цель
+
+Grafana должна автоматически загружать dashboards из repository.
+
+### Шаги
+
+- [ ] Создать dashboard provider configuration.
+- [ ] Указать путь к dashboard JSON.
+- [ ] Включить автоматическое provisioning.
+- [ ] Зафиксировать folder.
+- [ ] Определить overwrite/update semantics.
+- [ ] Проверить обновление dashboard после изменения JSON.
+- [ ] Убедиться, что dashboard не создаётся как единственный mutable объект внутри container volume.
+
+### Acceptance Criteria
+
+Проверить сценарий:
+
+```text
+empty Grafana volume
+        ↓
+container start
+        ↓
+provider loads dashboard
+        ↓
+dashboard visible
+```
+
+и:
+
+```text
+change dashboard JSON
+        ↓
+restart/reprovision
+        ↓
+Grafana reflects Git version
+```
+
+---
+
+## Task 29.11 — Добавить smoke/integration tests для monitoring stack
+
+### Цель
+
+Проверять не только приложение, но и весь metrics pipeline.
+
+### Шаги
+
+Создать тестовый сценарий:
+
+```text
+application starts
+   ↓
+request is executed
+   ↓
+Micrometer metric changes
+   ↓
+/actuator/prometheus exposes metric
+   ↓
+Prometheus scrapes metric
+   ↓
+Grafana can query metric
+```
+
+Проверить минимум:
+
+- [ ] application target discovered;
+- [ ] target state = `UP`;
+- [ ] application metrics scraped;
+- [ ] generated request changes expected counter;
+- [ ] PromQL query returns non-empty result;
+- [ ] recording rule is evaluated;
+- [ ] alert rule is loaded.
+
+### Варианты реализации
+
+- [ ] lightweight smoke test на Compose stack;
+- [ ] Testcontainers-based monitoring test при приемлемой стоимости запуска;
+- [ ] отдельный CI job для полного monitoring stack.
+
+Не обязательно запускать Grafana на каждый unit test. Полный stack validation должен быть отдельным integration/smoke stage.
+
+### Acceptance Criteria
+
+- [ ] хотя бы один автоматизированный тест подтверждает end-to-end metrics path;
+- [ ] test падает при сломанном Prometheus config;
+- [ ] test падает при сломанном scrape path;
+- [ ] test падает при отсутствующем dashboard provisioning/configuration.
+
+---
+
+## Task 29.12 — Validate monitoring configuration as code
+
+### Цель
+
+Сделать monitoring configuration частью обычного quality gate.
+
+### Шаги
+
+Добавить локальную/CI validation для:
+
+- [ ] Prometheus config syntax;
+- [ ] recording rules syntax;
+- [ ] alert rules syntax;
+- [ ] YAML files;
+- [ ] Grafana provisioning YAML;
+- [ ] dashboard JSON validity.
+
+По возможности добавить отдельные команды/scripts:
+
+```text
+validate-prometheus
+validate-prometheus-rules
+validate-grafana-provisioning
+validate-grafana-dashboards
+```
+
+- [ ] Сделать команды reproducible внутри Docker/container или CI runner.
+- [ ] Не зависеть от локально установленного Grafana/Prometheus CLI без documented setup.
+- [ ] Включить validation в GitHub Actions после обычных tests.
+
+### Acceptance Criteria
+
+CI должен завершаться ошибкой, если:
+
+```text
+invalid prometheus.yml
+OR
+invalid rule
+OR
+invalid dashboard JSON
+OR
+broken provisioning file
+```
+
+---
+
+## Task 29.13 — Проверить metrics correctness под реальной нагрузкой
+
+### Цель
+
+Убедиться, что dashboard и rules показывают корректные значения во время нагрузки.
+
+### Шаги
+
+Использовать сценарии из Sprint 23:
+
+```text
+warm-up
+→ sustained redirects
+→ spike
+→ cool-down
+```
+
+Проверить:
+
+- [ ] request rate примерно соответствует генератору нагрузки;
+- [ ] redirect counter растёт только для successful redirects;
+- [ ] 404/410 отражаются в соответствующих counters;
+- [ ] cache hit/miss ratio меняется ожидаемым образом;
+- [ ] click increment counter соответствует успешным кликам;
+- [ ] click flush counter соответствует фактически выполненным flush cycles;
+- [ ] flush failure metric не растёт при нормальной работе;
+- [ ] latency panels реагируют на искусственное ухудшение зависимости;
+- [ ] JVM metrics не содержат аномальных скачков только из-за dashboard queries.
+
+### Acceptance Criteria
+
+- [ ] значения dashboard сверены с исходными application metrics;
+- [ ] хотя бы один load test используется для валидации dashboard;
+- [ ] расхождения между business counters и traffic logs отсутствуют или объяснены.
+
+---
+
+## Task 29.14 — Production security и exposure review
+
+### Цель
+
+Не превратить metrics stack в дополнительную поверхность атаки.
+
+### Шаги
+
+- [ ] Проверить exposure `/actuator/prometheus`.
+- [ ] Определить, доступен ли metrics endpoint только внутри internal network.
+- [ ] Не публиковать Prometheus/Grafana ports в production без необходимости.
+- [ ] Для local development сохранить удобный host access.
+- [ ] Не хранить Grafana admin credentials в Git.
+- [ ] Передавать credentials через environment variables/secrets mechanism.
+- [ ] Проверить, что metrics не содержат URL query parameters и пользовательские данные.
+- [ ] Проверить dashboard variables на отсутствие secret leakage.
+- [ ] Документировать production ingress policy.
+
+### Acceptance Criteria
+
+- [ ] application metrics не содержат secrets;
+- [ ] production exposure policy задокументирована;
+- [ ] Grafana credentials не hardcoded;
+- [ ] monitoring services не требуют public exposure для внутреннего использования.
+
+---
+
+## Task 29.15 — Обновить README, DEVELOPMENT.md и ADR
+
+### Цель
+
+Сделать monitoring stack частью официальной архитектуры проекта.
+
+### Шаги
+
+Обновить README:
+
+- [ ] добавить Prometheus в technology stack;
+- [ ] добавить Grafana в technology stack;
+- [ ] добавить monitoring architecture diagram;
+- [ ] описать endpoints;
+- [ ] указать локальные URLs;
+- [ ] описать запуск monitoring stack;
+- [ ] показать расположение configuration-as-code files.
+
+Обновить DEVELOPMENT.md:
+
+- [ ] как открыть Prometheus;
+- [ ] как открыть Grafana;
+- [ ] как проверить target;
+- [ ] как найти metric;
+- [ ] как локально проверить PromQL;
+- [ ] как изменить dashboard;
+- [ ] как изменить alert rule;
+- [ ] как валидировать monitoring configuration.
+
+Добавить ADR:
+
+```text
+ADR-007 — Prometheus + Grafana monitoring stack
+ADR-008 — Monitoring configuration as code
+```
+
+В ADR-007 зафиксировать:
+
+- [ ] почему выбран Prometheus;
+- [ ] почему выбран Grafana;
+- [ ] scrape model;
+- [ ] retention expectations;
+- [ ] network placement.
+
+В ADR-008 зафиксировать:
+
+- [ ] dashboard JSON хранится в Git;
+- [ ] Prometheus YAML хранится в Git;
+- [ ] rules хранятся в Git;
+- [ ] provisioning не выполняется вручную через UI;
+- [ ] CI валидирует monitoring artifacts.
+
+---
+
+# Sprint 29 — Definition of Done
+
+Sprint считается завершённым, если одновременно выполнены все условия:
+
+- [ ] Spring Boot экспортирует Prometheus metrics через Actuator.
+- [ ] Prometheus configuration находится в Git.
+- [ ] Prometheus scrape target приложения работает.
+- [ ] Recording rules находятся в Git и загружаются.
+- [ ] Alert rules находятся в Git и загружаются.
+- [ ] Grafana datasource создаётся автоматически.
+- [ ] Grafana dashboard создаётся автоматически.
+- [ ] Dashboard покрывает основные application/business/infra metrics.
+- [ ] Monitoring stack запускается через Docker Compose.
+- [ ] Monitoring configuration проходит automated validation.
+- [ ] Есть integration/smoke validation metrics pipeline.
+- [ ] Нет high-cardinality labels.
+- [ ] Metrics и dashboards не содержат secrets/user-provided sensitive values.
+- [ ] README и DEVELOPMENT.md обновлены.
+- [ ] ADR-007 и ADR-008 добавлены.
+- [ ] CI проверяет monitoring artifacts.
+
+---
+
+# Sprint 29 — Итоговая architecture flow
+
+```text
+                         ┌─────────────────────────────┐
+                         │       Spring Boot            │
+                         │         Java 25              │
+                         │                             │
+                         │ Domain / Service / API      │
+                         └──────────────┬──────────────┘
+                                        │
+                                        │ Micrometer
+                                        ▼
+                              ┌──────────────────────┐
+                              │ Spring Boot Actuator │
+                              │ /actuator/prometheus │
+                              └──────────┬───────────┘
+                                         │ scrape
+                                         ▼
+                              ┌──────────────────────┐
+                              │      Prometheus      │
+                              │                      │
+                              │ scrape + rules      │
+                              │ recording rules     │
+                              │ alert rules          │
+                              └──────────┬───────────┘
+                                         │ PromQL
+                                         ▼
+                              ┌──────────────────────┐
+                              │       Grafana        │
+                              │                      │
+                              │ datasource as code   │
+                              │ dashboard as code    │
+                              └──────────────────────┘
+
+Monitoring configuration:
+
+Git repository
+    ├── prometheus.yml
+    ├── recording-rules.yml
+    ├── alert-rules.yml
+    ├── grafana provisioning
+    └── dashboard JSON
+             │
+             ▼
+        Docker Compose
+             │
+             ▼
+    reproducible monitoring
+```
+
+---
+
+# Sprint 29 — Recommended implementation order
+
+```text
+29.1  Metrics contract
+   ↓
+29.2  Prometheus registry
+   ↓
+29.3  Naming / tags / cardinality
+   ↓
+29.4  Prometheus config as code
+   ↓
+29.5  Recording rules
+   ↓
+29.6  Alert rules
+   ↓
+29.7  Prometheus Docker Compose
+   ↓
+29.8  Grafana datasource provisioning
+   ↓
+29.9  Grafana dashboard
+   ↓
+29.10 Grafana dashboard provisioning
+   ↓
+29.11 End-to-end metrics smoke test
+   ↓
+29.12 Config validation in CI
+   ↓
+29.13 Load-based metrics validation
+   ↓
+29.14 Security review
+   ↓
+29.15 Documentation + ADRs
+```
+
+Каждая задача должна завершаться проверяемым артефактом. Нельзя считать monitoring setup готовым, если Prometheus и Grafana были настроены вручную через UI и после удаления контейнеров конфигурация теряется.
+
 # 5. Рекомендуемый порядок реализации внутри каждого спринта
 
 Для каждой функциональности использовать одинаковый шаблон:
@@ -2153,6 +3025,7 @@ Refactoring
 ```text
 Sprint 27
 Sprint 28
+Sprint 29
 ```
 
 Результат:
@@ -2163,6 +3036,10 @@ Documentation
 ADRs
 +
 Production readiness
++
+Prometheus + Grafana
++
+Metrics pipeline as code
 ```
 
 ---
@@ -2241,6 +3118,24 @@ Redis tuning
 Refactoring
 Documentation
 Production readiness
+```
+
+## Milestone M7 — Metrics platform
+
+После Sprint 29:
+
+```text
+Prometheus
++
+Grafana
++
+Recording rules
++
+Alert rules
++
+Dashboards as code
++
+Monitoring validation in CI
 ```
 
 ---
@@ -2398,6 +3293,10 @@ Virtual threads позволяют обслуживать большое кол�
 
 ---
 
+
+
+---
+
 # 12. Итоговая последовательность
 
 ```text
@@ -2430,6 +3329,7 @@ S25  Redis optimization
 S26  Refactoring
 S27  Documentation
 S28  Production readiness
+S29  Prometheus + Grafana: metrics pipeline as code
 ```
 
-Таким образом, разработка идёт от простого работающего CRUD/redirect-сервиса к полноценному production-oriented сервису, при этом наиболее опасные части — Redis counter, atomic flush, consistency и concurrency — получают отдельные спринты и отдельные тестовые сценарии.
+Таким образом, разработка идёт от простого работающего CRUD/redirect-сервиса к полноценному production-oriented сервису: наиболее опасные части — Redis counter, atomic flush, consistency и concurrency — получают отдельные спринты и тестовые сценарии, а Sprint 29 добавляет полностью воспроизводимый Prometheus + Grafana metrics pipeline as code.
