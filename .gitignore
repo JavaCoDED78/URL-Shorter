@@ -47,3 +47,5 @@ Thumbs.db
 
 # --- IDEA fastRequest plugin ---
 .fastRequest/
+benchmarks/links.json
+benchmarks/results/
