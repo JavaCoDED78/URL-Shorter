@@ -131,10 +131,12 @@ case-insensitive index cover every lookup; no additional indexes.
 the batched flush removes from the redirect path entirely.
 
 **Connection pool** (Hikari metrics sampled at 2 s under the heaviest DB
-path, sustained cache-miss load): pool 10 → active avg 5.0, peak 10,
-p95 10.5 ms; pool 16 → active avg 6.2, p95 9.6 ms. The ~1 ms gain is inside
-the ±3 ms run-to-run variance and buys capacity the cache already makes
-mostly unnecessary. **Pool stays at 10** (`ConnectionPoolIT` pins it) —
+path, sustained cache-miss load, both runs 0% errors on valid 302s):
+pool 10 → active avg 2.1, p95 12.6 ms, connection queueing observed
+(pending up to 10); pool 16 → active avg 3.1, p95 13.1 ms, queueing gone
+(pending ≤ 3) — **but no faster**. Connection waiting at pool 10 is not
+what costs latency on the miss path; the PostgreSQL lookup and cache
+repopulate dominate. **Pool stays at 10** (`ConnectionPoolIT` pins it) —
 sized from measured concurrency, not from the virtual-thread count.
 
 ## 🏛 Architecture
