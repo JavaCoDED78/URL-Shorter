@@ -117,6 +117,26 @@ Reproduce: `python benchmarks/prepare.py` then
 `k6 run -e SCENARIO=<hit|miss|create|stats|delete|spike10k> benchmarks/k6-scenario.js`
 or `k6 run benchmarks/k6-main.js` for the full profile.
 
+### Database notes (Sprint 24)
+
+**Query plans** (`EXPLAIN ANALYZE` on 200 000 links): all three hot queries
+are unique-index scans, sub-millisecond — `findByCodeIgnoreCase` via the
+`links_code_lower_uq` functional index (0.05 ms), click update and delete
+via `links_pkey` (0.19 / 0.11 ms). `PRIMARY KEY(code)` plus the migration-V2
+case-insensitive index cover every lookup; no additional indexes.
+
+**Per-click vs batch flush** (10 000 clicks, one transaction, psql over
+`docker exec`): 10 000 individual `UPDATE`s — 1.96 s; one batched `unnest`
+`UPDATE` — 0.49 s (~4×), before counting the per-click network roundtrip
+the batched flush removes from the redirect path entirely.
+
+**Connection pool** (Hikari metrics sampled at 2 s under the heaviest DB
+path, sustained cache-miss load): pool 10 → active avg 5.0, peak 10,
+p95 10.5 ms; pool 16 → active avg 6.2, p95 9.6 ms. The ~1 ms gain is inside
+the ±3 ms run-to-run variance and buys capacity the cache already makes
+mostly unnecessary. **Pool stays at 10** (`ConnectionPoolIT` pins it) —
+sized from measured concurrency, not from the virtual-thread count.
+
 ## 🏛 Architecture
 
 ```text

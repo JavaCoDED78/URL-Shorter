@@ -1736,7 +1736,7 @@ PostgreSQL MISS
 
 Убедиться, что PostgreSQL является узким местом только там, где это неизбежно.
 
-- [ ] **Task 24.1 — Проверить query plans**
+- [x] **Task 24.1 — Проверить query plans**
 
 Для основных запросов:
 
@@ -1748,7 +1748,7 @@ delete by code
 
 использовать `EXPLAIN`.
 
-- [ ] **Task 24.2 — Проверить индексы**
+- [x] **Task 24.2 — Проверить индексы**
 
 Убедиться:
 
@@ -1760,7 +1760,7 @@ PRIMARY KEY(code)
 
 Не добавлять лишние индексы.
 
-- [ ] **Task 24.3 — Проверить batch updates**
+- [x] **Task 24.3 — Проверить batch updates**
 
 Измерить:
 
@@ -1770,7 +1770,7 @@ vs
 batch flush
 ```
 
-- [ ] **Task 24.4 — Connection pool tuning**
+- [x] **Task 24.4 — Connection pool tuning**
 
 Настроить pool на основании нагрузки, а не количества virtual threads.
 
