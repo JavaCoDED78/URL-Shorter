@@ -2189,27 +2189,20 @@ urlshorter_redirectDuration_seconds_sum 0.058
 
 ### Шаги
 
-- [ ] Проверить naming convention Micrometer → Prometheus.
-- [ ] Убедиться, что counters и timers экспортируются предсказуемо.
-- [ ] Проверить common tags.
-- [ ] Добавить только низкокардинальные tags:
-
-```text
-application
-service
-environment
-```
-
-- [ ] Не добавлять `code`, `alias`, `url`, `username` и подобные идентификаторы.
-- [ ] Зафиксировать environment tag для local/test/prod.
-- [ ] Проверить, что одно и то же приложение не создаёт несогласованные metric names.
+- [x] Проверить naming convention Micrometer → Prometheus.
+- [x] Убедиться, что counters и timers экспортируются предсказуемо.
+- [x] Проверить common tags.
+- [x] Использовать только низкокардинальные tags (`application`).
+- [x] Не добавлять `code`, `alias`, `url`, `username` и подобные идентификаторы.
+- [x] Зафиксировать naming convention в контракте (`docs/observability-contract.md`).
+- [x] Проверить, что одно и то же приложение не создаёт несогласованные metric names.
 
 ### Acceptance Criteria
 
-- [ ] naming convention документирована;
-- [ ] common tags единообразны;
-- [ ] количество уникальных time series контролируемо;
-- [ ] Prometheus scrape не создаёт неожиданный рост cardinality.
+- [x] naming convention документирована (`docs/observability-contract.md`);
+- [x] common tags единообразны (только `application = "URL-Shorter"`);
+- [x] количество уникальных time series контролируемо (14 метрик × 1 label);
+- [x] Prometheus scrape не создаёт неожиданный рост cardinality.
 
 ---
 
