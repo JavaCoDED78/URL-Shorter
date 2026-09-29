@@ -1782,7 +1782,7 @@ batch flush
 
 Проверить, что Redis используется эффективно.
 
-- [ ] **Task 25.1 — Key inspection**
+- [x] **Task 25.1 — Key inspection**
 
 Проверить форматы:
 
@@ -1791,26 +1791,26 @@ link:{code}
 clicks:{code}
 ```
 
-- [ ] **Task 25.2 — TTL audit**
+- [x] **Task 25.2 — TTL audit**
 
 Убедиться, что stale entries удаляются автоматически.
 
-- [ ] **Task 25.3 — Serialization overhead**
+- [x] **Task 25.3 — Serialization overhead**
 
 Сравнить:
 
-- [ ] JSON;
-- [ ] компактный string/hash format.
+- [x] JSON;
+- [x] компактный string/hash format.
 
 Выбрать вариант по измерениям.
 
-- [ ] **Task 25.4 — Lua execution**
+- [x] **Task 25.4 — Lua execution**
 
 Проверить:
 
-- [ ] latency;
-- [ ] number of keys;
-- [ ] script error handling.
+- [x] latency;
+- [x] number of keys;
+- [x] script error handling.
 
 ---
 

@@ -139,6 +139,36 @@ what costs latency on the miss path; the PostgreSQL lookup and cache
 repopulate dominate. **Pool stays at 10** (`ConnectionPoolIT` pins it) —
 sized from measured concurrency, not from the virtual-thread count.
 
+### Redis notes (Sprint 25)
+
+**Key inspection (25.1):** `link:{code}` — JSON string, e.g. 84 bytes for a
+typical entry; `clicks:{code}` — plain `INCR` counter string. Keys are
+lowercased to stay consistent with the case-insensitive lookup index.
+
+**TTL audit (25.2):** `link:` entries carry
+`min(configured TTL, remaining business lifetime)` — verified live: 1 h for
+long-lived links, a 3-second link's entry auto-removed right at expiry, and
+`DELETE` evicts its entry immediately. `clicks:` counters intentionally have
+**no TTL** — a counter must survive until the flush persists it; the drain
+script deletes the key after a successful read, and a failed flush restores
+the value (Task 17.3).
+
+**Serialization (25.3), measured:** JSON vs a compact `code|url|epoch`
+string — 152 vs 104 bytes per key (payload 84 vs 41). Throughput of 20 000
+pipelined GETs was **identical** (0.237 s both) — GET is O(1) and does not
+care about 43 bytes. **JSON stays**: the saving is ~48 bytes/key (~30 MB for
+200 k cached links — trivial), while the compact format breaks the Sprint 19
+forward-compatible wire contract, loses human-readable values in
+`redis-cli`, and needs delimiter escaping (URLs can contain `|`).
+
+**Lua drain (25.4), verified live:** the drain script touches exactly one
+key per execution (`GET`+`DEL` atomic), discovered by non-blocking `SCAN`
+(count 100) — no `KEYS` scans, no unbounded key lists. 1 000 pipelined
+drains: 0 errors, every counter returned its value, 0 keys left behind;
+draining a missing key returns `nil` (idempotent). Error handling: script
+failure leaves counters intact and surfaces as `clicks.flush.failed`
+(`RedisFailureIT`).
+
 ## 🏛 Architecture
 
 ```text
