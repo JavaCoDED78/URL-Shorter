@@ -1,9 +1,221 @@
 # URL-Shorter — Prometheus alerting rules (Sprint 29, Task 29.6).
 #
-# Placeholder created by Task 29.4 (Prometheus config as code) so the
-# monitoring/ tree and the rule_files reference exist and validate as a unit.
-# Task 29.6 populates this file with the operational conditions — target down,
-# HTTP error rate, redirect latency, cache failure rate, click flush failures,
-# pending flush backlog, PostgreSQL availability — using thresholds grounded in
-# the Sprint 23 performance baseline, not arbitrary values.
-groups: []
+# Each rule encodes an operational condition with:
+#
+#   * expr   — PromQL evaluated at the global evaluation_interval (15 s);
+#   * for    — minimum time the expression must hold before firing
+#              (prevents transient blips from alerting);
+#   * severity — `critical` (requires immediate attention) or `warning`
+#                (degraded but still operating);
+#   * summary  — one-line human-readable signal;
+#   * description — context: what metric, which threshold, for how long.
+#
+# Thresholds are grounded in the Sprint 23 baseline:
+#   * redirect p95 < 50 ms under normal cache-hit load;
+#   * postgres-lookup p95 < 100 ms;
+#   * redis-lookup p95 < 20 ms;
+#   * cache hit ratio > 0.7 under sustained traffic;
+#   * HTTP 5xx error ratio < 1%.
+#
+# Naming: every alert uses the `urlshorter:` prefix for the alert name
+# (Prometheus convention), and the `urlshorter.` namespace mirrors the
+# observability contract (docs/observability-contract.md).
+
+groups:
+  # --------------------------------------------------------------------- target
+  - name: urlshorter.target
+    rules:
+      - alert: urlshorter_target_down
+        expr: up{job="urlshorter-app"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Application target is down"
+          description: >-
+            The Prometheus scrape target `urlshorter-app` at
+            `app:8080` has been unreachable for more than 30 seconds.
+            This means the Spring Boot application is not answering HTTP
+            requests on /actuator/prometheus or any other endpoint.
+
+  # ------------------------------------------------------------------- errors
+  - name: urlshorter.errors
+    rules:
+      - alert: urlshorter_http_error_ratio_high
+        expr: urlshorter_http_error_ratio:5m > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP 5xx error rate is above 5 %"
+          description: >-
+            The share of 5xx responses across all endpoints has exceeded
+            5 % of total requests over the last 5 minutes
+            (recording rule `urlshorter_http_error_ratio:5m`).
+            Check application logs for database connectivity or
+            upstream failures.
+
+      - alert: urlshorter_5xx_spike
+        expr: increase(http_server_requests_seconds_count{status=~"5.."}[5m]) > 50
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "5xx errors rising rapidly"
+          description: >-
+            More than 50 5xx responses have been recorded in the last
+            5 minutes. This may be a transient blip or the beginning
+            of a larger outage.
+
+  # ---------------------------------------------------------------- latency
+  - name: urlshorter.latency
+    rules:
+      - alert: urlshorter_redirect_latency_p95_high
+        expr: urlshorter_redirect_duration:p95 > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redirect p95 latency above 100 ms"
+          description: >-
+            The 95-th percentile redirect duration has exceeded
+            100 ms for 2 minutes. Baseline under cache-hit load is
+            < 50 ms. Possible causes: Redis latency, PG connection
+            pool saturation, or increased cache miss ratio.
+
+      - alert: urlshorter_postgres_lookup_latency_p95_high
+        expr: urlshorter_postgres_lookup_duration:p95 > 0.2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL lookup p95 latency above 200 ms"
+          description: >-
+            PostgreSQL lookups on the cache-miss path are exceeding
+            200 ms p95. Baseline is < 100 ms. Consider connection
+            pool exhaustion or slow queries.
+
+  # ------------------------------------------------------------- cache / redis
+  - name: urlshorter.cache
+    rules:
+      - alert: urlshorter_cache_hit_ratio_low
+        expr: >-
+            urlshorter_cache_hit_ratio:5m < 0.3
+            and
+            sum(rate(urlshorter_cacheHit_total[5m])) > 10
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cache hit ratio below 30 %"
+          description: >-
+            Less than 30 % of redirects are being served from the
+            Redis cache over the last 5 minutes, with at least 10
+            cache hits in the window. This forces extra PostgreSQL
+            lookups. Could indicate cold cache, restart, or cache
+            stampede.
+
+      - alert: urlshorter_redis_lookup_latency_p95_high
+        expr: urlshorter_redis_lookup_duration:p95 > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis lookup p95 latency above 50 ms"
+          description: >-
+            Redis cache lookup latency is above 50 ms p95. The Redis
+            server may be under load, experiencing network issues, or
+            connection pooling is exhausted.
+
+      - alert: urlshorter_click_increment_failures
+        expr: urlshorter_click_increment_failures:rate5m > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Click increments are failing"
+          description: >-
+            `urlshorter_clicksIncrementFailed_total` is increasing —
+            increments to Redis are failing. Likely Redis
+            connectivity issue. Clicks are being silently dropped.
+
+  # ---------------------------------------------------------- click flush
+  - name: urlshorter.flush
+    rules:
+      - alert: urlshorter_flush_failures
+        expr: urlshorter_click_flush_failures:rate5m > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Click flush is failing repeatedly"
+          description: >-
+            `urlshorter_clicksFlushFailed_total` is increasing —
+            the Lua atomic flush cycle cannot persist drained
+            counters to PostgreSQL. Pending clicks will accumulate
+            and may be lost if Redis restarts.
+
+      - alert: urlshorter_pending_flush_backlog
+        expr: >-
+            sum(rate(urlshorter_click_increments:rate5m[5m]))
+            -
+            sum(rate(urlshorter_clicks_flushed:rate5m[5m]))
+            > 500
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Unflushed click backlog growing"
+          description: >-
+            The difference between click increments and flush
+            deliveries has exceeded 500 for 3 minutes. Clicks are
+            being buffered in Redis faster than the scheduled flush
+            can persist them — the PostgreSQL side may be down or
+            very slow.
+
+  # --------------------------------------------------------- infrastructure
+  - name: urlshorter.infrastructure
+    rules:
+      - alert: urlshorter_connection_pool_saturation
+        expr: >-
+            hikaricp_connections_active / hikaricp_connections_pool_max
+            > 0.9
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HikariCP connection pool > 90 % active"
+          description: >-
+            More than 90 % of the PostgreSQL connection pool is in
+            use. With virtual threads this can cause request
+            queuing. Consider increasing `maximum-pool-size` or
+            reducing concurrent redirect load.
+
+      - alert: urlshorter_jvm_memory_high
+        expr: >-
+            jvm_memory_used_bytes{area="heap"}
+            /
+            jvm_memory_max_bytes{area="heap"}
+            > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM heap usage above 85 %"
+          description: >-
+            Heap memory usage has stayed above 85 % for 5 minutes.
+            GC frequency will increase; consider adjusting heap
+            size or investigating memory growth (e.g. Redis cache
+            entries accumulating).
+
+      - alert: urlshorter_gc_pressure
+        expr: rate(jvm_gc_pause_seconds_count[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GC pause frequency above 10/sec"
+          description: >-
+            More than 10 GC pauses per second on average.
+            High GC activity can increase redirect latency and
+            reduce overall throughput.
