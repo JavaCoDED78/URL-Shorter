@@ -1,9 +1,115 @@
 # URL-Shorter — Prometheus recording rules (Sprint 29, Task 29.5).
 #
-# Placeholder created by Task 29.4 (Prometheus config as code) so the
-# monitoring/ tree and the rule_files reference exist and validate as a unit.
-# Task 29.5 populates this file with the derived/aggregated series — request
-# rate, redirect rate, error rate, cache hit ratio, click flush rate, flush
-# failure rate and request latency quantiles — that dashboards and alert rules
-# share instead of duplicating PromQL.
-groups: []
+# Purpose: pre-compute the derived series that several Grafana dashboard
+# panels (Task 29.9) and alert rules (Task 29.6) will share, so complex
+# PromQL is written once here instead of duplicated in every panel.
+#
+# Naming: the recorded series follow the project's `urlshorter.` namespace
+# convention (docs/observability-contract.md), rendered in Prometheus
+# format as `urlshorter_*` — the plan's `recorded:` prefix was adapted to
+# the naming convention actually chosen, as Task 29.5 allows.
+#
+# Sources: every expression uses only metrics that exist in the
+# observability contract v1.1 (application-owned counters/timers plus the
+# Spring Boot platform metric `http_server_requests_seconds`). No metric
+# from outside the contract is referenced.
+#
+# Conventions:
+#   * rates use a 5m rate window (matches the `...rate5m` suffix in the name);
+#   * ratios are guarded against a zero denominator by arithmetic only —
+#     with no traffic in the window the series evaluates to NaN and panels
+#     render "no data" rather than a false 0 or an alertable spike;
+#   * latency quantiles are computed with histogram_quantile over the
+#     application timers and the HTTP server timer (both expose
+#     percentiles-histograms, see management.metrics.distribution in
+#     application.yaml — required for `_bucket` series to exist);
+#   * group interval equals the global evaluation_interval (15 s).
+
+groups:
+  # ---------------------------------------------------------------- rates
+  - name: urlshorter.rates
+    interval: 15s
+    rules:
+      # Requests per second, per URI template (method/status/outcome collapsed).
+      - record: urlshorter_http_requests:rate5m
+        expr: sum by (uri) (rate(http_server_requests_seconds_count[5m]))
+      # HTTP 5xx errors per second, per URI template.
+      - record: urlshorter_http_errors:rate5m
+        expr: sum by (uri) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+      # Successful redirects per second (302 resolution).
+      - record: urlshorter_redirects:rate5m
+        expr: rate(urlshorter_linksRedirected_total[5m])
+      # Redirects on unknown codes per second (404).
+      - record: urlshorter_not_found:rate5m
+        expr: rate(urlshorter_linksNotFound_total[5m])
+      # Redirects on expired links per second (410).
+      - record: urlshorter_expired:rate5m
+        expr: rate(urlshorter_linksExpired_total[5m])
+      # Cache-aside hits / misses per second.
+      - record: urlshorter_cache_hits:rate5m
+        expr: rate(urlshorter_cacheHit_total[5m])
+      - record: urlshorter_cache_misses:rate5m
+        expr: rate(urlshorter_cacheMiss_total[5m])
+      # Click increments and best-effort drops (Redis unavailable) per second.
+      - record: urlshorter_click_increments:rate5m
+        expr: rate(urlshorter_clicksIncremented_total[5m])
+      - record: urlshorter_click_increment_failures:rate5m
+        expr: rate(urlshorter_clicksIncrementFailed_total[5m])
+      # Drained clicks persisted per second, and failed flush cycles per second.
+      - record: urlshorter_clicks_flushed:rate5m
+        expr: rate(urlshorter_clicksFlushed_total[5m])
+      - record: urlshorter_click_flush_failures:rate5m
+        expr: rate(urlshorter_clicksFlushFailed_total[5m])
+
+  # ---------------------------------------------------------------- ratios
+  - name: urlshorter.ratios
+    interval: 15s
+    rules:
+      # Share of redirect lookups served from the Redis cache, over 5m.
+      - record: urlshorter_cache_hit_ratio:5m
+        expr: |
+          sum(rate(urlshorter_cacheHit_total[5m]))
+            /
+          (
+            sum(rate(urlshorter_cacheHit_total[5m]))
+            + sum(rate(urlshorter_cacheMiss_total[5m]))
+          )
+      # Share of all HTTP requests that ended in a 5xx, over 5m.
+      - record: urlshorter_http_error_ratio:5m
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+            /
+          sum(rate(http_server_requests_seconds_count[5m]))
+
+  # ---------------------------------------------------------------- latency
+  - name: urlshorter.latency
+    interval: 15s
+    rules:
+      # Redirect resolution end-to-end, quantiles over the last 5m.
+      - record: urlshorter_redirect_duration:p50
+        expr: histogram_quantile(0.50, sum by (le) (rate(urlshorter_redirectDuration_seconds_bucket[5m])))
+      - record: urlshorter_redirect_duration:p95
+        expr: histogram_quantile(0.95, sum by (le) (rate(urlshorter_redirectDuration_seconds_bucket[5m])))
+      - record: urlshorter_redirect_duration:p99
+        expr: histogram_quantile(0.99, sum by (le) (rate(urlshorter_redirectDuration_seconds_bucket[5m])))
+      # PostgreSQL lookup on the cache-miss path, quantiles over the last 5m.
+      - record: urlshorter_postgres_lookup_duration:p50
+        expr: histogram_quantile(0.50, sum by (le) (rate(urlshorter_postgresLookupDuration_seconds_bucket[5m])))
+      - record: urlshorter_postgres_lookup_duration:p95
+        expr: histogram_quantile(0.95, sum by (le) (rate(urlshorter_postgresLookupDuration_seconds_bucket[5m])))
+      - record: urlshorter_postgres_lookup_duration:p99
+        expr: histogram_quantile(0.99, sum by (le) (rate(urlshorter_postgresLookupDuration_seconds_bucket[5m])))
+      # Redis cache lookup, quantiles over the last 5m.
+      - record: urlshorter_redis_lookup_duration:p50
+        expr: histogram_quantile(0.50, sum by (le) (rate(urlshorter_redisLookupDuration_seconds_bucket[5m])))
+      - record: urlshorter_redis_lookup_duration:p95
+        expr: histogram_quantile(0.95, sum by (le) (rate(urlshorter_redisLookupDuration_seconds_bucket[5m])))
+      - record: urlshorter_redis_lookup_duration:p99
+        expr: histogram_quantile(0.99, sum by (le) (rate(urlshorter_redisLookupDuration_seconds_bucket[5m])))
+      # HTTP server response time (all endpoints), quantiles over the last 5m.
+      - record: urlshorter_http_duration:p50
+        expr: histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket[5m])))
+      - record: urlshorter_http_duration:p95
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket[5m])))
+      - record: urlshorter_http_duration:p99
+        expr: histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket[5m])))

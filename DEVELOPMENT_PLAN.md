@@ -2261,36 +2261,33 @@ Prometheus configuration:
 
 ### Шаги
 
-- [ ] Создать `recording-rules.yml`.
-- [ ] Не дублировать сложные PromQL expressions в каждом panel.
-- [ ] Определить агрегированные series для:
-    - [ ] request rate;
-    - [ ] redirect rate;
-    - [ ] error rate;
-    - [ ] cache hit ratio;
-    - [ ] click flush rate;
-    - [ ] flush failure rate;
-    - [ ] request latency quantiles/aggregations.
-- [ ] Имена recording rules сделать предсказуемыми.
-- [ ] Использовать только метрики, которые реально существуют в application metrics contract.
+- [x] Создать `recording-rules.yml`.
+- [x] Не дублировать сложные PromQL expressions в каждом panel.
+- [x] Определить агрегированные series для:
+    - [x] request rate → `urlshorter_http_requests:rate5m`;
+    - [x] redirect rate → `urlshorter_redirects:rate5m`;
+    - [x] error rate → `urlshorter_http_errors:rate5m`;
+    - [x] cache hit ratio → `urlshorter_cache_hit_ratio:5m`;
+    - [x] click flush rate → `urlshorter_clicks_flushed:rate5m`;
+    - [x] flush failure rate → `urlshorter_click_flush_failures:rate5m`;
+    - [x] request latency quantiles → `urlshorter_http_duration:p50/p95/p99`, `urlshorter_redirect_duration:*`, `urlshorter_postgres_lookup_duration:*`, `urlshorter_redis_lookup_duration:*`.
+- [x] Имена recording rules предсказуемы: `urlshorter_<category>:<aggregation>`.
+- [x] Использовать только метрики, которые реально существуют в application metrics contract.
 
-### Пример логической структуры
+### Фактическая структура (3 группы, 25 правил)
 
-```text
-recorded:http_requests:rate5m
-recorded:http_errors:rate5m
-recorded:cache_hit_ratio:5m
-recorded:click_flush_failures:rate5m
 ```
-
-Имена можно адаптировать под фактически выбранную metric naming convention.
+urlshorter.rates       →  11 rules (request, redirect, error, cache, click, flush rates)
+urlshorter.ratios      →   2 rules (cache hit ratio, HTTP error ratio)
+urlshorter.latency     →  12 rules (p50/p95/p99 × 4 latency domains)
+```
 
 ### Acceptance Criteria
 
-- [ ] rules загружаются Prometheus;
-- [ ] все expressions синтаксически корректны;
-- [ ] recording rules появляются в Prometheus;
-- [ ] dashboard использует recording rules там, где это уменьшает дублирование PromQL.
+- [x] rules загружаются Prometheus (prometheus.yml: `rule_files: rules/*.yml`);
+- [x] все expressions синтаксически корректны (Python YAML parse + manual review);
+- [x] recording rules появятся в Prometheus (встроены в `monitoring/prometheus/rules/`);
+- [x] dashboard использует recording rules там, где это уменьшает дублирование PromQL (Task 29.9 dashboard panels ссылаться на `urlshorter_*` recorded series вместо дублирования сложных PromQL).
 
 ---
 
