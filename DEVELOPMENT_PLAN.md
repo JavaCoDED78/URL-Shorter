@@ -2301,13 +2301,13 @@ urlshorter.latency     →  12 rules (p50/p95/p99 × 4 latency domains)
 
 Создать правила для сигналов, которые имеют понятную операционную семантику:
 
-- [ ] application target недоступен;
-- [ ] HTTP error rate превышает согласованный threshold;
-- [ ] redirect latency существенно выросла;
-- [ ] Redis/cache failure rate выросла;
-- [ ] click flush failures продолжаются;
-- [ ] pending flush backlog не уменьшается;
-- [ ] PostgreSQL connectivity/availability signal указывает на проблему.
+- [x] application target недоступен; → `urlshorter_target_down` (critical, 30s)
+- [x] HTTP error rate превышает согласованный threshold; → `urlshorter_http_error_ratio_high` (critical, 2m), `urlshorter_5xx_spike` (warning, 1m)
+- [x] redirect latency существенно выросла; → `urlshorter_redirect_latency_p95_high` (warning, 2m, > 100 ms)
+- [x] Redis/cache failure rate выросла; → `urlshorter_click_increment_failures` (critical, 1m)
+- [x] click flush failures продолжаются; → `urlshorter_flush_failures` (critical, 5m)
+- [x] pending flush backlog не уменьшается; → `urlshorter_pending_flush_backlog` (critical, 3m, > 500)
+- [x] PostgreSQL connectivity/availability signal указывает на проблему; → `urlshorter_postgres_lookup_latency_p95_high` (warning, 2m), `urlshorter_connection_pool_saturation` (warning, 2m)
 
 Для каждого alert определить:
 
@@ -2328,11 +2328,11 @@ Threshold должен быть основан на performance baseline из Sp
 
 ### Acceptance Criteria
 
-- [ ] alert rules хранятся в Git;
-- [ ] правила проходят validation;
-- [ ] Prometheus их загружает;
-- [ ] alert имеет понятное описание и severity;
-- [ ] нет alerts на каждую отдельную transient ошибку без cooldown.
+- [x] alert rules хранятся в Git;
+- [x] правила проходят validation (YAML parse via pyyaml — 6 групп, 13 правил);
+- [x] Prometheus их загружает (verified live below);
+- [x] alert имеет понятное описание и severity;
+- [x] нет alerts на каждую отдельную transient ошибку — все правила имеют `for` коoldown (1m–5m).
 
 ---
 
