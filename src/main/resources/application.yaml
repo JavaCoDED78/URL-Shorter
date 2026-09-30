@@ -60,3 +60,17 @@ management:
       probes:
         enabled: true
       show-components: always
+  metrics:
+    # Task 29.5: expose application timers (and the HTTP server timer) as
+    # Prometheus histograms — without this, Micrometer exposes them as
+    # summaries and `_bucket` series do not exist, so the recording rules'
+    # histogram_quantile p50/p95/p99 (monitoring/prometheus/rules/
+    # recording-rules.yml) and the dashboard latency panels (Task 29.9)
+    # cannot be computed. This matches the observability contract, which
+    # declares `*_seconds` bucket histograms for all timers.
+    distribution:
+      percentiles-histogram:
+        urlshorter.redirectDuration: true
+        urlshorter.postgresLookupDuration: true
+        urlshorter.redisLookupDuration: true
+        http.server.requests: true

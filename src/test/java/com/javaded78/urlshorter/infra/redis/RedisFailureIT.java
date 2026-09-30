@@ -118,8 +118,8 @@ class RedisFailureIT {
 
         // Task 17.2 policy: availability wins, the click is dropped, not the request
         assertThat(response.getStatusCode().value()).isEqualTo(302);
-        assertThat(metric("clicks.increment.failed")).isGreaterThanOrEqualTo(1);
-        assertThat(metric("links.redirected")).isGreaterThanOrEqualTo(1);
+        assertThat(metric("urlshorter.clicksIncrementFailed")).isGreaterThanOrEqualTo(1);
+        assertThat(metric("urlshorter.linksRedirected")).isGreaterThanOrEqualTo(1);
     }
 
     @Test
@@ -136,14 +136,14 @@ class RedisFailureIT {
 
         rest.getForEntity(url("/s17flush"), String.class);   // accumulate a pending click
 
-        long failedBefore = metric("clicks.flush.failed");
-        waitFor(() -> metricUnchecked("clicks.flush.failed") > failedBefore, 30_000);
+        long failedBefore = metric("urlshorter.clicksFlushFailed");
+        waitFor(() -> metricUnchecked("urlshorter.clicksFlushFailed") > failedBefore, 30_000);
         assertThat(liveness()).isEqualTo("UP");
 
         // recovery: next scheduled cycle drains normally
         redisDown.set(false);
-        long flushedBefore = metric("clicks.flushed");
-        waitFor(() -> metricUnchecked("clicks.flushed") > flushedBefore, 30_000);
+        long flushedBefore = metric("urlshorter.clicksFlushed");
+        waitFor(() -> metricUnchecked("urlshorter.clicksFlushed") > flushedBefore, 30_000);
 
         ResponseEntity<Map> stats = restTemplate.getForEntity(
                 url("/api/v1/links/s17flush/stats"), Map.class);
