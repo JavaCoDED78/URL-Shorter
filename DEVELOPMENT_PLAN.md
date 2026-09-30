@@ -2227,27 +2227,29 @@ monitoring/
 
 ### Шаги
 
-- [ ] Создать `prometheus.yml`.
-- [ ] Зафиксировать global configuration.
-- [ ] Настроить `scrape_interval`.
-- [ ] Настроить `evaluation_interval`.
-- [ ] Добавить scrape job для Spring Boot application.
-- [ ] Указать hostname/port приложения через Docker networking.
-- [ ] Добавить `metrics_path: /actuator/prometheus`.
-- [ ] Добавить необходимый scrape timeout.
-- [ ] Настроить labels для окружения.
-- [ ] Не использовать hard-coded production secrets.
-- [ ] Не хранить credentials в Git.
+- [x] Создать `prometheus.yml`.
+- [x] Зафиксировать global configuration.
+- [x] Настроить `scrape_interval`.
+- [x] Настроить `evaluation_interval`.
+- [x] Добавить scrape job для Spring Boot application.
+- [x] Указать hostname/port приложения через Docker networking.
+- [x] Добавить `metrics_path: /actuator/prometheus`.
+- [x] Добавить необходимый scrape timeout.
+- [x] Настроить labels для окружения.
+- [x] Не использовать hard-coded production secrets.
+- [x] Не хранить credentials в Git.
 
 ### Acceptance Criteria
 
 Prometheus configuration:
 
-- [ ] находится в repository;
-- [ ] читается контейнером Prometheus;
-- [ ] проходит syntax/config validation;
-- [ ] после запуска автоматически обнаруживает application target;
-- [ ] не требует ручной настройки через Web UI.
+- [x] находится в repository;
+- [x] читается контейнером Prometheus;
+- [x] проходит syntax/config validation;
+- [x] после запуска автоматически обнаруживает application target;
+- [x] не требует ручной настройки через Web UI.
+
+**Evidence (verified 2026-09-30):** `promtool check config` → `SUCCESS: 2 rule files found` + `valid prometheus config file syntax`. Live verification with `prom/prometheus:v2.55.1` mounting `monitoring/prometheus/prometheus.yml` + `rules/` read-only on the compose network: target `http://app:8080/actuator/prometheus` discovered automatically, `up == 1`, `urlshorter_linksRedirected_total` and `urlshorter_redirectDuration_seconds_count` scraped with labels `{application="URL-Shorter", instance="app:8080", job="urlshorter-app"}`; no config-load errors in Prometheus logs; no manual UI configuration performed.
 
 ---
 

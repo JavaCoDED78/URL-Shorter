@@ -1,0 +1,9 @@
+# URL-Shorter — Prometheus recording rules (Sprint 29, Task 29.5).
+#
+# Placeholder created by Task 29.4 (Prometheus config as code) so the
+# monitoring/ tree and the rule_files reference exist and validate as a unit.
+# Task 29.5 populates this file with the derived/aggregated series — request
+# rate, redirect rate, error rate, cache hit ratio, click flush rate, flush
+# failure rate and request latency quantiles — that dashboards and alert rules
+# share instead of duplicating PromQL.
+groups: []

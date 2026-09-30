@@ -1,0 +1,43 @@
+# URL-Shorter — Prometheus configuration (Sprint 29, Task 29.4)
+#
+# This file, together with the rule files under rules/, is the single source
+# of truth for the local monitoring stack. Task 29.7 mounts it read-only into
+# the Prometheus container, so no manual configuration through the Prometheus
+# Web UI is required.
+#
+# Security: this config holds no secrets or credentials. The scrape target is
+# addressed by its Docker service name on the compose bridge network, and the
+# local stack needs no authentication for /actuator/prometheus.
+
+global:
+  # How often each target is scraped (Task 29.4: scrape_interval).
+  scrape_interval: 15s
+  # How often recording + alerting rules are evaluated (Task 29.4).
+  evaluation_interval: 15s
+  # Hard cap on a single scrape; must be < scrape_interval. The actuator
+  # endpoint answers in milliseconds, so 10s leaves generous headroom
+  # (Task 29.4: scrape timeout).
+  scrape_timeout: 10s
+  # Labels attached to every stored time series — the environment this stack
+  # runs in (Task 29.4: environment labels). This config is the local/CI dev
+  # stack; other environments ship their own override.
+  external_labels:
+    environment: local
+
+# Rules as code: recording rules (Task 29.5) and alert rules (Task 29.6).
+rule_files:
+  - "rules/*.yml"
+
+scrape_configs:
+  # The Spring Boot application, addressed by its Docker service name ("app")
+  # on the compose bridge network — no IP or host hard-coding (Task 29.4).
+  - job_name: urlshorter-app
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - "app:8080"
+        labels:
+          # Every series from this target (including platform metrics such as
+          # jvm_* / hikaricp_) carries the application label from the
+          # observability contract (docs/observability-contract.md).
+          application: URL-Shorter

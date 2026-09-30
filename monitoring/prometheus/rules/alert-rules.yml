@@ -1,0 +1,9 @@
+# URL-Shorter — Prometheus alerting rules (Sprint 29, Task 29.6).
+#
+# Placeholder created by Task 29.4 (Prometheus config as code) so the
+# monitoring/ tree and the rule_files reference exist and validate as a unit.
+# Task 29.6 populates this file with the operational conditions — target down,
+# HTTP error rate, redirect latency, cache failure rate, click flush failures,
+# pending flush backlog, PostgreSQL availability — using thresholds grounded in
+# the Sprint 23 performance baseline, not arbitrary values.
+groups: []
