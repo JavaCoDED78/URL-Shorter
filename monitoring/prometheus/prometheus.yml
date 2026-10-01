@@ -36,6 +36,7 @@ scrape_configs:
     static_configs:
       - targets:
           - "app:8080"
+          - "host.docker.internal:8080"
         labels:
           # Every series from this target (including platform metrics such as
           # jvm_* / hikaricp_) carries the application label from the

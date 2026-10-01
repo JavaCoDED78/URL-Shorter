@@ -71,9 +71,70 @@ services:
       start_period: 90s
     restart: unless-stopped
 
+  # ------------------------------------------------------------------- prometheus
+  # Task 29.7: Prometheus scrapes /actuator/prometheus from the app.
+  # Configuration (prometheus.yml + rules/*.yml) is mounted read-only
+  # from the repository so the entire monitoring stack is defined in Git.
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: urlshorter-prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules/:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    depends_on:
+      app:
+        condition: service_started
+    networks:
+      - urlshorter
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------- grafana
+  # Task 29.8/29.10: Grafana auto-provisions datasource (Prometheus)
+  # and imports the dashboard JSON from monitoring/grafana/dashboards/.
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: urlshorter-grafana
+    ports:
+      - "${GRAFANA_PORT:-14000}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    networks:
+      - urlshorter
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   redis-data:
+  prometheus-data:
+  grafana-data:
 
 networks:
   urlshorter:
