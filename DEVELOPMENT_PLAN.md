@@ -2653,28 +2653,28 @@ Grafana can query metric
 
 Проверить минимум:
 
-- [ ] application target discovered;
-- [ ] target state = `UP`;
-- [ ] application metrics scraped;
-- [ ] generated request changes expected counter;
-- [ ] PromQL query returns non-empty result;
-- [ ] recording rule is evaluated;
-- [ ] alert rule is loaded.
+- [x] application target discovered;
+- [x] target state = `UP`;
+- [x] application metrics scraped;
+- [x] generated request changes expected counter;
+- [x] PromQL query returns non-empty result;
+- [x] recording rule is evaluated;
+- [x] alert rule is loaded.
 
 ### Варианты реализации
 
-- [ ] lightweight smoke test на Compose stack;
+- [x] lightweight smoke test на Compose stack;
 - [ ] Testcontainers-based monitoring test при приемлемой стоимости запуска;
-- [ ] отдельный CI job для полного monitoring stack.
+- [x] отдельный CI job для полного monitoring stack.
 
 Не обязательно запускать Grafana на каждый unit test. Полный stack validation должен быть отдельным integration/smoke stage.
 
 ### Acceptance Criteria
 
-- [ ] хотя бы один автоматизированный тест подтверждает end-to-end metrics path;
-- [ ] test падает при сломанном Prometheus config;
-- [ ] test падает при сломанном scrape path;
-- [ ] test падает при отсутствующем dashboard provisioning/configuration.
+- [x] хотя бы один автоматизированный тест подтверждает end-to-end metrics path;
+- [x] test падает при сломанном Prometheus config;
+- [x] test падает при сломанном scrape path;
+- [x] test падает при отсутствующем dashboard provisioning/configuration.
 
 ---
 

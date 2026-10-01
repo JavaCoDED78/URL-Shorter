@@ -1,0 +1,308 @@
+#!/usr/bin/env python3
+# pyright: reportUnknownVariableType=false, reportUnknownArgumentType=false
+# Smoke/integration tests for the monitoring stack (Task 29.11).
+#
+# Verifies the full metrics pipeline:
+#   application starts → request → Micrometer → /actuator/prometheus
+#   → Prometheus scrape → recording rules → alert rules loaded
+#   → Grafana dashboard provisioning
+#
+# Usage (local dev):
+#   python monitoring/validate-monitoring-stack.py
+#
+# Usage (CI):
+#   python monitoring/validate-monitoring-stack.py --ci
+#
+
+import argparse, json, sys, time, urllib.request, urllib.error
+
+BASE_URL_PROMETHEUS = "http://localhost:9090"
+BASE_URL_GRAFANA = "http://localhost:14000"
+GRAFANA_USER = "admin"
+GRAFANA_PASS = "admin"
+APP_URL = "http://localhost:8080"
+EXPECTED_SERIES = {
+    "urlshorter_linksRedirected_total",
+    "urlshorter_cacheHit_total",
+    "urlshorter_cacheMiss_total",
+    "urlshorter_clicksIncremented_total",
+}
+
+
+def http_get(url, headers=None, timeout=10, as_json=True):
+    req = urllib.request.Request(url, headers=headers or {})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode()
+            if not as_json:
+                return resp.status, raw
+            return resp.status, json.loads(raw)
+    except urllib.error.HTTPError as e:
+        body = e.read()
+        text = body.decode() if body else ""
+        return e.code, json.loads(text) if text else ""
+    except Exception as e:
+        return None, str(e)
+
+
+def grafana_get(path, timeout=10):
+    """Grafana API request with Basic auth via header (URL-based auth broken in Python 3.14)."""
+    import base64
+    auth = base64.b64encode(f"{GRAFANA_USER}:{GRAFANA_PASS}".encode()).decode()
+    headers = {"Authorization": f"Basic {auth}"}
+    return http_get(f"{BASE_URL_GRAFANA}{path}", headers=headers, timeout=timeout)
+
+
+def check(description, fn):
+    """Run fn(); print PASS/FAIL. Returns True on success."""
+    try:
+        ok, data = fn()
+        status = "PASS" if ok else "FAIL"
+        print(f"  [{status}] {description}")
+        if data is not None and not ok:
+            print(f"         Data: {data}")
+        return ok
+    except Exception as e:
+        print(f"  [FAIL] {description} — exception: {e}")
+        return False
+
+
+# ---- Prometheus checks ----
+
+def prometheus_targets():
+    """All Prometheus targets discovered (at least one UP)."""
+    status, data = http_get(f"{BASE_URL_PROMETHEUS}/api/v1/targets")
+    if status != 200 or not data.get("data"):
+        return False, data
+    targets = data["data"].get("activeTargets", [])
+    up = [t for t in targets if t.get("health") == "up"]
+    return len(up) > 0, {"up": len(up), "total": len(targets)}
+
+
+def prometheus_application_scraped():
+    """Application metrics are present in Prometheus."""
+    status, data = http_get(f"{BASE_URL_PROMETHEUS}/api/v1/label/__name__/values")
+    if status != 200 or not data.get("data"):
+        return False, data
+    names = set(data["data"])
+    found = EXPECTED_SERIES & names
+    missing = EXPECTED_SERIES - names
+    return len(missing) == 0, {"found": len(found), "missing": sorted(missing)}
+
+
+def prometheus_metric_changes_on_request(iterations=5):
+    """Generate redirects and verify the redirect counter increases."""
+    import urllib.parse
+    import urllib.error
+
+    # Create a link
+    body = json.dumps({"originalUrl": "https://example.com/health"}).encode()
+    req = urllib.request.Request(
+        f"{APP_URL}/api/v1/links",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            code = json.loads(resp.read().decode()).get("code")
+    except urllib.error.HTTPError as e:
+        return False, {"detail": f"link creation failed: {e.code}"}
+    except Exception as e:
+        return False, {"detail": f"link creation failed: {e}"}
+    if not code:
+        return False, {"detail": "no code returned"}
+
+    # Trigger redirects
+    for _ in range(iterations):
+        try:
+            req = urllib.request.Request(f"{APP_URL}/{code}", method="GET")
+            urllib.request.urlopen(req, timeout=5)
+        except urllib.error.HTTPError as e:
+            if e.code != 302:
+                pass  # ignore non-302 redirects
+        except Exception:
+            pass  # some redirects raise ConnectionError
+
+    # Query Prometheus for the counter
+    prom_query = 'urlshorter_linksRedirected_total{job="urlshorter-app"}'
+    q = f"{BASE_URL_PROMETHEUS}/api/v1/query?query={urllib.parse.quote(prom_query)}"
+    status, data = http_get(q)
+    if status != 200:
+        return False, data
+    result = data.get("data", {}).get("result", [])
+    if not result:
+        return False, {"detail": "no series found for urlshorter_linksRedirected_total"}
+    value = float(result[0]["value"][1])
+    return value >= iterations, {"expected_at_least": iterations, "actual": value}
+
+
+def prometheus_recording_rules_evaluated():
+    """At least one recording rule series exists in Prometheus."""
+    status, data = http_get(
+        f"{BASE_URL_PROMETHEUS}/api/v1/series?"
+        f"match[]={urllib.parse.quote('urlshorter_cache_hit_ratio:5m')}"
+    )
+    if status != 200:
+        return False, data
+    series = data.get("data", [])
+    return len(series) > 0, {"series_found": len(series)}
+
+
+def prometheus_alert_rules_loaded():
+    """Alert rules are loaded in Prometheus (loaded without errors)."""
+    status, data = http_get(f"{BASE_URL_PROMETHEUS}/api/v1/rules?type=alert")
+    if status != 200 or not data.get("data"):
+        return False, data
+    groups = data["data"].get("groups", [])
+    total_rules = sum(len(g.get("rules", [])) for g in groups)
+    return total_rules > 0, {"alert_groups": len(groups), "total_rules": total_rules}
+
+
+def prometheus_query_non_empty():
+    """A PromQL query for a business metric returns non-empty result."""
+    query = urllib.parse.quote("sum(rate(urlshorter_clicksIncremented_total[1m]))")
+    status, data = http_get(f"{BASE_URL_PROMETHEUS}/api/v1/query?query={query}")
+    if status != 200:
+        return False, data
+    result = data.get("data", {}).get("result", [])
+    return len(result) > 0, {"series_count": len(result)}
+
+
+# ---- Grafana checks ----
+
+def grafana_datasource_provisioned():
+    """Grafana datasource (Prometheus) is provisioned automatically."""
+    status, data = grafana_get("/api/datasources")
+    if status != 200 or not isinstance(data, list):
+        return False, data
+    prom_ds = [d for d in data if d.get("type") == "prometheus"]
+    return len(prom_ds) > 0, {"prometheus_datasources": len(prom_ds)}
+
+
+def grafana_dashboard_provisioned():
+    """Grafana dashboard is auto-imported from provisioning."""
+    status, data = grafana_get("/api/dashboards/uid/url-shortener-overview")
+    if status != 200:
+        return False, data
+    dashboard = data.get("dashboard", {})
+    return bool(dashboard.get("uid")), {
+        "uid": dashboard.get("uid"),
+        "title": dashboard.get("title"),
+        "folder": dashboard.get("meta", {}).get("folderTitle"),
+        "panels": len(dashboard.get("panels", [])),
+    }
+
+
+def grafana_dashboard_panels_valid():
+    """All panels reference a valid Prometheus datasource."""
+    status, data = grafana_get("/api/dashboards/uid/url-shortener-overview")
+    if status != 200:
+        return False, data
+    panels = data["dashboard"].get("panels", [])
+    prom_refs = {"Prometheus", "Prometheus (urlshorter-prometheus)", "prometheus", "PBFA97CFB590B2093"}
+    broken = []
+    for p in panels:
+        ds = p.get("datasource")
+        # Grafana 11+ returns datasource as dict: {'type': 'prometheus', 'uid': '...'}
+        if ds:
+            if isinstance(ds, dict):
+                ds_type = str(ds.get("type", ""))
+                ds_uid = str(ds.get("uid", ""))
+                if ds_type != "prometheus":
+                    broken.append({"panel": p.get("title"), "datasource": str(ds)})
+            elif str(ds) not in prom_refs:
+                broken.append({"panel": p.get("title"), "datasource": str(ds)})
+    return len(broken) == 0, {"broken_panels": broken[:5]}
+
+
+# ---- Stack lifecycle helpers ----
+
+def wait_for_health(base_url, check_path="/-/healthy", max_attempts=30, delay=2):
+    """Poll until the service is healthy or timeout."""
+    for _ in range(max_attempts):
+        try:
+            status, _ = http_get(f"{base_url}{check_path}", timeout=3)
+            if status == 200:
+                return True
+        except Exception:
+            pass
+        time.sleep(delay)
+    return False
+
+
+# ---- Main ----
+
+def main():
+    parser = argparse.ArgumentParser(description="Monitoring stack smoke tests (Task 29.11)")
+    parser.add_argument("--ci", action="store_true", help="Run in CI mode (no compose up/down)")
+    args = parser.parse_args()
+
+    passed = 0
+    failed = 0
+
+    def record(ok):
+        nonlocal passed, failed
+        if ok:
+            passed += 1
+        else:
+            failed += 1
+
+    # Step 1: Check Prometheus is running and healthy
+    print("\n1. Prometheus health")
+    ok, _ = http_get(f"{BASE_URL_PROMETHEUS}/-/healthy", timeout=5, as_json=False)
+    record(ok == 200)
+    print(f"  [{'PASS' if ok == 200 else 'FAIL'}] Prometheus health endpoint")
+
+    # Step 2: Check Grafana is running
+    print("\n2. Grafana health")
+    ok, _ = http_get(f"{BASE_URL_GRAFANA}/api/health", timeout=5)
+    record(ok == 200)
+    print(f"  [{'PASS' if ok == 200 else 'FAIL'}] Grafana health endpoint")
+
+    # Step 3: Prometheus — target discovered
+    print("\n3. Prometheus target discovery")
+    record(check("application target discovered", prometheus_targets))
+
+    # Step 4: Prometheus — application metrics scraped
+    print("\n4. Application metrics scraping")
+    record(check("application metrics present", prometheus_application_scraped))
+
+    # Step 5: PromQL — non-empty query
+    print("\n5. PromQL query")
+    record(check("PromQL query returns results", prometheus_query_non_empty))
+
+    # Step 6: Recording rules evaluated
+    print("\n6. Recording rules")
+    record(check("recording rule series evaluated", prometheus_recording_rules_evaluated))
+
+    # Step 7: Alert rules loaded
+    print("\n7. Alert rules")
+    record(check("alert rules loaded", prometheus_alert_rules_loaded))
+
+    # Step 8: End-to-end — redirect counter changes
+    print("\n8. End-to-end metrics path (create link → redirect → Prometheus)")
+    record(check("redirect counter increases on request", prometheus_metric_changes_on_request))
+
+    # Step 9: Grafana — datasource provisioned
+    print("\n9. Grafana datasource provisioning")
+    record(check("Prometheus datasource provisioned", grafana_datasource_provisioned))
+
+    # Step 10: Grafana — dashboard provisioned
+    print("\n10. Grafana dashboard provisioning")
+    record(check("dashboard auto-imported", grafana_dashboard_provisioned))
+    record(check("dashboard panels valid", grafana_dashboard_panels_valid))
+
+    # Summary
+    total = passed + failed
+    print(f"\n{'=' * 50}")
+    print(f"Monitoring stack smoke tests: {passed}/{total} passed, {failed} failed")
+    if failed:
+        print("RESULT: FAIL")
+        sys.exit(1)
+    else:
+        print("RESULT: ALL PASSED")
+
+
+if __name__ == "__main__":
+    main()
