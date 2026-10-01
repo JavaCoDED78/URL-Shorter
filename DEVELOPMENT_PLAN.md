@@ -1728,6 +1728,36 @@ PostgreSQL MISS
 
 Не менять default только на основании synthetic benchmark — решение должно соответствовать требованиям точности и latency.
 
+### Пересъёмка baseline (2026-10-01, harness fix)
+
+**Дефект harness:** сценарий `miss` использовал per-VU счётчик
+(`exec.vu.iterationInInstance % links.length`), поэтому каждый VU крутил
+одни и те же коды пула — из 96 327 запросов Sprint 23 лишь ~8 000 были
+настоящими промахами в PostgreSQL, остальное обслуживал Redis-кэш.
+Baseline-строка miss (~3 210 rps) была недействительна. Исправлено на
+`shared-iterations` + `exec.scenario.iterationInTest` — каждый запрос
+гарантированно уникальный код (коммит `90c19d3`).
+
+**Новые числа** (k6 v2.2.0, полный compose-стек, 0% ошибок; полная
+таблица — в README §Performance baseline):
+
+| Сценарий | RPS | avg | p95 |
+|---|---|---|---|
+| Redirect — Redis hit | ~16 887 | 2.8 ms | 4.8 ms |
+| Redirect — PostgreSQL miss (genuine, 30k пул) | ~4 737 | 6.1 ms | 9.6 ms |
+| Create | ~1 486 | 20.0 ms | 29.2 ms |
+| Stats | ~9 651 | 5.1 ms | 8.0 ms |
+| Delete (пары create+delete) | ~727 пар/s | 13.6 ms | 17.6 ms |
+| Spike 3000 rps × 4 s | ~2 999 | 0.81 ms | 1.6 ms |
+
+Полный профиль (4 мин, спайк 500 VU): 4 322 597 запросов, 18 010 rps avg,
+p95 18.96 ms, 0 failures. Потолки: CPU ≈ 3.8 ядер avg / 4.0 peak,
+RSS ≈ 601 MB avg / 736 MB peak, пул PostgreSQL 10/10 при спайке
+(pending ≤ 91), flush/increment failures = 0.
+
+Точность подсчёта кликов под нагрузкой подтверждена отдельно: 5000
+редиректов одного кода → stats API = PostgreSQL = 5000, pending = ∅.
+
 ---
 
 # Sprint 24 — Database optimization

@@ -25,6 +25,12 @@ evidence live in `DEVELOPMENT_PLAN.md` (Sprint 29); decisions are recorded in
   retained
 - Production ingress policy for the monitoring stack
   (`docs/production-ingress-policy.md`)
+- Benchmark harness fixes and Sprint 23 baseline re-measurement
+  (2026-10-01): genuine PostgreSQL-miss scenario (`shared-iterations`),
+  resilient `prepare.py` (ephemeral-port retries, idempotent re-runs);
+  README/DEVELOPMENT_PLAN baseline tables re-measured with the fixed
+  harness — full profile 4 322 597 requests / 18 010 rps avg / p95
+  18.96 ms / 0 failures
 
 ## 1.0.0 — Production readiness milestone (Sprints 1–28, 2026-09-29)
 

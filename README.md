@@ -80,32 +80,42 @@ platform-thread limit without tuning `server.tomcat.threads.max`, at ~50 MB
 extra RSS. The PostgreSQL pool stays the hard concurrency ceiling for DB
 access in both modes.
 
-### Performance baseline (Sprint 23)
+### Performance baseline (Sprint 23, re-measured 2026-10-01)
 
 Measured with k6 (scripts in `benchmarks/`) against the dev stack on a
 desktop machine — an anchor for future comparisons, not an absolute claim.
 All runs: **0% errors**.
 
-Per-endpoint (30 s each; k6 `http_req_duration`; RPS = requests/30 s):
+> **Harness fix (2026-10-01):** the `miss` scenario originally cycled the
+> same pool codes per VU, so most "miss" requests were served from Redis —
+> the Sprint 23 miss row (~3 210 rps) was contaminated. The scenario now
+> uses `shared-iterations` with a global counter: every request is a
+> genuine PostgreSQL lookup. The numbers below are re-measured with the
+> fixed harness.
+
+Per-endpoint (30 s each; `miss` is pool-bound — 30 000 unique codes in ~6 s):
 
 | Scenario | RPS | avg | p95 | Notes |
 |---|---|---|---|---|
-| Redirect — Redis hit | ~5 090 | 9.6 ms | 13.0 ms | 152 779 requests |
-| Redirect — PostgreSQL miss | ~3 210 | 9.1 ms | 13.1 ms | 96 327 requests, uncached pool |
-| Create link | ~1 267 | 23.5 ms | 32.2 ms | write path + Hikari checkout |
-| Stats | ~4 954 | 9.7 ms | 14.5 ms | PostgreSQL read |
-| Delete | ~1 244 calls/s | 15.9 ms | 21.5 ms | create + delete per iteration |
-| 10 000 concurrent redirects | ~2 999 | 2.4 ms | 4.6 ms | 12 001 requests / 4 s, 0 dropped |
+| Redirect — Redis hit | ~16 887 | 2.8 ms | 4.8 ms | 506 637 requests |
+| Redirect — PostgreSQL miss | ~4 737 | 6.1 ms | 9.6 ms | 30 000 requests, 30 000-code uncached pool |
+| Create link | ~1 486 | 20.0 ms | 29.2 ms | write path + Hikari checkout |
+| Stats | ~9 651 | 5.1 ms | 8.0 ms | PostgreSQL read + pending counter |
+| Delete | ~727 pairs/s | 13.6 ms | 17.6 ms | 21 850 create + delete pairs |
+| 10 000 concurrent redirects | ~2 999 | 0.81 ms | 1.6 ms | 12 001 requests / 4 s, 0 dropped |
 
 Full load profile (warm-up → sustained → 500-VU spike → cool-down,
-4 min): **1 104 481 requests**, 4 602 rps avg, p95 86 ms, 0 failures.
-Resource ceilings observed during the profile: CPU ≈ 2.4 cores avg /
-3.6 cores at the spike; RSS ≈ 523 MB avg / 809 MB peak; PostgreSQL
-connections peaked at 11 (10-connection pool + the monitoring session);
-Redis traffic ≈ 2 ops per redirect (GET + INCR) — measured 24 040 Redis
-commands for 12 001 spike requests, exactly consistent.
+4 min): **4 322 597 requests**, 18 010 rps avg, p95 18.96 ms, 0 failures.
+Resource ceilings observed during the profile: CPU ≈ 3.8 cores avg /
+4.0 cores peak; RSS ≈ 601 MB avg / 736 MB peak; PostgreSQL connections
+saturated the 10-connection pool at the spike (pending queue ≤ 91 —
+virtual threads wait, they do not overwhelm the pool); PostgreSQL and
+Redis each stayed ≤ 12 % CPU (72 MB / 17 MB RSS); Redis traffic
+≈ 2 ops per redirect; zero flush or increment failures.
 
-Flush interval comparison (60 s, 50 VUs, cache-hit redirect):
+Flush interval comparison (60 s, 50 VUs, cache-hit redirect — measured with
+the original Sprint 23 harness; the hit path was not affected by the miss
+harness bug):
 
 | `SHORTENER_FLUSH_INTERVAL` | Requests | p95 | Flushes/min |
 |---|---|---|---|
