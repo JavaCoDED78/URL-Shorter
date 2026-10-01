@@ -2743,21 +2743,21 @@ warm-up
 
 Проверить:
 
-- [ ] request rate примерно соответствует генератору нагрузки;
-- [ ] redirect counter растёт только для successful redirects;
-- [ ] 404/410 отражаются в соответствующих counters;
-- [ ] cache hit/miss ratio меняется ожидаемым образом;
-- [ ] click increment counter соответствует успешным кликам;
-- [ ] click flush counter соответствует фактически выполненным flush cycles;
-- [ ] flush failure metric не растёт при нормальной работе;
-- [ ] latency panels реагируют на искусственное ухудшение зависимости;
-- [ ] JVM metrics не содержат аномальных скачков только из-за dashboard queries.
+- [x] request rate примерно соответствует генератору нагрузки;
+- [x] redirect counter растёт только для successful redirects;
+- [x] 404/410 отражаются в соответствующих counters;
+- [x] cache hit/miss ratio меняется ожидаемым образом;
+- [x] click increment counter соответствует успешным кликам;
+- [x] click flush counter соответствует фактически выполненным flush cycles;
+- [x] flush failure metric не растёт при нормальной работе;
+- [x] latency panels реагируют на искусственное ухудшение зависимости;
+- [x] JVM metrics не содержат аномальных скачков только из-за dashboard queries.
 
 ### Acceptance Criteria
 
-- [ ] значения dashboard сверены с исходными application metrics;
-- [ ] хотя бы один load test используется для валидации dashboard;
-- [ ] расхождения между business counters и traffic logs отсутствуют или объяснены.
+- [x] значения dashboard сверены с исходными application metrics;
+- [x] хотя бы один load test используется для валидации dashboard;
+- [x] расхождения между business counters и traffic logs отсутствуют или объяснены.
 
 ---
 
