@@ -9,9 +9,9 @@ spring:
       ddl-auto: validate
     open-in-view: false
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/urlshortener}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/urlshortener}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
     hikari:
       # Virtual threads raise request concurrency, but the pool stays the
       # explicit ceiling for PostgreSQL access (Task 14.3) — it must not be

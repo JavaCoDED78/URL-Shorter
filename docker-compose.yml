@@ -1,23 +1,23 @@
 # Production-like local stack: PostgreSQL + Redis.
-# Credentials come from env (e.g. a git-ignored .env file).
-# The defaults below are for local development only and must not be reused in real deployments.
+# Credentials and ports are read from .env (git-ignored).
+# All defaults live in .env — edit there, never here.
 
 services:
   postgres:
     image: postgres:17
     container_name: urlshorter-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-urlshortener}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - urlshorter
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-urlshortener}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -28,7 +28,7 @@ services:
     image: redis:7
     container_name: urlshorter-redis
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT}:6379"
     volumes:
       - redis-data:/data
     networks:
@@ -46,16 +46,16 @@ services:
     container_name: urlshorter-app
     environment:
       # configuration through environment only — never baked into the image
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-urlshortener}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
       # k6 benchmark harness (Sprint 23) needs GET /bench-hit; the production
       # default is false (shortener.benchmark.enabled). Set
       # SHORTENER_BENCHMARK_ENABLED=false to probe the closed state.
-      SHORTENER_BENCHMARK_ENABLED: ${SHORTENER_BENCHMARK_ENABLED:-true}
+      SHORTENER_BENCHMARK_ENABLED: ${SHORTENER_BENCHMARK_ENABLED}
     ports:
-      - "${APP_PORT:-8080}:8080"
+      - "${APP_PORT}:8080"
     depends_on:
       # Task 21.4: health conditions, not just startup order — Flyway and
       # the cache must face ready infrastructure
@@ -83,7 +83,7 @@ services:
     image: prom/prometheus:v2.55.1
     container_name: urlshorter-prometheus
     ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+      - "${PROMETHEUS_PORT}:9090"
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/prometheus/rules:/etc/prometheus/rules/:ro
@@ -113,9 +113,9 @@ services:
     image: grafana/grafana:11.4.0
     container_name: urlshorter-grafana
     ports:
-      - "${GRAFANA_PORT:-14000}:3000"
+      - "${GRAFANA_PORT}:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
