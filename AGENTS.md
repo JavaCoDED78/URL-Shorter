@@ -143,6 +143,7 @@ The full sprint-by-sprint breakdown, with every task as a checkbox, lives in `DE
 | `SHORTENER_CACHE_TTL` | `1h` | Redis TTL for cached links |
 | `SHORTENER_FLUSH_INTERVAL` | `PT5S` | Click counter flush interval |
 | `SHORTENER_MAX_PAYLOAD_SIZE` | `16KB` | Raw request body ceiling |
+| `SHORTENER_BENCHMARK_ENABLED` | `false` (`true` in the dev compose stack) | Enables the benchmark-only `GET /bench-hit` redirect used by the k6 harness |
 
 All values also follow Spring relaxed binding — e.g. `SPRING_DATASOURCE_URL`
 overrides `DB_URL` the same way `spring.datasource.url` would. Prometheus and

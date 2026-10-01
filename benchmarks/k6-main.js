@@ -1,7 +1,9 @@
 // Performance baseline (Sprint 23): full load profile on the cache-hit
 // redirect path — warm-up → sustained → spike → cool-down (Task 23.3).
 // Run:  k6 run benchmarks/k6-main.js
-// Needs a primed 'bench-hit' link (benchmarks/prepare.py) and the app on :8080.
+// Needs the app on :8080 with shortener.benchmark.enabled=true (the default
+// of the dev compose stack; /bench-hit is a benchmark-only endpoint gated by
+// SHORTENER_BENCHMARK_ENABLED).
 
 import http from 'k6/http';
 import { check } from 'k6';

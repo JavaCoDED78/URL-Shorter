@@ -1,4 +1,6 @@
 // Per-endpoint benchmark scenarios (Sprint 23, Task 23.1).
+// The 'hit' and 'spike10k' scenarios need shortener.benchmark.enabled=true
+// (default of the dev compose stack; /bench-hit is benchmark-only).
 // Run:  k6 run -e SCENARIO=hit    benchmarks/k6-scenario.js
 //       k6 run -e SCENARIO=miss   benchmarks/k6-scenario.js   (after cache flush)
 //       k6 run -e SCENARIO=create benchmarks/k6-scenario.js

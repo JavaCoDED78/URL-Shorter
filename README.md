@@ -131,7 +131,10 @@ window (Sprint 8) at a quarter of the write load of PT1S.
 
 Reproduce: `python benchmarks/prepare.py` then
 `k6 run -e SCENARIO=<hit|miss|create|stats|delete|spike10k> benchmarks/k6-scenario.js`
-or `k6 run benchmarks/k6-main.js` for the full profile.
+or `k6 run benchmarks/k6-main.js` for the full profile. The `hit` path uses
+the benchmark-only `GET /bench-hit` endpoint, enabled via
+`SHORTENER_BENCHMARK_ENABLED=true` (default in the dev compose stack; off in
+production).
 
 ### Database notes (Sprint 24)
 

@@ -1,8 +1,11 @@
 """Preparation for the Sprint 23 benchmark runs.
 
-Creates the link pool consumed by benchmarks/k6-scenario.js (one 'bench-hit'
-code plus a pool of never-requested codes) and empties Redis so the first
-'run -e SCENARIO=miss' measures genuine PostgreSQL lookups.
+Creates the link pool consumed by benchmarks/k6-scenario.js (a pool of
+never-requested codes) and empties Redis so the first
+'run -e SCENARIO=miss' measures genuine PostgreSQL lookups. The 'bench-hit'
+redirect is served by a benchmark-only endpoint (shortener.benchmark.enabled)
+and needs no link row — 'bench-hit' is a reserved alias and cannot be
+created.
 
 Usage: python benchmarks/prepare.py [pool_size]
 """
@@ -38,7 +41,7 @@ def post(alias: str) -> int:
 
 def main() -> None:
     started = time.time()
-    aliases = ["bench-hit"] + [f"p{i}" for i in range(POOL)]
+    aliases = [f"p{i}" for i in range(POOL)]
     counter = itertools.count()
     failures = []
 

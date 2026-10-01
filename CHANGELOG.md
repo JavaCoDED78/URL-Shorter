@@ -32,6 +32,10 @@ evidence live in `DEVELOPMENT_PLAN.md` (Sprint 29); decisions are recorded in
 - Benchmark harness fixes and Sprint 23 baseline re-measurement
   (2026-10-01): genuine PostgreSQL-miss scenario (`shared-iterations`),
   resilient `prepare.py` (ephemeral-port retries, idempotent re-runs);
+- `GET /bench-hit` (k6 hit-path harness) moved out of the production
+  controller behind `shortener.benchmark.enabled` (default `false`, enabled
+  in the dev compose stack); `bench-hit` added to reserved aliases so no
+  link can claim the route when the endpoint is off
   README/DEVELOPMENT_PLAN baseline tables re-measured with the fixed
   harness — full profile 4 322 597 requests / 18 010 rps avg / p95
   18.96 ms / 0 failures

@@ -50,6 +50,10 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
+      # k6 benchmark harness (Sprint 23) needs GET /bench-hit; the production
+      # default is false (shortener.benchmark.enabled). Set
+      # SHORTENER_BENCHMARK_ENABLED=false to probe the closed state.
+      SHORTENER_BENCHMARK_ENABLED: ${SHORTENER_BENCHMARK_ENABLED:-true}
     ports:
       - "${APP_PORT:-8080}:8080"
     depends_on:

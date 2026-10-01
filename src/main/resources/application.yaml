@@ -39,7 +39,7 @@ shortener:
     allowed-schemes: http,https
   alias:
     max-length: ${SHORTENER_ALIAS_MAX_LENGTH:64}
-    reserved: api,actuator,swagger,swagger-ui,v3,favicon.ico
+    reserved: api,actuator,swagger,swagger-ui,v3,favicon.ico,bench-hit
   create:
     max-collision-retries: ${SHORTENER_MAX_COLLISION_RETRIES:5}
   cache:
@@ -49,6 +49,11 @@ shortener:
   # Raw JSON body ceiling (Task 20.1) — far above the largest legitimate
   # create request (2048-char URL plus JSON overhead).
   max-payload-size: ${SHORTENER_MAX_PAYLOAD_SIZE:16KB}
+  # Benchmark-only /bench-hit redirect (Sprint 23 k6 harness). Disabled by
+  # default: never part of the production API surface. The dev/benchmark
+  # compose stack enables it explicitly.
+  benchmark:
+    enabled: ${SHORTENER_BENCHMARK_ENABLED:false}
 
 management:
   endpoints:

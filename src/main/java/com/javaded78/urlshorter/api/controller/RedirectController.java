@@ -37,24 +37,9 @@ public class RedirectController {
     private final LinkService linkService;
     private final MetricsRecorder metrics;
 
-    private static final String BENCH_TARGET = "https://example.com/bench";
-
     public RedirectController(LinkService linkService, MetricsRecorder metrics) {
         this.linkService = linkService;
         this.metrics = metrics;
-    }
-
-    /**
-     * Benchmark shortcut (Sprint 23): always redirects to
-     * {@code https://example.com/bench} without DB lookup so load tests
-     * measure pure redirect + click-counting throughput.
-     */
-    @GetMapping("/bench-hit")
-    public ResponseEntity<Void> benchHit() {
-        metrics.linkRedirected();
-        metrics.cacheHit();
-        return metrics.timeRedirect(() ->
-                ResponseEntity.status(HttpStatus.FOUND).location(URI.create(BENCH_TARGET)).build());
     }
 
     @Operation(summary = "Redirect to the original URL",
