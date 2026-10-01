@@ -34,7 +34,7 @@ Pin exact dependency versions in Gradle; keep README badge versions in sync with
 Spring Boot app (API → Service → Repository)
         │
    ┌────┴─────┐
-Cache-aside   HINCRBY
+Cache-aside   INCR
    │             │
 Redis          Redis
 link:{code}   clicks:{code}
@@ -46,13 +46,13 @@ link:{code}   clicks:{code}
 ```
 
 - **Create**: validate → generate Base62 code (or validate custom alias) → insert into PostgreSQL → `201`. The database `UNIQUE` constraint is the final defence against code collisions; an `existsByCode` pre-check is only an optimization, not a concurrency guarantee.
-- **Redirect**: Redis lookup → on hit, check `expiresAt` from the cached value, `HINCRBY` the click counter, `302`; on miss, read PostgreSQL, check expiration, write-through to Redis, then redirect.
+- **Redirect**: Redis lookup → on hit, check `expiresAt` from the cached value, `INCR` the click counter, `302`; on miss, read PostgreSQL, check expiration, write-through to Redis, then redirect.
 - **Click flush**: every `SHORTENER_FLUSH_INTERVAL` (default 5s), a Redis Lua script atomically reads-and-resets each `clicks:{code}` counter, then a batch `UPDATE` persists the drained values to PostgreSQL. Never implement this as separate `HGET` + `DEL` calls — increments arriving between the two would be lost.
 
 ## 4. Project structure
 
 ```
-src/main/java/com/example/shortener/
+src/main/java/com/javaded78/urlshorter/
 ├── api/
 │   ├── controller/       # REST endpoints
 │   ├── dto/              # request/response DTOs
@@ -69,7 +69,11 @@ src/main/java/com/example/shortener/
 │       ├── counter/      # click counters
 │       ├── script/       # Lua scripts
 │       └── flush/        # scheduled flush job
-└── config/
+└── config/               # properties, filters, OpenAPI, startup diagnostics
+
+monitoring/               # repo-root Prometheus/Grafana configuration as code
+├── prometheus/           # prometheus.yml + recording/alert rules
+└── grafana/              # dashboards + datasource/dashboard provisioning
 ```
 
 The service layer must not know Redis command details — talk to Redis only through the `infra/redis` abstractions.
@@ -126,13 +130,23 @@ The full sprint-by-sprint breakdown, with every task as a checkbox, lives in `DE
 | Variable | Default | Description |
 |---|---|---|
 | `SERVER_PORT` | `8080` | Application HTTP port |
-| `SPRING_DATASOURCE_URL` | — | PostgreSQL JDBC URL |
-| `SPRING_DATA_REDIS_HOST` | `localhost` | Redis host |
-| `SHORTENER_CACHE_TTL` | `PT1H` | Redis TTL for cached links |
-| `SHORTENER_FLUSH_INTERVAL` | `PT5S` | Click counter flush interval |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/urlshortener` | PostgreSQL JDBC URL |
+| `DB_USERNAME` | `postgres` | PostgreSQL user |
+| `DB_PASSWORD` | `postgres` | PostgreSQL password |
+| `REDIS_HOST` | `localhost` | Redis host |
+| `REDIS_PORT` | `6379` | Redis port |
+| `REDIS_TIMEOUT` | `2s` | Redis command timeout |
 | `SHORTENER_CODE_LENGTH` | `7` | Generated Base62 code length |
+| `SHORTENER_URL_MAX_LENGTH` | `2048` | Maximum accepted original URL length |
+| `SHORTENER_ALIAS_MAX_LENGTH` | `64` | Maximum custom alias length |
+| `SHORTENER_MAX_COLLISION_RETRIES` | `5` | Bounded retries on generated-code collision |
+| `SHORTENER_CACHE_TTL` | `1h` | Redis TTL for cached links |
+| `SHORTENER_FLUSH_INTERVAL` | `PT5S` | Click counter flush interval |
+| `SHORTENER_MAX_PAYLOAD_SIZE` | `16KB` | Raw request body ceiling |
 
-Never hardcode connection strings or secrets — everything above must be overridable via environment variables.
+All values also follow Spring relaxed binding — e.g. `SPRING_DATASOURCE_URL`
+overrides `DB_URL` the same way `spring.datasource.url` would. Prometheus and
+Grafana configuration is file-based under `monitoring/`, not env-var based.
 
 ## 8. API surface
 
@@ -144,7 +158,7 @@ Never hardcode connection strings or secrets — everything above must be overri
 | `GET` | `/api/v1/links/{code}/stats` | Get click statistics | `200`, `404` |
 | `DELETE` | `/api/v1/links/{code}` | Delete a link | `204`, `404` |
 
-Errors use Spring's `ProblemDetail` (RFC 9457): `type`, `title`, `status`, `detail`, `instance`. Keep `type`/`title`/`detail` stable enough for clients to rely on. Error categories: `400` invalid request/URL, `409` code/alias already taken, `404` link not found, `410` link expired, `500` unexpected failure.
+Errors use Spring's `ProblemDetail` (RFC 9457): `type`, `title`, `status`, `detail`, `instance`. Keep `type`/`title`/`detail` stable enough for clients to rely on. Error categories: `400` invalid request/URL, `409` code/alias already taken, `404` link not found, `410` link expired, `413` request body over the size limit, `503` database temporarily unavailable, `500` unexpected failure.
 
 ## 9. Non-negotiable design rules
 
@@ -159,7 +173,7 @@ Errors use Spring's `ProblemDetail` (RFC 9457): `type`, `title`, `status`, `deta
 ## 10. Known risks to keep closed (don't reintroduce these bugs)
 
 1. **Lost clicks during flush** — never split the Redis drain into two non-atomic commands.
-2. **Click loss after a failed PostgreSQL update** post-drain — needs a recovery path before the production milestone.
+2. **Click loss after a failed PostgreSQL update** post-drain — closed: a failed flush restores the drained counters in Redis instead of losing clicks (Tasks 8.6/17.3, `RedisFailureIT`).
 3. **Cache serving an expired link** — always re-check `expiresAt` on cache hit, don't trust Redis TTL alone.
 4. **Code collisions** — the DB unique constraint is the real guarantee, not the app-level existence check.
 5. **Connection pool exhaustion** — virtual threads increase concurrency, but the PostgreSQL pool size is still the limit.
@@ -173,7 +187,19 @@ Errors use Spring's `ProblemDetail` (RFC 9457): `type`, `title`, `status`, `deta
 
 ## 12. Roadmap / not yet built
 
-Click analytics (user agent, referrer, device), daily click aggregation, Bucket4j + Redis rate limiting, authentication + "my links", QR code generation, GraalVM native image comparison, k6 load tests, cache-hit-vs-miss latency benchmarks, horizontal scaling, Prometheus + Grafana dashboards.
+Done since this list was written: k6 load tests + cache-hit/miss latency
+benchmarks (Sprint 23), Prometheus + Grafana metrics pipeline as code
+(Sprint 29, see `monitoring/` and `docs/adr/ADR-007`/`ADR-008`).
+
+Still open:
+
+- Click analytics (user agent, referrer, device), daily click aggregation
+- Bucket4j + Redis rate limiting (the `RateLimiter` port exists with a no-op default)
+- Authentication + "my links"
+- QR code generation
+- GraalVM native image comparison
+- Horizontal scaling
+- Production deployment hardening beyond `docs/production-ingress-policy.md`
 
 ## 13. Reference documents
 

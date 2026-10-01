@@ -173,24 +173,26 @@ Expected: `urlshorter-app` target with `health: "up"`.
 ```bash
 # Search in Prometheus UI: Graph → "Expression" → type metric name
 # Or via API:
-curl "http://localhost:9090/api/v1/label/__name__/values" | jq '.data[]' | grep -i "link_redirected"
+curl "http://localhost:9090/api/v1/label/__name__/values" | jq '.data[]' | grep -i "urlshorter"
 ```
 
-Common business metrics:
+Common business metrics (names follow the observability contract —
+`docs/observability-contract.md`):
 
 ```text
-links_created_total           # counter
-links_redirected_total        # counter
-links_not_found_total         # counter
-links_expired_total           # counter
-links_deleted_total           # counter
+urlshorter_linksCreated_total           # counter
+urlshorter_linksRedirected_total        # counter
+urlshorter_linksNotFound_total          # counter
+urlshorter_linksExpired_total           # counter
+urlshorter_linksDeleted_total           # counter
 
-cache_hits_total              # counter
-cache_misses_total            # counter
+urlshorter_cacheHit_total               # counter
+urlshorter_cacheMiss_total              # counter
 
-clicks_incremented_total      # counter
-clicks_flushed_total          # counter
-clicks_flush_failures_total   # counter
+urlshorter_clicksIncremented_total      # counter
+urlshorter_clicksIncrementFailed_total  # counter
+urlshorter_clicksFlushed_total          # counter
+urlshorter_clicksFlushFailed_total      # counter
 
 http_server_requests_seconds  # histogram (micrometer)
 ```

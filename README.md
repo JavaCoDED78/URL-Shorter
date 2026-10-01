@@ -293,7 +293,7 @@ Redis lookup
 Check expiration
       │
       ▼
-HINCRBY click counter
+INCR click counter
       │
       ▼
 HTTP 302 → original URL
@@ -348,21 +348,22 @@ src/main/java/com/javaded78/urlshorter/
 │       └── flush/        # scheduled flush job
 │
 ├── config/               # properties, filters, OpenAPI, startup diagnostics
-│
-└── monitoring/            # Prometheus/Grafana configuration as code
-    ├── prometheus/
-    │   ├── prometheus.yml
-    │   └── rules/
-    │       ├── recording-rules.yml
-    │       └── alert-rules.yml
-    └── grafana/
-        ├── dashboards/
-        │   └── url-shortener-overview.json
-        └── provisioning/
-            ├── datasources/
-            │   └── prometheus.yml
-            └── dashboards/
-                └── dashboards.yml
+└── (application classes end here)
+
+monitoring/                # repo-root Prometheus/Grafana configuration as code
+├── prometheus/
+│   ├── prometheus.yml
+│   └── rules/
+│       ├── recording-rules.yml
+│       └── alert-rules.yml
+└── grafana/
+    ├── dashboards/
+    │   └── url-shortener-overview.json
+    └── provisioning/
+        ├── datasources/
+        │   └── prometheus.yml
+        └── dashboards/
+            └── dashboards.yml
 ```
 
 The service layer talks to Redis only through the `domain/cache` and
@@ -780,21 +781,28 @@ Grafana dashboards
 
 ### Metrics contract
 
-The minimum business metric set is:
+The minimum business metric set (see
+[`docs/observability-contract.md`](docs/observability-contract.md) for the full
+contract, including timers and platform metrics) is:
 
 ```text
-links_created_total
-links_redirected_total
-links_not_found_total
-links_expired_total
-links_deleted_total
+urlshorter_linksCreated_total
+urlshorter_linksRedirected_total
+urlshorter_linksNotFound_total
+urlshorter_linksExpired_total
+urlshorter_linksDeleted_total
 
-cache_hits_total
-cache_misses_total
+urlshorter_cacheHit_total
+urlshorter_cacheMiss_total
 
-clicks_incremented_total
-clicks_flushed_total
-clicks_flush_failures_total
+urlshorter_clicksIncremented_total
+urlshorter_clicksIncrementFailed_total
+urlshorter_clicksFlushed_total
+urlshorter_clicksFlushFailed_total
+
+urlshorter_redirectDuration_seconds
+urlshorter_postgresLookupDuration_seconds
+urlshorter_redisLookupDuration_seconds
 ```
 
 The Prometheus exposition may contain additional JVM, process, Spring and

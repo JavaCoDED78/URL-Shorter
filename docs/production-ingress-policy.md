@@ -54,17 +54,19 @@ management:
 | Credential | Storage | Production Handling |
 |-----------|---------|---------------------|
 | Grafana admin password | `GF_SECURITY_ADMIN_PASSWORD` env var | Set via Kubernetes secret or HashiCorp Vault; never committed to Git |
-| PostgreSQL credentials | `SPRING_DATASOURCE_*` env vars | Set via Kubernetes secret or Vault; never committed to Git |
-| Redis credentials | `SPRING_DATA_REDIS_*` env vars | Use TLS and authentication in production |
+| PostgreSQL credentials | `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` env vars | Set via Kubernetes secret or Vault; never committed to Git |
+| Redis credentials | `REDIS_HOST` / `REDIS_PORT` (+ auth via Spring `spring.data.redis` overrides) | Use TLS and authentication in production |
 
 ## 6. Metrics Content Rules
 
 - Metrics must **never** contain passwords, tokens, API keys, or connection strings.
 - Metrics must **never** contain full URLs with query parameters or user data.
-- The `originalUrl` is stored as a **label value only in counter metrics** for
-  aggregation (e.g. `urlshorter_linksRedirected_total{originalUrl="https://..."}`);
-  URL paths (host, path) are acceptable but sensitive query parameters must be
-  excluded by application logic.
+- The `originalUrl` must **never** be used as a metric label — it is a
+  high-cardinality, user-provided value and is explicitly forbidden by the
+  observability contract (`docs/observability-contract.md`, §4 Forbidden
+  labels). Business counters such as `urlshorter_linksRedirected_total` carry
+  only the `application` label. Short-link codes and aliases are likewise
+  never label values.
 - Prometheus remote_write (if used) must not transmit data to untrusted endpoints.
 
 **Verification**: Metrics were audited during Task 29.13 — no secrets or user

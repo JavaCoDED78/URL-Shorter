@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.1.0 — Metrics platform (Sprint 29, 2026-10-01)
+
+Prometheus + Grafana monitoring pipeline as code. Sprint history and per-task
+evidence live in `DEVELOPMENT_PLAN.md` (Sprint 29); decisions are recorded in
+`docs/adr/ADR-007-prometheus-grafana-monitoring-stack.md` and
+`docs/adr/ADR-008-monitoring-configuration-as-code.md`.
+
+### Features
+
+- Prometheus exposition via `/actuator/prometheus` (served by
+  `PrometheusEndpointController`; micrometer-registry-prometheus 1.17.x does
+  not auto-configure the endpoint under Spring Boot 4.1.1)
+- Prometheus scrape config, recording rules (25) and alert rules (13) as code
+  under `monitoring/prometheus/`
+- Grafana datasource + dashboard provisioning as code under
+  `monitoring/grafana/` — dashboard `url-shortener-overview` (24 panels),
+  no manual UI setup, clean-volume reproduction verified
+- Metrics contract finalized in `docs/observability-contract.md`
+  (`urlshorter.*` namespace, 11 counters + 3 timers, low-cardinality labels
+  only)
+- CI: monitoring config validation (`validate-monitoring-config.py`) and a
+  full-stack monitoring smoke job (`validate-monitoring-stack.py`), Trivy scan
+  retained
+- Production ingress policy for the monitoring stack
+  (`docs/production-ingress-policy.md`)
+
 ## 1.0.0 — Production readiness milestone (Sprints 1–28, 2026-09-29)
 
 First release-candidate state. Full sprint history with per-sprint evidence

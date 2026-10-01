@@ -4,21 +4,21 @@
 
 Этот документ превращает README проекта в пошаговый план реализации. Он рассчитан на разработку production-oriented URL Shortener на:
 
-- [ ] Java 25
-- [ ] Spring Boot 4.1.1
-- [ ] Spring Web
-- [ ] Spring Data JPA
-- [ ] PostgreSQL 17
-- [ ] Flyway
-- [ ] Redis 7
-- [ ] Spring Data Redis
-- [ ] Gradle Kotlin DSL
-- [ ] JUnit 5
-- [ ] Testcontainers
-- [ ] Awaitility
-- [ ] AssertJ
-- [ ] Docker Compose
-- [ ] GitHub Actions
+- [x] Java 25
+- [x] Spring Boot 4.1.1
+- [x] Spring Web
+- [x] Spring Data JPA
+- [x] PostgreSQL 17
+- [x] Flyway
+- [x] Redis 7
+- [x] Spring Data Redis
+- [x] Gradle Kotlin DSL
+- [x] JUnit 5
+- [x] Testcontainers
+- [x] Awaitility
+- [x] AssertJ
+- [x] Docker Compose
+- [x] GitHub Actions
 
 Главный принцип разработки: сначала создаётся минимальный полностью работающий вертикальный срез, затем к нему последовательно добавляются Redis cache-aside, буферизация click counter, атомарный flush, наблюдаемость, нагрузочные тесты и production hardening.
 
@@ -28,26 +28,26 @@
 
 К концу разработки сервис должен поддерживать:
 
-- [ ] Создание коротких ссылок.
-- [ ] Генерацию уникального Base62-кода длиной 7 символов.
-- [ ] Создание пользовательских alias.
-- [ ] TTL/expiration ссылки.
-- [ ] Redirect через HTTP 302.
-- [ ] Cache-aside через Redis.
-- [ ] Увеличение счётчика переходов в Redis.
-- [ ] Периодический атомарный flush счётчиков в PostgreSQL.
-- [ ] Получение статистики.
-- [ ] Удаление ссылки.
-- [ ] Корректную invalidation Redis.
-- [ ] RFC 9457 ProblemDetail.
-- [ ] OpenAPI/Swagger UI.
-- [ ] Actuator и базовые operational metrics.
-- [ ] Java virtual threads.
-- [ ] Полноценные integration tests на PostgreSQL + Redis через Testcontainers.
-- [ ] Проверку конкурентных переходов.
-- [ ] Запуск всего окружения через Docker Compose.
-- [ ] CI pipeline.
-- [ ] Документированный API и архитектуру.
+- [x] Создание коротких ссылок.
+- [x] Генерацию уникального Base62-кода длиной 7 символов.
+- [x] Создание пользовательских alias.
+- [x] TTL/expiration ссылки.
+- [x] Redirect через HTTP 302.
+- [x] Cache-aside через Redis.
+- [x] Увеличение счётчика переходов в Redis.
+- [x] Периодический атомарный flush счётчиков в PostgreSQL.
+- [x] Получение статистики.
+- [x] Удаление ссылки.
+- [x] Корректную invalidation Redis.
+- [x] RFC 9457 ProblemDetail.
+- [x] OpenAPI/Swagger UI.
+- [x] Actuator и базовые operational metrics.
+- [x] Java virtual threads.
+- [x] Полноценные integration tests на PostgreSQL + Redis через Testcontainers.
+- [x] Проверку конкурентных переходов.
+- [x] Запуск всего окружения через Docker Compose.
+- [x] CI pipeline.
+- [x] Документированный API и архитектуру.
 
 ---
 
@@ -424,7 +424,7 @@ Base62CodeGenerator
 Реализовать первый end-to-end сценарий:
 
 ```text
-POST /api/links
+POST /api/v1/links
 → PostgreSQL
 → 201
 ```
@@ -499,7 +499,7 @@ expiresAt
 Endpoint:
 
 ```http
-POST /api/links
+POST /api/v1/links
 ```
 
 Проверить:
@@ -901,7 +901,7 @@ DB clickCount + pending Redis counter
 - [x] **Task 9.3 — Реализовать endpoint**
 
 ```http
-GET /api/links/{code}/stats
+GET /api/v1/links/{code}/stats
 ```
 
 - [x] **Task 9.4 — Tests**
@@ -927,7 +927,7 @@ GET /api/links/{code}/stats
 Endpoint:
 
 ```http
-DELETE /api/links/{code}
+DELETE /api/v1/links/{code}
 ```
 
 Flow:
@@ -1069,11 +1069,11 @@ API должно быть понятно разработчику без чте�
 Добавить документацию для:
 
 ```text
-POST /api/links
+POST /api/v1/links
 GET /{code}
-GET /api/links/{code}
-GET /api/links/{code}/stats
-DELETE /api/links/{code}
+GET /api/v1/links/{code}
+GET /api/v1/links/{code}/stats
+DELETE /api/v1/links/{code}
 ```
 
 - [x] **Task 12.4 — Документировать errors**
@@ -2047,16 +2047,16 @@ No dashboard-only changes in UI
 
 К концу спринта должно быть возможно:
 
-- [ ] запустить приложение и monitoring stack одной командой;
-- [ ] открыть Prometheus и увидеть target приложения в состоянии `UP`;
-- [ ] получить Spring Boot metrics через `/actuator/prometheus`;
-- [ ] проверить, что Prometheus хранит application metrics;
-- [ ] открыть Grafana без ручного добавления datasource;
-- [ ] автоматически получить готовый dashboard URL Shortener;
-- [ ] видеть traffic, latency, errors, cache, Redis, PostgreSQL и click flush metrics;
-- [ ] воспроизвести весь monitoring setup на чистой машине только из Git;
-- [ ] тестировать конфигурацию Prometheus и Grafana в CI;
-- [ ] версионировать dashboards и rules как обычный код.
+- [x] запустить приложение и monitoring stack одной командой;
+- [x] открыть Prometheus и увидеть target приложения в состоянии `UP`;
+- [x] получить Spring Boot metrics через `/actuator/prometheus`;
+- [x] проверить, что Prometheus хранит application metrics;
+- [x] открыть Grafana без ручного добавления datasource;
+- [x] автоматически получить готовый dashboard URL Shortener;
+- [x] видеть traffic, latency, errors, cache, Redis, PostgreSQL и click flush metrics;
+- [x] воспроизвести весь monitoring setup на чистой машине только из Git;
+- [x] тестировать конфигурацию Prometheus и Grafana в CI;
+- [x] версионировать dashboards и rules как обычный код.
 
 ---
 
@@ -2135,10 +2135,10 @@ Spring (Micrometer auto)
 
 - [x] Добавить Prometheus registry dependency, совместимую с текущим Spring Boot/Micrometer stack (`io.micrometer:micrometer-registry-prometheus`).
 - [x] Проверить, что Actuator уже подключён согласно Sprint 13.
-- [x] Включить Prometheus endpoint — Spring Boot auto-configures `/actuator/prometheus` when the registry is on the classpath.
-- [x] Настроить exposure только необходимых management endpoints (`health,metrics` уже настроено в `application.yaml`).
-- [x] Не открывать все actuator endpoints без необходимости — оставлены только `health` и `metrics`.
-- [x] Проверить формат endpoint: `/actuator/prometheus`.
+- [x] Включить Prometheus endpoint — в итоге served by `PrometheusEndpointController` (auto-configuration не сработала: micrometer-registry-prometheus 1.17.x не auto-configures `/actuator/prometheus` under Spring Boot 4.1.1).
+- [x] Настроить exposure только необходимых management endpoints (`health,metrics` уже настроено в `application.yaml`; `prometheus` добавлен в Task 29.2 — итоговый список: `health,metrics,prometheus`).
+- [x] Не открывать все actuator endpoints без необходимости — оставлены только `health`, `metrics` и `prometheus`.
+- [x] Проверить формат endpoint: `/actuator/prometheus` (served by `PrometheusEndpointController` — micrometer-registry-prometheus 1.17.x does not auto-configure the endpoint under Spring Boot 4.1.1).
 
 ### Acceptance Criteria
 
@@ -3281,7 +3281,7 @@ Definition of Done:
 
 # 10. Главные технические риски, которые нужно закрыть
 
-- [ ] **Risk 1 — Lost clicks during flush**
+- [x] **Risk 1 — Lost clicks during flush** — закрыт: Lua-скрипт атомарно GET+DEL (ADR-004, Task 8.3)
 
 Самый важный риск.
 
@@ -3295,33 +3295,33 @@ GET + DEL
 
 Нужна атомарная drain operation.
 
-- [ ] **Risk 2 — Click loss после Redis drain**
+- [x] **Risk 2 — Click loss после Redis drain** — закрыт: failed flush восстанавливает drained counters в Redis (Task 8.6/17.3, `RedisFailureIT`)
 
 Если Redis counter уже сброшен, а PostgreSQL update упал, counter не должен исчезнуть без recovery path.
 
 Это должно быть решено до production milestone.
 
-- [ ] **Risk 3 — Cache contains expired link**
+- [x] **Risk 3 — Cache contains expired link** — закрыт: `expiresAt` проверяется на каждом cache hit (ADR-006, Tasks 19.2)
 
 Expiration нельзя определять только Redis TTL.
 
 Бизнес-время жизни ссылки должно проверяться на чтении.
 
-- [ ] **Risk 4 — Code collision**
+- [x] **Risk 4 — Code collision** — закрыт: DB UNIQUE constraint + bounded retries (ADR-005, Task 16.3)
 
 `existsByCode` не обеспечивает concurrency safety.
 
 Final guarantee должна предоставляться PostgreSQL unique constraint.
 
-- [ ] **Risk 5 — Excessive database connections**
+- [x] **Risk 5 — Excessive database connections** — закрыт: pool зафиксирован на 10 и pinned тестом `ConnectionPoolIT` (Task 24.4)
 
 Virtual threads позволяют обслуживать большое количество concurrent requests, но PostgreSQL connection pool остаётся ограничением.
 
-- [ ] **Risk 6 — Stale cache after delete**
+- [x] **Risk 6 — Stale cache after delete** — закрыт: delete сразу evict-ит Redis entry (Tasks 10.1–10.4)
 
 Удаление должно учитывать PostgreSQL и Redis.
 
-- [ ] **Risk 7 — Stats lag**
+- [x] **Risk 7 — Stats lag** — закрыт: stats = persisted DB count + pending Redis counter (Task 9.1)
 
 Если stats читается только из PostgreSQL, значение может быть меньше реального из-за pending Redis clicks.
 
