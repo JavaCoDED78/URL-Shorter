@@ -9,9 +9,13 @@ evidence live in `DEVELOPMENT_PLAN.md` (Sprint 29); decisions are recorded in
 
 ### Features
 
-- Prometheus exposition via `/actuator/prometheus` (served by
-  `PrometheusEndpointController`; micrometer-registry-prometheus 1.17.x does
-  not auto-configure the endpoint under Spring Boot 4.1.1)
+- Prometheus exposition via `/actuator/prometheus` served by the standard
+  Spring Boot Actuator `PrometheusScrapeEndpoint` (auto-configured by
+  `spring-boot-micrometer-metrics`, exposure via
+  `management.endpoints.web.exposure.include`). The earlier
+  `PrometheusEndpointController` workaround (based on a misdiagnosed
+  "missing auto-configuration") was removed — the actuator endpoint was
+  already active and is the canonical implementation
 - Prometheus scrape config, recording rules (25) and alert rules (13) as code
   under `monitoring/prometheus/`
 - Grafana datasource + dashboard provisioning as code under

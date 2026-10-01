@@ -2165,10 +2165,13 @@ Spring (Micrometer auto)
 
 - [x] Добавить Prometheus registry dependency, совместимую с текущим Spring Boot/Micrometer stack (`io.micrometer:micrometer-registry-prometheus`).
 - [x] Проверить, что Actuator уже подключён согласно Sprint 13.
-- [x] Включить Prometheus endpoint — в итоге served by `PrometheusEndpointController` (auto-configuration не сработала: micrometer-registry-prometheus 1.17.x не auto-configures `/actuator/prometheus` under Spring Boot 4.1.1).
+- [x] Включить Prometheus endpoint — served by the standard Spring Boot Actuator
+  `PrometheusScrapeEndpoint` (auto-configured by `spring-boot-micrometer-metrics`;
+  exposure настраивается через `management.endpoints.web.exposure.include`).
 - [x] Настроить exposure только необходимых management endpoints (`health,metrics` уже настроено в `application.yaml`; `prometheus` добавлен в Task 29.2 — итоговый список: `health,metrics,prometheus`).
 - [x] Не открывать все actuator endpoints без необходимости — оставлены только `health`, `metrics` и `prometheus`.
-- [x] Проверить формат endpoint: `/actuator/prometheus` (served by `PrometheusEndpointController` — micrometer-registry-prometheus 1.17.x does not auto-configure the endpoint under Spring Boot 4.1.1).
+- [x] Проверить формат endpoint: `/actuator/prometheus` (actuator scrape endpoint;
+  content negotiation `text/plain;version=0.0.4` / OpenMetrics 1.0.0).
 
 ### Acceptance Criteria
 
