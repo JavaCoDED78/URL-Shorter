@@ -1969,7 +1969,8 @@
   "timepicker": {},
   "timezone": "",
   "title": "URL Shortener Overview",
+  "folder": "URL Shortener",
   "uid": "url-shortener-overview",
-  "version": 2,
+  "version": 3,
   "weekStart": ""
 }

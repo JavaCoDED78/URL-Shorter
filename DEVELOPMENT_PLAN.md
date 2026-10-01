@@ -2552,13 +2552,13 @@ Grafana должна автоматически загружать dashboards и
 
 ### Шаги
 
-- [ ] Создать dashboard provider configuration.
-- [ ] Указать путь к dashboard JSON.
-- [ ] Включить автоматическое provisioning.
-- [ ] Зафиксировать folder.
-- [ ] Определить overwrite/update semantics.
-- [ ] Проверить обновление dashboard после изменения JSON.
-- [ ] Убедиться, что dashboard не создаётся как единственный mutable объект внутри container volume.
+- [x] Создать dashboard provider configuration (`monitoring/grafana/provisioning/dashboards/dashboards.yml`).
+- [x] Указать путь к dashboard JSON (`/var/lib/grafana/dashboards`).
+- [x] Включить автоматическое provisioning (`type: file`, `updateIntervalSeconds: 10`).
+- [x] Зафиксировать folder (`URL Shortener` — в provider config + в dashboard JSON `folder` field).
+- [x] Определить overwrite/update semantics (`editable: false`, `allowUiUpdates: false`, dashboard как код).
+- [x] Проверить обновление dashboard после изменения JSON.
+- [x] Убедиться, что dashboard не создаётся как единственный mutable объект внутри container volume (dashboard из bind-mount, state в persistent volume).
 
 ### Acceptance Criteria
 
@@ -2583,6 +2583,47 @@ restart/reprovision
         ↓
 Grafana reflects Git version
 ```
+
+### Evidence (verified 2026-10-01)
+
+**Clean volume test** (`docker compose down -v` → `up -d`):
+```
+Provisioning: docker logs urlshorter-grafana | grep provisioning.dashboard
+→ "starting to provision dashboards" + "finished to provision dashboards"
+
+Dashboard: curl -s -u admin:admin http://localhost:14000/api/dashboards/uid/url-shortener-overview
+→ type:db, title: URL Shortener Overview, uid: url-shortener-overview,
+   folderTitle: URL Shortener, panels: 24
+
+Datasource: curl -s -u admin:admin http://localhost:14000/api/datasources
+→ [{name: Prometheus, type: prometheus, url: http://prometheus:9090, isDefault: true}]
+```
+
+**Update semantics test** (change title → `url-shortener-overview (updated)` → restart):
+```
+Title before: URL Shortener Overview (version 3)
+Title after:  URL Shortener Overview (updated) → confirmed in API response
+Title restored: URL Shortener Overview → confirmed after restoring + restart
+```
+
+**Provisioning configuration:**
+```yaml
+apiVersion: 1
+providers:
+  - name: url-shortener
+    orgId: 1
+    folder: URL Shortener
+    type: file
+    disableDeletion: false
+    editable: false          # prevent manual edits from persisting
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
+      updateIntervalSeconds: 10  # auto-refresh from Git every 10s
+      allowUiUpdates: false      # dashboard-as-code: no UI changes survive restart
+```
+
+**Dashboard JSON** (`folder: URL Shortener`, `uid: url-shortener-overview`, `version: 3`) — all panels use `datasource.uid: Prometheus`, no broken queries detected.
 
 ---
 
