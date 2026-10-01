@@ -2344,20 +2344,20 @@ Threshold должен быть основан на performance baseline из Sp
 
 ### Шаги
 
-- [ ] Добавить Prometheus service в основной Compose stack.
-- [ ] Определить отдельный named volume для Prometheus data.
-- [ ] Подключить monitoring configuration через read-only bind mounts.
-- [ ] Подключить rules directory.
-- [ ] Настроить dependency/startup conditions.
-- [ ] Добавить healthcheck для Prometheus.
-- [ ] Проверить network connectivity:
+- [x] Добавить Prometheus service в основной Compose stack.
+- [x] Определить отдельный named volume для Prometheus data.
+- [x] Подключить monitoring configuration через read-only bind mounts.
+- [x] Подключить rules directory.
+- [x] Настроить dependency/startup conditions.
+- [x] Добавить healthcheck для Prometheus.
+- [x] Проверить network connectivity:
 
 ```text
 prometheus → app:actuator/prometheus
 ```
 
-- [ ] Открыть Prometheus UI локально только на dev environment.
-- [ ] Проверить lifecycle после `docker compose down` и повторного `up`.
+- [x] Открыть Prometheus UI локально только на dev environment.
+- [x] Проверить lifecycle после `docker compose down` и повторного `up`.
 
 ### Acceptance Criteria
 
