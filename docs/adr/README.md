@@ -8,3 +8,5 @@
 | [ADR-004](ADR-004-lua-atomic-flush.md) | Atomic counter drain via a Lua script | Accepted |
 | [ADR-005](ADR-005-base62-code-generation.md) | Uniform-random Base62 code generation with DB-unique guarantee | Accepted |
 | [ADR-006](ADR-006-expiration-semantics.md) | Business expiration carried in the cached value, re-checked on every read | Accepted |
+| [ADR-007](ADR-007-prometheus-grafana-monitoring-stack.md) | Prometheus + Grafana monitoring stack | Accepted |
+| [ADR-008](ADR-008-monitoring-configuration-as-code.md) | Monitoring configuration as code | Accepted |

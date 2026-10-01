@@ -2798,24 +2798,24 @@ warm-up
 
 Обновить README:
 
-- [ ] добавить Prometheus в technology stack;
-- [ ] добавить Grafana в technology stack;
-- [ ] добавить monitoring architecture diagram;
-- [ ] описать endpoints;
-- [ ] указать локальные URLs;
-- [ ] описать запуск monitoring stack;
-- [ ] показать расположение configuration-as-code files.
+- [x] добавить Prometheus в technology stack;
+- [x] добавить Grafana в technology stack;
+- [x] добавить monitoring architecture diagram;
+- [x] описать endpoints;
+- [x] указать локальные URLs;
+- [x] описать запуск monitoring stack;
+- [x] показать расположение configuration-as-code files.
 
 Обновить DEVELOPMENT.md:
 
-- [ ] как открыть Prometheus;
-- [ ] как открыть Grafana;
-- [ ] как проверить target;
-- [ ] как найти metric;
-- [ ] как локально проверить PromQL;
-- [ ] как изменить dashboard;
-- [ ] как изменить alert rule;
-- [ ] как валидировать monitoring configuration.
+- [x] как открыть Prometheus;
+- [x] как открыть Grafana;
+- [x] как проверить target;
+- [x] как найти metric;
+- [x] как локально проверить PromQL;
+- [x] как изменить dashboard;
+- [x] как изменить alert rule;
+- [x] как валидировать monitoring configuration.
 
 Добавить ADR:
 
@@ -2826,19 +2826,19 @@ ADR-008 — Monitoring configuration as code
 
 В ADR-007 зафиксировать:
 
-- [ ] почему выбран Prometheus;
-- [ ] почему выбран Grafana;
-- [ ] scrape model;
-- [ ] retention expectations;
-- [ ] network placement.
+- [x] почему выбран Prometheus;
+- [x] почему выбран Grafana;
+- [x] scrape model;
+- [x] retention expectations;
+- [x] network placement.
 
 В ADR-008 зафиксировать:
 
-- [ ] dashboard JSON хранится в Git;
-- [ ] Prometheus YAML хранится в Git;
-- [ ] rules хранятся в Git;
-- [ ] provisioning не выполняется вручную через UI;
-- [ ] CI валидирует monitoring artifacts.
+- [x] dashboard JSON хранится в Git;
+- [x] Prometheus YAML хранится в Git;
+- [x] rules хранятся в Git;
+- [x] provisioning не выполняется вручную через UI;
+- [x] CI валидирует monitoring artifacts.
 
 ---
 
@@ -2846,22 +2846,22 @@ ADR-008 — Monitoring configuration as code
 
 Sprint считается завершённым, если одновременно выполнены все условия:
 
-- [ ] Spring Boot экспортирует Prometheus metrics через Actuator.
-- [ ] Prometheus configuration находится в Git.
-- [ ] Prometheus scrape target приложения работает.
-- [ ] Recording rules находятся в Git и загружаются.
-- [ ] Alert rules находятся в Git и загружаются.
-- [ ] Grafana datasource создаётся автоматически.
-- [ ] Grafana dashboard создаётся автоматически.
-- [ ] Dashboard покрывает основные application/business/infra metrics.
-- [ ] Monitoring stack запускается через Docker Compose.
-- [ ] Monitoring configuration проходит automated validation.
-- [ ] Есть integration/smoke validation metrics pipeline.
-- [ ] Нет high-cardinality labels.
-- [ ] Metrics и dashboards не содержат secrets/user-provided sensitive values.
-- [ ] README и DEVELOPMENT.md обновлены.
-- [ ] ADR-007 и ADR-008 добавлены.
-- [ ] CI проверяет monitoring artifacts.
+- [x] Spring Boot экспортирует Prometheus metrics через Actuator.
+- [x] Prometheus configuration находится в Git.
+- [x] Prometheus scrape target приложения работает.
+- [x] Recording rules находятся в Git и загружаются.
+- [x] Alert rules находятся в Git и загружаются.
+- [x] Grafana datasource создаётся автоматически.
+- [x] Grafana dashboard создаётся автоматически.
+- [x] Dashboard покрывает основные application/business/infra metrics.
+- [x] Monitoring stack запускается через Docker Compose.
+- [x] Monitoring configuration проходит automated validation.
+- [x] Есть integration/smoke validation metrics pipeline.
+- [x] Нет high-cardinality labels.
+- [x] Metrics и dashboards не содержат secrets/user-provided sensitive values.
+- [x] README и DEVELOPMENT.md обновлены.
+- [x] ADR-007 и ADR-008 добавлены.
+- [x] CI проверяет monitoring artifacts.
 
 ---
 

@@ -140,6 +140,112 @@ case-insensitive lookup index); `link:` entries are JSON strings with a
 stable wire format (see ADR-002); `clicks:` counters are plain strings with
 no TTL by design (ADR-003/004).
 
+## Monitoring
+
+The monitoring stack (Prometheus + Grafana) runs alongside the application in
+the Docker Compose stack. All configuration is **as code** (ADR-008).
+
+### Open Prometheus
+
+```
+http://localhost:9090
+```
+
+### Open Grafana
+
+```
+http://localhost:14000
+# default credentials: admin / admin (set GF_SECURITY_ADMIN_PASSWORD via env)
+```
+
+### Check Prometheus target
+
+```bash
+# In the Prometheus UI: Status → Targets
+# Or via API:
+curl http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | {job, health, labels}'
+```
+
+Expected: `urlshorter-app` target with `health: "up"`.
+
+### Find a metric
+
+```bash
+# Search in Prometheus UI: Graph → "Expression" → type metric name
+# Or via API:
+curl "http://localhost:9090/api/v1/label/__name__/values" | jq '.data[]' | grep -i "link_redirected"
+```
+
+Common business metrics:
+
+```text
+links_created_total           # counter
+links_redirected_total        # counter
+links_not_found_total         # counter
+links_expired_total           # counter
+links_deleted_total           # counter
+
+cache_hits_total              # counter
+cache_misses_total            # counter
+
+clicks_incremented_total      # counter
+clicks_flushed_total          # counter
+clicks_flush_failures_total   # counter
+
+http_server_requests_seconds  # histogram (micrometer)
+```
+
+### Verify recording rules locally
+
+```bash
+# Check recording rules are loaded:
+curl http://localhost:9090/api/v1/rules | jq '.data.groups[].rules[] | select(.type=="recording") | .name'
+
+# Query a pre-computed metric (e.g. 5-minute redirect rate):
+curl "http://localhost:9090/api/v1/query?query=urlshorter:link_redirected:rate5m"
+```
+
+### Verify alert rules locally
+
+```bash
+# Check alert rules are loaded:
+curl http://localhost:9090/api/v1/rules | jq '.data.groups[].rules[] | select(.type=="alert") | .name'
+```
+
+### Change a dashboard
+
+Dashboard JSON is under `monitoring/grafana/dashboards/url-shortener-overview.json`.
+Changes are applied automatically on Grafana restart (or re-provisioning on
+`docker compose up --force-recreate grafana`).
+
+1. Edit the JSON file.
+2. Restart the container: `docker compose restart grafana`
+3. Refresh the browser.
+
+### Change an alert rule
+
+1. Edit `monitoring/prometheus/rules/alert-rules.yml`.
+2. Restart Prometheus: `docker compose restart prometheus`
+3. Verify in Prometheus UI: Status → Rules.
+
+### Validate monitoring configuration
+
+A standalone validator checks YAML syntax, PromQL validity, and Grafana
+provisioning without Docker:
+
+```bash
+python monitoring/validate-monitoring-config.py
+```
+
+The smoke test runs the full pipeline (with Docker):
+
+```bash
+python monitoring/validate-monitoring-stack.py
+```
+
+See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) — Tasks 29.12 and 29.11 for
+details on CI validation and smoke testing.
+
 ## PostgreSQL inspection
 
 ```bash
