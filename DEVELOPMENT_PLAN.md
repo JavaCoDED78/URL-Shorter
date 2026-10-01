@@ -2391,17 +2391,17 @@ monitoring/
 
 ### Шаги
 
-- [ ] Добавить Grafana service в Docker Compose.
-- [ ] Создать datasource provisioning file.
-- [ ] Указать Prometheus URL по имени Docker service, а не `localhost` внутри container.
-- [ ] Сделать datasource default.
-- [ ] Отключить необходимость ручного ввода datasource через UI.
-- [ ] Настроить provisioning path.
-- [ ] Проверить startup с пустой Grafana state.
+- [x] Добавить Grafana service в Docker Compose.
+- [x] Создать datasource provisioning file.
+- [x] Указать Prometheus URL по имени Docker service, а не `localhost` внутри container.
+- [x] Сделать datasource default.
+- [x] Отключить необходимость ручного ввода datasource через UI.
+- [x] Настроить provisioning path.
+- [x] Проверить startup с пустой Grafana state.
 
 ### Acceptance Criteria
 
-После первого запуска:
+После первого запуска (включая чистый volume):
 
 ```text
 Grafana
@@ -2411,9 +2411,27 @@ Datasource exists automatically
 Prometheus connection = healthy
 ```
 
-- [ ] datasource создан автоматически;
-- [ ] datasource URL корректен внутри Compose network;
-- [ ] отсутствие ручных UI steps подтверждено на чистом volume.
+- [x] datasource создан автоматически (`PBFA97CFB590B2093`);
+- [x] datasource URL корректен внутри Compose network (`http://prometheus:9090`);
+- [x] отсутствие ручных UI steps подтверждено на чистом volume.
+
+**Evidence (verified 2026-10-01):**
+
+```
+Datasource:  curl -s -u admin:admin http://localhost:14000/api/datasources
+→ [{name: Prometheus, type: prometheus, url: http://prometheus:9090, isDefault: true}]
+
+Prometheus:  curl -s http://localhost:9090/-/healthy
+→ Prometheus Server is Healthy.
+
+Target UP:   curl -s http://localhost:9090/api/v1/query?query=up
+→ urlshorter-app target health=up, value=1
+
+Dashboard:   curl -s -u admin:admin http://localhost:14000/api/dashboards/uid/url-shortener-overview
+→ type:db, title: URL Shortener Overview, uid: url-shortener-overview, panels: 22, folder: URL Shortener
+
+Clean volume: docker compose down -v + up — datasource + dashboard re-provisioned automatically.
+```
 
 ---
 
