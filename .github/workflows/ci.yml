@@ -99,6 +99,12 @@ jobs:
         run: chmod +x gradlew
       - name: Build application (no Docker image needed)
         run: ./gradlew bootJar -x test
+      - name: Install Python for smoke tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate monitoring configuration as code
+        run: python monitoring/validate-monitoring-config.py
       - name: Start monitoring stack
         run: docker compose -f docker-compose.yml up -d postgres redis
       - name: Run application with monitoring
@@ -128,10 +134,6 @@ jobs:
             fi
             sleep 3
           done
-      - name: Install Python for smoke tests
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
       - name: Run monitoring stack smoke tests
         run: python monitoring/validate-monitoring-stack.py
       - name: Tear down stack

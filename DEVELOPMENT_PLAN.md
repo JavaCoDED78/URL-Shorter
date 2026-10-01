@@ -2688,12 +2688,12 @@ Grafana can query metric
 
 Добавить локальную/CI validation для:
 
-- [ ] Prometheus config syntax;
-- [ ] recording rules syntax;
-- [ ] alert rules syntax;
-- [ ] YAML files;
-- [ ] Grafana provisioning YAML;
-- [ ] dashboard JSON validity.
+- [x] Prometheus config syntax;
+- [x] recording rules syntax;
+- [x] alert rules syntax;
+- [x] YAML files;
+- [x] Grafana provisioning YAML;
+- [x] dashboard JSON validity.
 
 По возможности добавить отдельные команды/scripts:
 
@@ -2704,9 +2704,9 @@ validate-grafana-provisioning
 validate-grafana-dashboards
 ```
 
-- [ ] Сделать команды reproducible внутри Docker/container или CI runner.
-- [ ] Не зависеть от локально установленного Grafana/Prometheus CLI без documented setup.
-- [ ] Включить validation в GitHub Actions после обычных tests.
+- [x] Сделать команды reproducible внутри Docker/container или CI runner.
+- [x] Не зависеть от локально установленного Grafana/Prometheus CLI без documented setup.
+- [x] Включить validation в GitHub Actions после обычных tests.
 
 ### Acceptance Criteria
 
