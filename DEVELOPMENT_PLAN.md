@@ -2769,22 +2769,22 @@ warm-up
 
 ### Шаги
 
-- [ ] Проверить exposure `/actuator/prometheus`.
-- [ ] Определить, доступен ли metrics endpoint только внутри internal network.
-- [ ] Не публиковать Prometheus/Grafana ports в production без необходимости.
-- [ ] Для local development сохранить удобный host access.
-- [ ] Не хранить Grafana admin credentials в Git.
-- [ ] Передавать credentials через environment variables/secrets mechanism.
-- [ ] Проверить, что metrics не содержат URL query parameters и пользовательские данные.
-- [ ] Проверить dashboard variables на отсутствие secret leakage.
-- [ ] Документировать production ingress policy.
+- [x] Проверить exposure `/actuator/prometheus`.
+- [x] Определить, доступен ли metrics endpoint только внутри internal network.
+- [x] Не публиковать Prometheus/Grafana ports в production без необходимости.
+- [x] Для local development сохранить удобный host access.
+- [x] Не хранить Grafana admin credentials в Git.
+- [x] Передавать credentials через environment variables/secrets mechanism.
+- [x] Проверить, что metrics не содержат URL query parameters и пользовательские данные.
+- [x] Проверить dashboard variables на отсутствие secret leakage.
+- [x] Документировать production ingress policy.
 
 ### Acceptance Criteria
 
-- [ ] application metrics не содержат secrets;
-- [ ] production exposure policy задокументирована;
-- [ ] Grafana credentials не hardcoded;
-- [ ] monitoring services не требуют public exposure для внутреннего использования.
+- [x] application metrics не содержат secrets;
+- [x] production exposure policy задокументирована;
+- [x] Grafana credentials не hardcoded;
+- [x] monitoring services не требуют public exposure для внутреннего использования.
 
 ---
 

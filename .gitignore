@@ -49,3 +49,10 @@ Thumbs.db
 .fastRequest/
 benchmarks/links.json
 benchmarks/results/
+
+# --- SSL/TLS certs / keys (production) ---
+*.pem
+*.key
+*.crt
+*.keystore
+*.jks
