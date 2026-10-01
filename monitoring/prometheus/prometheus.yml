@@ -35,8 +35,12 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets:
+          # The compose-network address only. A second host.docker.internal
+          # target used to point at the same instance in full-stack mode and
+          # doubled every sum(...) on the dashboard (verified under load:
+          # two identical series per recording rule). CI also runs the app
+          # container, so app:8080 resolves there too.
           - "app:8080"
-          - "host.docker.internal:8080"
         labels:
           # Every series from this target (including platform metrics such as
           # jvm_* / hikaricp_) carries the application label from the

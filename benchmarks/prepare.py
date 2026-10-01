@@ -19,12 +19,21 @@ POOL = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
 
 
 def post(alias: str) -> int:
-    conn = http.client.HTTPConnection(*BASE, timeout=30)
-    body = json.dumps({"originalUrl": "https://example.com/bench", "alias": alias})
-    conn.request("POST", "/api/v1/links", body, {"Content-Type": "application/json"})
-    status = conn.getresponse().status
-    conn.close()
-    return status
+    # Windows exhausts ephemeral client ports when hundreds of threads churn
+    # short-lived connections (WinError 10048) — retry instead of dropping
+    # the alias silently.
+    for attempt in range(5):
+        try:
+            conn = http.client.HTTPConnection(*BASE, timeout=30)
+            body = json.dumps({"originalUrl": "https://example.com/bench", "alias": alias})
+            conn.request("POST", "/api/v1/links", body, {"Content-Type": "application/json"})
+            status = conn.getresponse().status
+            conn.close()
+            return status
+        except OSError:
+            if attempt == 4:
+                raise
+            time.sleep(0.1)
 
 
 def main() -> None:
@@ -38,7 +47,12 @@ def main() -> None:
             i = next(counter)
             if i >= len(aliases):
                 return
-            if post(aliases[i]) != 201:
+            try:
+                # 409 = alias already exists from a previous prepare run —
+                # the pool only has to exist, so re-runs stay idempotent.
+                if post(aliases[i]) not in (201, 409):
+                    failures.append(aliases[i])
+            except OSError:
                 failures.append(aliases[i])
 
     threads = [threading.Thread(target=worker) for _ in range(200)]
@@ -46,11 +60,30 @@ def main() -> None:
         t.start()
     for t in threads:
         t.join()
+
+    # Sequential retry of the stragglers — one connection at a time lets
+    # the ephemeral port pool recover.
+    for _ in range(10):
+        if not failures:
+            break
+        retry, failures = failures, []
+        for alias in retry:
+            try:
+                if post(alias) not in (201, 409):
+                    failures.append(alias)
+            except OSError:
+                failures.append(alias)
     if failures:
         raise SystemExit(f"{len(failures)} creations failed, first: {failures[:3]}")
 
+    # Dev compose names the container urlshorter-redis-dev, the full stack
+    # urlshorter-redis — pick whichever is running.
+    redis_container = "urlshorter-redis-dev"
+    if subprocess.run(["docker", "inspect", redis_container],
+                      capture_output=True).returncode != 0:
+        redis_container = "urlshorter-redis"
     subprocess.run(
-        ["docker", "exec", "urlshorter-redis-dev", "redis-cli", "FLUSHALL"],
+        ["docker", "exec", redis_container, "redis-cli", "FLUSHALL"],
         check=True, capture_output=True)
     with open("benchmarks/links.json", "w", encoding="utf-8") as fh:
         json.dump({"codes": aliases[1:]}, fh)

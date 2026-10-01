@@ -23,7 +23,7 @@ const links = new SharedArray('links', () =>
 
 const executors = {
   hit:      { executor: 'constant-vus', vus: 50, duration: DURATION },
-  miss:     { executor: 'constant-vus', vus: 30, duration: DURATION },
+  miss:     { executor: 'shared-iterations', vus: 30, iterations: links.length, maxDuration: '120s' },
   create:   { executor: 'constant-vus', vus: 30, duration: DURATION },
   stats:    { executor: 'constant-vus', vus: 50, duration: DURATION },
   delete:   { executor: 'constant-vus', vus: 20, duration: DURATION },
@@ -46,7 +46,10 @@ export default function () {
     const r = http.get(`${BASE}/bench-hit`, { redirects: 0 });
     check(r, { '302': (x) => x.status === 302 });
   } else if (SCENARIO === 'miss') {
-    const code = links[exec.vu.iterationInInstance % links.length];
+    // Global iteration counter — every iteration consumes the next unused
+    // code, so each request is a genuine PostgreSQL lookup (never a
+    // repeat that would be served from the Redis cache).
+    const code = links[exec.scenario.iterationInTest % links.length];
     const r = http.get(`${BASE}/${code}`, { redirects: 0 });
     check(r, { '302': (x) => x.status === 302 });
   } else if (SCENARIO === 'create') {
