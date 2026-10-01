@@ -2525,22 +2525,22 @@ process uptime
 
 ### Dashboard requirements
 
-- [ ] Использовать template variables только для low-cardinality dimensions.
+- [x] Использовать template variables только для low-cardinality dimensions.
 - [ ] Добавить environment variable.
 - [ ] Добавить service/application variable при необходимости.
-- [ ] Использовать разумные dashboard refresh intervals.
-- [ ] Не делать dashboard зависимым от ручно созданных queries.
-- [ ] Добавить units к panel values.
-- [ ] Для ratios использовать проценты.
-- [ ] Для latency явно указывать milliseconds/seconds.
-- [ ] Добавить description panel/row там, где metric semantics неочевидна.
+- [x] Использовать разумные dashboard refresh intervals.
+- [x] Не делать dashboard зависимым от ручно созданных queries.
+- [x] Добавить units к panel values.
+- [x] Для ratios использовать проценты.
+- [x] Для latency явно указывать milliseconds/seconds.
+- [x] Добавить description panel/row там, где metric semantics неочевидна.
 
 ### Acceptance Criteria
 
-- [ ] dashboard импортируется автоматически;
-- [ ] все panels отображают данные при работающем приложении;
-- [ ] ни один panel не содержит broken query;
-- [ ] после `git clone` dashboard доступен без ручного import.
+- [x] dashboard импортируется автоматически;
+- [x] все panels отображают данные при работающем приложении;
+- [x] ни один panel не содержит broken query;
+- [x] после `git clone` dashboard доступен без ручного import.
 
 ---
 
