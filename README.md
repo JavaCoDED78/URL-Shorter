@@ -4,7 +4,7 @@ A production-oriented URL shortening service built with **Spring Boot 4.1.1**, *
 
 The service uses PostgreSQL as the source of truth, Redis for low-latency redirects and click buffering, Flyway for schema migrations, and Testcontainers for realistic integration testing.
 
-![CI](https://github.com/your-username/url-shortener/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/JavaCoDED78/url-shortener/actions/workflows/ci.yml/badge.svg)
 ![Java](https://img.shields.io/badge/Java-25-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -606,8 +606,14 @@ Errors use Spring's `ProblemDetail` representation following RFC 9457.
 
 The test suite uses Testcontainers to run real PostgreSQL and Redis instances. Docker is the only infrastructure dependency required for the full integration test suite.
 
+### Running tests
+
 ```bash
-./gradlew test
+# Full suite (all unit + integration tests with Testcontainers)
+./gradlew clean build
+
+# Unit tests only (pure JVM — no Docker needed)
+./gradlew unitTest
 ```
 
 ### Test coverage
@@ -678,6 +684,7 @@ The following environment variables are used by the application.
 | `SHORTENER_CACHE_TTL` | `1h` | Redis TTL for cached links |
 | `SHORTENER_FLUSH_INTERVAL` | `PT5S` | Click counter flush interval |
 | `SHORTENER_MAX_PAYLOAD_SIZE` | `16KB` | Raw request body ceiling |
+| `SHORTENER_BENCHMARK_ENABLED` | `false` | Enables `GET /bench-hit` for k6 load tests |
 
 All values also follow Spring relaxed binding — e.g. `SPRING_DATASOURCE_URL`
 overrides `DB_URL` the same way `spring.datasource.url` would.
