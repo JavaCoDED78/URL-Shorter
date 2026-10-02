@@ -24,10 +24,9 @@ authorized service accounts.
 | PostgreSQL  | 5432          | **No**                    | Private database; app connects via internal network |
 | Redis       | 6379          | **No**                    | Private cache; app connects via internal network |
 
-**Local development** (`docker-compose.dev.yml`): Prometheus and Grafana ports
-are mapped for convenience (`9090`, `14000`) but this file is **not used in
-production**. Production deployments use a Kubernetes ingress or reverse proxy
-that does not expose these ports.
+**Local development** (`docker-compose.yml`): Prometheus (`9090`) and Grafana
+(`14000`) ports are mapped for convenience. Production deployments use a
+Kubernetes ingress or reverse proxy that does not expose these ports.
 
 ## 4. Actuator Endpoint Exposure
 
