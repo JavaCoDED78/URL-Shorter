@@ -56,7 +56,7 @@ groups:
             upstream failures.
 
       - alert: urlshorter_5xx_spike
-        expr: increase(http_server_requests_seconds_count{status=~"5.."}[5m]) > 50
+        expr: increase(urlshorter_http_errors:rate5m[5m]) > 50
         for: 1m
         labels:
           severity: warning
@@ -64,8 +64,9 @@ groups:
           summary: "5xx errors rising rapidly"
           description: >-
             More than 50 5xx responses have been recorded in the last
-            5 minutes. This may be a transient blip or the beginning
-            of a larger outage.
+            5 minutes, using the recording rule
+            `urlshorter_http_errors:rate5m`. This may be a transient blip
+            or the beginning of a larger outage.
 
   # ---------------------------------------------------------------- latency
   - name: urlshorter.latency
