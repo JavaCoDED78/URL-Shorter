@@ -27,9 +27,7 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
       - name: Unit tests (pure JVM — no Docker)
-        run: ./gradlew test --tests '*Test' \
-             --tests '!UrlShorterApplicationTests' \
-             --tests '!LinkRepositoryTest'
+        run: ./gradlew unitTest
 
   integration-tests:
     name: Full build + integration tests
@@ -46,7 +44,7 @@ jobs:
         run: chmod +x gradlew
       - name: Verify Docker is available for Testcontainers
         run: docker info >/dev/null
-      - name: Clean build — integration tests run on real PostgreSQL/Redis
+      - name: Clean build — all tests run on real PostgreSQL/Redis
         run: ./gradlew clean build
 
   docker-image:

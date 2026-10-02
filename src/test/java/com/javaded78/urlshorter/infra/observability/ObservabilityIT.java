@@ -5,15 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Map;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.domain.service.CounterFlushService;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,148 +32,152 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Actuator contract (Tasks 13.1–13.3): liveness/readiness/application
- * health with PostgreSQL and Redis dependency checks, business counters
- * (links.*, cache.*, clicks.*) and latency timers
- * (links_redirected, links_not_found, links_expired, etc.) and latency
- * timers (redirect_duration, postgres_lookup_duration, redis_lookup_duration).
- * The scheduled flush is disabled; the test controls flushing explicitly.
+ * Actuator contract (Tasks 13.1–13.3): liveness/readiness/application health with PostgreSQL and
+ * Redis dependency checks, business counters (links.*, cache.*, clicks.*) and latency timers
+ * (links_redirected, links_not_found, links_expired, etc.) and latency timers (redirect_duration,
+ * postgres_lookup_duration, redis_lookup_duration). The scheduled flush is disabled; the test
+ * controls flushing explicitly.
  */
 @SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "shortener.flush.enabled=false")
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = "shortener.flush.enabled=false")
 @AutoConfigureTestRestTemplate
 @Import(TestcontainersConfiguration.class)
 class ObservabilityIT {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    @LocalServerPort
-    private int port;
+  @LocalServerPort private int port;
 
-    @Autowired
-    private TestRestTemplate restTemplate;
+  @Autowired private TestRestTemplate restTemplate;
 
-    @Autowired
-    private CounterFlushService flushService;
+  @Autowired private CounterFlushService flushService;
 
-    @MockitoSpyBean
-    private LinkRepository repository;
+  @MockitoSpyBean private LinkRepository repository;
 
-    private TestRestTemplate rest;
+  private TestRestTemplate rest;
 
-    @BeforeEach
-    void setUp() {
-        rest = restTemplate.withRedirects(HttpRedirects.DONT_FOLLOW);
+  @BeforeEach
+  void setUp() {
+    rest = restTemplate.withRedirects(HttpRedirects.DONT_FOLLOW);
+  }
+
+  @Test
+  void livenessAndReadinessAreUp() throws Exception {
+    assertThat(health("liveness").required("status").asText()).isEqualTo("UP");
+    assertThat(health("readiness").required("status").asText()).isEqualTo("UP");
+  }
+
+  @Test
+  void applicationHealthReportsPostgreSQLAndRedis() throws Exception {
+    JsonNode health = get("/actuator/health");
+    assertThat(health.required("status").asText()).isEqualTo("UP");
+    assertThat(health.required("components").required("db").required("status").asText())
+        .isEqualTo("UP");
+    assertThat(health.required("components").required("redis").required("status").asText())
+        .isEqualTo("UP");
+  }
+
+  @Test
+  void businessCountersAndTimersAreRecorded() throws Exception {
+    long createdBefore = metric("urlshorter.linksCreated");
+    post(Map.of("originalUrl", "https://example.com", "alias", "obs01"));
+
+    redirect("obs01"); // cache miss
+    redirect("obs01"); // cache hit
+    redirect("no-such-code"); // not found
+
+    assertThat(metric("urlshorter.linksCreated")).isEqualTo(createdBefore + 1);
+    assertThat(metric("urlshorter.linksRedirected")).isGreaterThanOrEqualTo(2);
+    assertThat(metric("urlshorter.linksNotFound")).isGreaterThanOrEqualTo(1);
+    assertThat(metric("urlshorter.cacheMiss")).isGreaterThanOrEqualTo(1);
+    assertThat(metric("urlshorter.cacheHit")).isGreaterThanOrEqualTo(1);
+    assertThat(metric("urlshorter.clicksIncremented")).isGreaterThanOrEqualTo(2);
+    assertThat(metric("urlshorter.redirectDuration")).isGreaterThanOrEqualTo(2);
+    assertThat(metric("urlshorter.redisLookupDuration")).isGreaterThanOrEqualTo(1);
+    assertThat(metric("urlshorter.postgresLookupDuration")).isGreaterThanOrEqualTo(1);
+  }
+
+  @Test
+  void expiredAndDeletedLinksAreCounted() throws Exception {
+    post(
+        Map.of(
+            "originalUrl",
+            "https://example.com",
+            "alias",
+            "obs02",
+            "expiresAt",
+            Instant.now().plus(1, ChronoUnit.SECONDS).toString()));
+    Thread.sleep(1100);
+    redirect("obs02"); // 410
+
+    post(Map.of("originalUrl", "https://example.com", "alias", "obs03"));
+    delete("obs03");
+
+    assertThat(metric("urlshorter.linksExpired")).isGreaterThanOrEqualTo(1);
+    assertThat(metric("urlshorter.linksDeleted")).isGreaterThanOrEqualTo(1);
+  }
+
+  @Test
+  void flushCountersAreRecorded() throws Exception {
+    post(Map.of("originalUrl", "https://example.com", "alias", "obs04"));
+    redirect("obs04");
+    redirect("obs04");
+    redirect("obs04");
+
+    flushService.flush();
+    assertThat(metric("urlshorter.clicksFlushed")).isGreaterThanOrEqualTo(3);
+
+    doThrow(new DataAccessException("db down") {})
+        .when(repository)
+        .batchIncrementClickCounts(any(), any());
+    redirect("obs04");
+    assertThatThrownBy(flushService::flush).isNotNull();
+    assertThat(metric("urlshorter.clicksFlushFailed")).isEqualTo(1);
+  }
+
+  private JsonNode health(String group) throws Exception {
+    return get("/actuator/health/" + group);
+  }
+
+  private JsonNode get(String path) throws Exception {
+    ResponseEntity<String> response = restTemplate.getForEntity(url(path), String.class);
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    return MAPPER.readTree(response.getBody());
+  }
+
+  /** Current value of a counter/timer metric (COUNT statistic). */
+  private long metric(String name) throws Exception {
+    JsonNode body = get("/actuator/metrics/" + name);
+    for (JsonNode measurement : body.required("measurements")) {
+      if ("COUNT".equals(measurement.required("statistic").asText())) {
+        return (long) measurement.required("value").asDouble();
+      }
     }
+    throw new AssertionError("no COUNT measurement for metric " + name);
+  }
 
-    @Test
-    void livenessAndReadinessAreUp() throws Exception {
-        assertThat(health("liveness").required("status").asText()).isEqualTo("UP");
-        assertThat(health("readiness").required("status").asText()).isEqualTo("UP");
-    }
+  private void post(Map<String, Object> body) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    ResponseEntity<String> response =
+        restTemplate.exchange(
+            url("/api/v1/links"), HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+  }
 
-    @Test
-    void applicationHealthReportsPostgreSQLAndRedis() throws Exception {
-        JsonNode health = get("/actuator/health");
-        assertThat(health.required("status").asText()).isEqualTo("UP");
-        assertThat(health.required("components").required("db").required("status").asText())
-                .isEqualTo("UP");
-        assertThat(health.required("components").required("redis").required("status").asText())
-                .isEqualTo("UP");
-    }
+  private void redirect(String code) {
+    rest.getForEntity(url("/" + code), String.class);
+  }
 
-    @Test
-    void businessCountersAndTimersAreRecorded() throws Exception {
-        long createdBefore = metric("urlshorter.linksCreated");
-        post(Map.of("originalUrl", "https://example.com", "alias", "obs01"));
+  private void delete(String code) {
+    ResponseEntity<String> response =
+        restTemplate.exchange(
+            url("/api/v1/links/" + code), HttpMethod.DELETE, HttpEntity.EMPTY, String.class);
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+  }
 
-        redirect("obs01");           // cache miss
-        redirect("obs01");           // cache hit
-        redirect("no-such-code");    // not found
-
-        assertThat(metric("urlshorter.linksCreated")).isEqualTo(createdBefore + 1);
-        assertThat(metric("urlshorter.linksRedirected")).isGreaterThanOrEqualTo(2);
-        assertThat(metric("urlshorter.linksNotFound")).isGreaterThanOrEqualTo(1);
-        assertThat(metric("urlshorter.cacheMiss")).isGreaterThanOrEqualTo(1);
-        assertThat(metric("urlshorter.cacheHit")).isGreaterThanOrEqualTo(1);
-        assertThat(metric("urlshorter.clicksIncremented")).isGreaterThanOrEqualTo(2);
-        assertThat(metric("urlshorter.redirectDuration")).isGreaterThanOrEqualTo(2);
-        assertThat(metric("urlshorter.redisLookupDuration")).isGreaterThanOrEqualTo(1);
-        assertThat(metric("urlshorter.postgresLookupDuration")).isGreaterThanOrEqualTo(1);
-    }
-
-    @Test
-    void expiredAndDeletedLinksAreCounted() throws Exception {
-        post(Map.of("originalUrl", "https://example.com", "alias", "obs02",
-                "expiresAt", Instant.now().plus(1, ChronoUnit.SECONDS).toString()));
-        Thread.sleep(1100);
-        redirect("obs02"); // 410
-
-        post(Map.of("originalUrl", "https://example.com", "alias", "obs03"));
-        delete("obs03");
-
-        assertThat(metric("urlshorter.linksExpired")).isGreaterThanOrEqualTo(1);
-        assertThat(metric("urlshorter.linksDeleted")).isGreaterThanOrEqualTo(1);
-    }
-
-    @Test
-    void flushCountersAreRecorded() throws Exception {
-        post(Map.of("originalUrl", "https://example.com", "alias", "obs04"));
-        redirect("obs04");
-        redirect("obs04");
-        redirect("obs04");
-
-        flushService.flush();
-        assertThat(metric("urlshorter.clicksFlushed")).isGreaterThanOrEqualTo(3);
-
-        doThrow(new DataAccessException("db down") {
-        }).when(repository).batchIncrementClickCounts(any(), any());
-        redirect("obs04");
-        assertThatThrownBy(flushService::flush).isNotNull();
-        assertThat(metric("urlshorter.clicksFlushFailed")).isEqualTo(1);
-    }
-
-    private JsonNode health(String group) throws Exception {
-        return get("/actuator/health/" + group);
-    }
-
-    private JsonNode get(String path) throws Exception {
-        ResponseEntity<String> response = restTemplate.getForEntity(url(path), String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        return MAPPER.readTree(response.getBody());
-    }
-
-    /** Current value of a counter/timer metric (COUNT statistic). */
-    private long metric(String name) throws Exception {
-        JsonNode body = get("/actuator/metrics/" + name);
-        for (JsonNode measurement : body.required("measurements")) {
-            if ("COUNT".equals(measurement.required("statistic").asText())) {
-                return (long) measurement.required("value").asDouble();
-            }
-        }
-        throw new AssertionError("no COUNT measurement for metric " + name);
-    }
-
-    private void post(Map<String, Object> body) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        ResponseEntity<String> response = restTemplate.exchange(url("/api/v1/links"),
-                HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-    }
-
-    private void redirect(String code) {
-        rest.getForEntity(url("/" + code), String.class);
-    }
-
-    private void delete(String code) {
-        ResponseEntity<String> response = restTemplate.exchange(url("/api/v1/links/" + code),
-                HttpMethod.DELETE, HttpEntity.EMPTY, String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-    }
-
-    private String url(String path) {
-        return "http://localhost:" + port + path;
-    }
+  private String url(String path) {
+    return "http://localhost:" + port + path;
+  }
 }

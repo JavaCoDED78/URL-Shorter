@@ -2,6 +2,7 @@ plugins {
     java
     id("org.springframework.boot") version "4.1.1"
     id("io.spring.dependency-management") version "1.1.7"
+    id("com.diffplug.spotless") version "6.25.0"
 }
 
 group = "com.javaded78"
@@ -81,4 +82,35 @@ tasks.withType<JavaCompile> {
 tasks.withType<Test> {
     useJUnitPlatform()
     systemProperty("file.encoding", "UTF-8")
+}
+
+// Unit test task: excludes Testcontainer-bearing tests (UrlShorterApplicationTests,
+// LinkRepositoryTest) so it runs on pure JVM without Docker.
+tasks.register<Test>("unitTest") {
+    description = "Runs pure-JVM unit tests (no Docker/Testcontainers required)"
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    useJUnitPlatform {
+        filter {
+            includeTestsMatching("*Test")
+            excludeTestsMatching("UrlShorterApplicationTests")
+            excludeTestsMatching("LinkRepositoryTest")
+        }
+    }
+}
+
+// Spotless: Google Java Format + Checkstyle validation (Sprint 33)
+spotless {
+    java {
+        target("src/**/*.java")
+        googleJavaFormat("1.22.0")
+        // Fix imports that are out of alphabetical order
+        importOrder()
+        // Remove unused imports
+        removeUnusedImports()
+        // Standard whitespace
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
 }
