@@ -3,13 +3,20 @@ package com.javaded78.urlshorter.api.error;
 import com.javaded78.urlshorter.domain.service.AliasAlreadyExistsException;
 import com.javaded78.urlshorter.domain.service.LinkExpiredException;
 import com.javaded78.urlshorter.domain.service.LinkNotFoundException;
+import com.javaded78.urlshorter.config.PayloadTooLargeException;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.transaction.CannotCreateTransactionException;
 
 /**
  * Maps application exceptions to RFC 9457 {@link ProblemDetail} responses.
@@ -25,8 +32,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-  private static final org.slf4j.Logger log =
-      org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
+  private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
@@ -80,8 +86,8 @@ public class GlobalExceptionHandler {
    * (unexpected). The cause is logged server-side only; the connection-acquisition timeout is
    * pinned at 5 s in application.yaml so the request cannot hang.
    */
-  @ExceptionHandler(org.springframework.dao.DataAccessException.class)
-  public ProblemDetail handleDataAccessException(org.springframework.dao.DataAccessException ex) {
+  @ExceptionHandler(DataAccessException.class)
+  public ProblemDetail handleDataAccessException(DataAccessException ex) {
     log.error("data access failure while handling request", ex);
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(
@@ -95,14 +101,14 @@ public class GlobalExceptionHandler {
    * Transaction-begin failure with the database unreachable (found in the Sprint 28 live review):
    * when the container is down, the JPA transaction manager cannot even open an EntityManager, so
    * the failure surfaces as {@link
-   * org.springframework.transaction.CannotCreateTransactionException} — which is NOT a {@code
+   * CannotCreateTransactionException} — which is NOT a {@code
    * DataAccessException} and would otherwise leak through as a misleading 500. This is the same
    * "database temporarily unavailable" contract as above; rollback/commit failures after a running
    * transaction are a different class and still fall to 500.
    */
-  @ExceptionHandler(org.springframework.transaction.CannotCreateTransactionException.class)
+  @ExceptionHandler(CannotCreateTransactionException.class)
   public ProblemDetail handleCannotCreateTransaction(
-      org.springframework.transaction.CannotCreateTransactionException ex) {
+      CannotCreateTransactionException ex) {
     log.error("transaction begin failure while handling request", ex);
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(
@@ -116,9 +122,9 @@ public class GlobalExceptionHandler {
    * Body over the payload limit (Task 20.1): thrown by the bounded stream for chunked bodies;
    * usually arrives wrapped by the message converter.
    */
-  @ExceptionHandler(com.javaded78.urlshorter.config.PayloadTooLargeException.class)
+  @ExceptionHandler(PayloadTooLargeException.class)
   public ProblemDetail handlePayloadTooLarge(
-      com.javaded78.urlshorter.config.PayloadTooLargeException ex) {
+      PayloadTooLargeException ex) {
     return payloadTooLarge(ex.getMessage());
   }
 
@@ -126,11 +132,11 @@ public class GlobalExceptionHandler {
    * Unreadable body: 400 for syntactically broken JSON, 413 when the cause chain shows the bounded
    * stream hit the payload limit (chunked oversized bodies, Task 20.1).
    */
-  @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+  @ExceptionHandler(HttpMessageNotReadableException.class)
   public ProblemDetail handleUnreadableBody(
-      org.springframework.http.converter.HttpMessageNotReadableException ex) {
+      HttpMessageNotReadableException ex) {
     for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
-      if (cause instanceof com.javaded78.urlshorter.config.PayloadTooLargeException tooLarge) {
+      if (cause instanceof PayloadTooLargeException tooLarge) {
         return payloadTooLarge(tooLarge.getMessage());
       }
     }
@@ -153,9 +159,9 @@ public class GlobalExceptionHandler {
    * Unmapped paths (e.g. retired unversioned API routes) must be a plain 404 — without this, the
    * generic fallback below would turn them into a misleading 500.
    */
-  @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+  @ExceptionHandler(NoResourceFoundException.class)
   public ProblemDetail handleNoResource(
-      org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+      NoResourceFoundException ex) {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "resource not found");
     problem.setType(ErrorType.RESOURCE_NOT_FOUND.uri());
