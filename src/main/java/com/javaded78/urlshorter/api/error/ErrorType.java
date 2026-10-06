@@ -1,22 +1,21 @@
 package com.javaded78.urlshorter.api.error;
 
 import java.net.URI;
-import java.util.Locale;
 import org.springframework.http.HttpStatus;
 
 /**
- * Stable, client-facing categories for every {@link org.springframework.http.ProblemDetail} the
- * API returns.
+ * Stable, client-facing categories for every {@link org.springframework.http.ProblemDetail} the API
+ * returns.
  *
  * <p>Each constant is a machine-readable, {@link URI#isAbsolute() absolute} URI so clients can
- * branch on the error kind without parsing the human-readable {@code title}. The base URI is
- * {@link #BASE_URI}; appending the {@link #code()} segment yields the {@code type} value sent in the
- * response body. The {@code #code()} is also human-readable (e.g. {@code "validation-error"}), which
- * is handy in logs, traces and error pages.
+ * branch on the error kind without parsing the human-readable {@code title}. The base URI is {@link
+ * #BASE_URI}; appending the {@link #code()} segment yields the {@code type} value sent in the
+ * response body. The {@code #code()} is also human-readable (e.g. {@code "validation-error"}),
+ * which is handy in logs, traces and error pages.
  *
  * <p>Keep this list in sync with {@code OpenApiContractIT} and {@code ErrorHandlingIT}: every error
- * that reaches the API must appear here so its {@code type}/{@code status}/{@code title} stay stable
- * for clients.
+ * that reaches the API must appear here so its {@code type}/{@code status}/{@code title} stay
+ * stable for clients.
  */
 public enum ErrorType {
   VALIDATION("validation-error", HttpStatus.BAD_REQUEST, "Invalid request"),
@@ -24,13 +23,13 @@ public enum ErrorType {
   CODE_ALREADY_TAKEN("code-already-taken", HttpStatus.CONFLICT, "Code already taken"),
   LINK_NOT_FOUND("link-not-found", HttpStatus.NOT_FOUND, "Link not found"),
   LINK_EXPIRED("link-expired", HttpStatus.GONE, "Link expired"),
-  DATABASE_UNAVAILABLE("database-unavailable", HttpStatus.SERVICE_UNAVAILABLE, "Service unavailable"),
+  DATABASE_UNAVAILABLE(
+      "database-unavailable", HttpStatus.SERVICE_UNAVAILABLE, "Service unavailable"),
   PAYLOAD_TOO_LARGE("payload-too-large", HttpStatus.PAYLOAD_TOO_LARGE, "Payload too large"),
   RESOURCE_NOT_FOUND("resource-not-found", HttpStatus.NOT_FOUND, "Not found"),
   INTERNAL_ERROR("internal-error", HttpStatus.INTERNAL_SERVER_ERROR, "Internal error");
 
-  private static final URI BASE_URI =
-      URI.create("https://urlshortener.javaded78.dev/errors/");
+  private static final URI BASE_URI = URI.create("https://urlshortener.javaded78.dev/errors/");
 
   private final String code;
   private final HttpStatus status;

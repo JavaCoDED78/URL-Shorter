@@ -10,22 +10,23 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
-import org.springframework.stereotype.Component;
 
 /**
  * Bounds the request URI so a crafted path cannot be used to inflate the request-line, the routing
  * stack, or (for the root {@code GET /{code}} endpoint) the code lookup.
  *
  * <p>The URL/alias fields are already field-validated (2048 / 64 characters) and the raw body is
- * bounded by {@link RequestSizeLimitFilter}, but a path segment is parsed before any handler runs and
- * is not subject to those checks. A request whose {@code requestURI.length()} exceeds {@code
+ * bounded by {@link RequestSizeLimitFilter}, but a path segment is parsed before any handler runs
+ * and is not subject to those checks. A request whose {@code requestURI.length()} exceeds {@code
  * shortener.max-uri-length} (default 1024 — far above the largest legitimate code of 11 characters)
  * is answered immediately with 413 {@code ProblemDetail} and never reaches the servlet container's
- * routing. The same {@code ProblemDetail} shape is written here as in {@link RequestSizeLimitFilter}
- * (a dedicated, locally-built {@code ObjectMapper}) so the error contract is identical regardless of
- * whether MVC is in scope.
+ * routing. The {@code ProblemDetail} is serialized to the response through {@link
+ * ProblemDetailWriter} (this filter runs before MVC, so the web {@code ObjectMapper} is not in
+ * scope here), so the error contract is identical regardless of whether MVC is in scope.
+ *
+ * <p>Registered explicitly in {@link FilterConfig} (order: {@code HIGHEST_PRECEDENCE}), not as a
+ * Spring component, so the two request-bounding filters share one deterministic ordering contract.
  */
-@Component
 public class RequestUriLengthFilter implements Filter {
 
   private final int maxUriLength;
@@ -58,6 +59,6 @@ public class RequestUriLengthFilter implements Filter {
             org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE,
             "request URI exceeds the maximum of " + maxUriLength + " characters");
     problem.setTitle("Request URI too long");
-    new com.fasterxml.jackson.databind.ObjectMapper().writeValue(http.getOutputStream(), problem);
+    ProblemDetailWriter.write(http, problem);
   }
 }

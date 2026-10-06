@@ -4,6 +4,7 @@ import static org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.ServletRequest;
@@ -13,9 +14,9 @@ import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
-import org.springframework.stereotype.Component;
 
 /**
  * Bounds the raw request body (Task 20.1). Field validation already limits the URL (2048) and alias
@@ -33,8 +34,10 @@ import org.springframework.stereotype.Component;
  *
  * <p>The limit is configurable: {@code shortener.max-payload-size}, default 16&nbsp;KB — far above
  * the largest legitimate create request (2048-char URL plus JSON overhead).
+ *
+ * <p>Registered explicitly in {@link FilterConfig} (order: {@code LOWEST_PRECEDENCE}), not as a
+ * Spring component, so the two request-bounding filters share one deterministic ordering contract.
  */
-@Component
 public class RequestSizeLimitFilter implements Filter {
 
   private final long maxPayloadBytes;
@@ -97,16 +100,15 @@ public class RequestSizeLimitFilter implements Filter {
         ProblemDetail.forStatusAndDetail(
             PAYLOAD_TOO_LARGE, "request body exceeds the maximum of " + maxPayloadBytes + " bytes");
     problem.setTitle("Payload too large");
-    // same dedicated-mapper pattern as RedisLinkCache: this filter runs
-    // before MVC, so the web ObjectMapper is not in scope here
-    new com.fasterxml.jackson.databind.ObjectMapper().writeValue(http.getOutputStream(), problem);
+    // this filter runs before MVC, so the body is written from the shared
+    // ProblemDetailWriter (no web ObjectMapper in scope here)
+    ProblemDetailWriter.write(http, problem);
   }
 
   private static final class BoundedRequestWrapper extends HttpServletRequestWrapper {
 
     private final long limit;
-    private final java.util.concurrent.atomic.AtomicBoolean violated =
-        new java.util.concurrent.atomic.AtomicBoolean();
+    private final AtomicBoolean violated = new AtomicBoolean();
     private ServletInputStream bounded;
 
     BoundedRequestWrapper(HttpServletRequest request, long limit) {
@@ -137,11 +139,10 @@ public class RequestSizeLimitFilter implements Filter {
 
     private final InputStream delegate;
     private final long limit;
-    private final java.util.concurrent.atomic.AtomicBoolean violated;
+    private final AtomicBoolean violated;
     private long seen;
 
-    BoundedInputStream(
-        InputStream delegate, long limit, java.util.concurrent.atomic.AtomicBoolean violated) {
+    BoundedInputStream(InputStream delegate, long limit, AtomicBoolean violated) {
       this.delegate = delegate;
       this.limit = limit;
       this.violated = violated;
@@ -185,7 +186,7 @@ public class RequestSizeLimitFilter implements Filter {
     }
 
     @Override
-    public void setReadListener(jakarta.servlet.ReadListener listener) {
+    public void setReadListener(ReadListener listener) {
       throw new UnsupportedOperationException("async reads not supported");
     }
   }

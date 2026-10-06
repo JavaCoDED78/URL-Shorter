@@ -1,9 +1,9 @@
 package com.javaded78.urlshorter.api.error;
 
+import com.javaded78.urlshorter.config.PayloadTooLargeException;
 import com.javaded78.urlshorter.domain.service.AliasAlreadyExistsException;
 import com.javaded78.urlshorter.domain.service.LinkExpiredException;
 import com.javaded78.urlshorter.domain.service.LinkNotFoundException;
-import com.javaded78.urlshorter.config.PayloadTooLargeException;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,12 +11,12 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
-import org.springframework.transaction.CannotCreateTransactionException;
 
 /**
  * Maps application exceptions to RFC 9457 {@link ProblemDetail} responses.
@@ -24,10 +24,10 @@ import org.springframework.transaction.CannotCreateTransactionException;
  * <p>Stable, client-facing categories (Task 11.2): 400 invalid request, 404 not found, 409
  * conflict, 410 gone, 500 internal error. Every response carries the same keys — {@code type},
  * {@code title}, {@code status}, {@code detail}, {@code instance}. The {@code type} field is a
- * machine-readable URI identifying each error class (so clients can branch on the error kind without
- * parsing the human-readable {@code title}), while {@code title} stays stable for human consumption.
- * The unexpected-failure fallback (Task 11.4) logs the cause server-side but never exposes stack
- * traces, SQL, connection URLs or Redis internals to the client.
+ * machine-readable URI identifying each error class (so clients can branch on the error kind
+ * without parsing the human-readable {@code title}), while {@code title} stays stable for human
+ * consumption. The unexpected-failure fallback (Task 11.4) logs the cause server-side but never
+ * exposes stack traces, SQL, connection URLs or Redis internals to the client.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -56,6 +56,7 @@ public class GlobalExceptionHandler {
     problem.setTitle(ErrorType.INVALID_REQUEST.title());
     return problem;
   }
+
   @ExceptionHandler(AliasAlreadyExistsException.class)
   public ProblemDetail handleAliasConflict(AliasAlreadyExistsException ex) {
     ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
@@ -100,15 +101,13 @@ public class GlobalExceptionHandler {
   /**
    * Transaction-begin failure with the database unreachable (found in the Sprint 28 live review):
    * when the container is down, the JPA transaction manager cannot even open an EntityManager, so
-   * the failure surfaces as {@link
-   * CannotCreateTransactionException} — which is NOT a {@code
+   * the failure surfaces as {@link CannotCreateTransactionException} — which is NOT a {@code
    * DataAccessException} and would otherwise leak through as a misleading 500. This is the same
    * "database temporarily unavailable" contract as above; rollback/commit failures after a running
    * transaction are a different class and still fall to 500.
    */
   @ExceptionHandler(CannotCreateTransactionException.class)
-  public ProblemDetail handleCannotCreateTransaction(
-      CannotCreateTransactionException ex) {
+  public ProblemDetail handleCannotCreateTransaction(CannotCreateTransactionException ex) {
     log.error("transaction begin failure while handling request", ex);
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(
@@ -123,8 +122,7 @@ public class GlobalExceptionHandler {
    * usually arrives wrapped by the message converter.
    */
   @ExceptionHandler(PayloadTooLargeException.class)
-  public ProblemDetail handlePayloadTooLarge(
-      PayloadTooLargeException ex) {
+  public ProblemDetail handlePayloadTooLarge(PayloadTooLargeException ex) {
     return payloadTooLarge(ex.getMessage());
   }
 
@@ -133,8 +131,7 @@ public class GlobalExceptionHandler {
    * stream hit the payload limit (chunked oversized bodies, Task 20.1).
    */
   @ExceptionHandler(HttpMessageNotReadableException.class)
-  public ProblemDetail handleUnreadableBody(
-      HttpMessageNotReadableException ex) {
+  public ProblemDetail handleUnreadableBody(HttpMessageNotReadableException ex) {
     for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
       if (cause instanceof PayloadTooLargeException tooLarge) {
         return payloadTooLarge(tooLarge.getMessage());
@@ -160,8 +157,7 @@ public class GlobalExceptionHandler {
    * generic fallback below would turn them into a misleading 500.
    */
   @ExceptionHandler(NoResourceFoundException.class)
-  public ProblemDetail handleNoResource(
-      NoResourceFoundException ex) {
+  public ProblemDetail handleNoResource(NoResourceFoundException ex) {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "resource not found");
     problem.setType(ErrorType.RESOURCE_NOT_FOUND.uri());

@@ -45,7 +45,10 @@ class ErrorHandlingIT {
     ResponseEntity<Map> response = post(Map.of());
 
     assertProblemContract(
-        response, "https://urlshortener.javaded78.dev/errors/validation-error", 400, "Invalid request");
+        response,
+        "https://urlshortener.javaded78.dev/errors/validation-error",
+        400,
+        "Invalid request");
     assertThat(response.getBody()).containsKey("errors");
   }
 
@@ -54,7 +57,10 @@ class ErrorHandlingIT {
     ResponseEntity<Map> response = post(Map.of("originalUrl", "not-a-url"));
 
     assertProblemContract(
-        response, "https://urlshortener.javaded78.dev/errors/invalid-request", 400, "Invalid request");
+        response,
+        "https://urlshortener.javaded78.dev/errors/invalid-request",
+        400,
+        "Invalid request");
   }
 
   @Test
@@ -65,7 +71,10 @@ class ErrorHandlingIT {
     // alias pattern is a Bean Validation constraint, so this is a
     // #validation-error rather than a semantic #invalid-request
     assertProblemContract(
-        response, "https://urlshortener.javaded78.dev/errors/validation-error", 400, "Invalid request");
+        response,
+        "https://urlshortener.javaded78.dev/errors/validation-error",
+        400,
+        "Invalid request");
     assertThat(response.getBody()).containsKey("errors");
   }
 
@@ -80,7 +89,10 @@ class ErrorHandlingIT {
                 Instant.now().minus(1, ChronoUnit.HOURS).toString()));
 
     assertProblemContract(
-        response, "https://urlshortener.javaded78.dev/errors/invalid-request", 400, "Invalid request");
+        response,
+        "https://urlshortener.javaded78.dev/errors/invalid-request",
+        400,
+        "Invalid request");
     assertThat((String) response.getBody().get("detail")).contains("expiresAt");
   }
 
