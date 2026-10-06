@@ -15,7 +15,8 @@ public record ShortenerProperties(
     Create create,
     Cache cache,
     Code code,
-    org.springframework.util.unit.DataSize maxPayloadSize) {
+    org.springframework.util.unit.DataSize maxPayloadSize,
+    int maxUriLength) {
 
   /**
    * @param maxLength maximum accepted original URL length

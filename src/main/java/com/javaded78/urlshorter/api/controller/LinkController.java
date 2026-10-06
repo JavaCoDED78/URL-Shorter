@@ -51,6 +51,10 @@ public class LinkController {
     @ApiResponse(
         responseCode = "409",
         description = "Code or alias already taken",
+        content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+    @ApiResponse(
+        responseCode = "413",
+        description = "Request body over the payload size limit",
         content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   })
   @PostMapping

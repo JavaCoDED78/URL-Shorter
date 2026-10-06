@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.1.1 — Centralized error types (2026-10-06)
+
+The `type` field in RFC 9457 `ProblemDetail` responses was previously
+`about:blank#<name>`, a `about:blank` URI with a `#` fragment — not a valid,
+self-describing error identifier. Error categories were also scattered across
+`GlobalExceptionHandler`, so the contract was easy to drift out of sync.
+
+- Introduced `ErrorType` enum (`api/error/ErrorType.java`) as the single source
+  of truth for every error category. Each category is now an absolute URI
+  (`https://urlshortener.javaded78.dev/errors/{code}`, e.g.
+  `.../errors/validation-error`, `.../errors/link-not-found`), readable by both
+  clients and humans.
+- `GlobalExceptionHandler` now references `ErrorType.uri()`/`title()` for every
+  handler.
+- **Breaking**: `type` values changed from `about:blank#<name>` to the new
+  absolute URIs. Clients that branch on `type` must update their expectations.
+
 ## 1.1.0 — Metrics platform (Sprint 29, 2026-10-01)
 
 Prometheus + Grafana monitoring pipeline as code. Sprint history and per-task

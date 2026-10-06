@@ -34,7 +34,8 @@ class RedisLinkCacheTest {
           new ShortenerProperties.Create(5),
           new ShortenerProperties.Cache(Duration.ofHours(1)),
           new ShortenerProperties.Code(7),
-          org.springframework.util.unit.DataSize.ofKilobytes(16));
+          org.springframework.util.unit.DataSize.ofKilobytes(16),
+          1024);
 
   private final RedisLinkCache cache = new RedisLinkCache(redis, objectMapper, properties);
 

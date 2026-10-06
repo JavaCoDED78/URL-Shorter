@@ -49,6 +49,11 @@ shortener:
   # Raw JSON body ceiling (Task 20.1) — far above the largest legitimate
   # create request (2048-char URL plus JSON overhead).
   max-payload-size: ${SHORTENER_MAX_PAYLOAD_SIZE:16KB}
+  # Maximum request-URI length (characters). A crafted path is parsed before
+  # any handler runs and is not subject to the body/field limits, so this
+  # bounds the request-line itself. Far above the largest legitimate code (11
+  # chars); oversized paths answer 413 from RequestUriLengthFilter.
+  max-uri-length: ${SHORTENER_MAX_URI_LENGTH:1024}
   # Benchmark-only /bench-hit redirect (Sprint 23 k6 harness). Disabled by
   # default: never part of the production API surface. The dev/benchmark
   # compose stack enables it explicitly.

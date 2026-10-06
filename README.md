@@ -482,8 +482,8 @@ Error cases:
 ```json
 // 400 — invalid URL or malformed request (detail carries the validator message)
 {
-  "type": "about:blank",
-  "title": "Bad Request",
+  "type": "https://urlshortener.javaded78.dev/errors/validation-error",
+  "title": "Invalid request",
   "status": 400,
   "detail": "URL scheme must be one of [http, https]: ftp://example.com",
   "instance": "/api/v1/links"
@@ -493,8 +493,8 @@ Error cases:
 ```json
 // 409 — generated code collision after bounded retries, or alias taken
 {
-  "type": "about:blank",
-  "title": "Conflict",
+  "type": "https://urlshortener.javaded78.dev/errors/code-already-taken",
+  "title": "Code already taken",
   "status": 409,
   "detail": "code already taken: my-link",
   "instance": "/api/v1/links"
@@ -504,8 +504,8 @@ Error cases:
 ```json
 // 413 — request body over the configured limit (default 16 KB)
 {
-  "type": "about:blank",
-  "title": "Payload Too Large",
+  "type": "https://urlshortener.javaded78.dev/errors/payload-too-large",
+  "title": "Payload too large",
   "status": 413,
   "detail": "request body exceeds the maximum of 16384 bytes",
   "instance": "/api/v1/links"
@@ -515,7 +515,7 @@ Error cases:
 ```json
 // 503 — PostgreSQL unavailable (bounded by a 5 s pool timeout)
 {
-  "type": "about:blank",
+  "type": "https://urlshortener.javaded78.dev/errors/database-unavailable",
   "title": "Service unavailable",
   "status": 503,
   "detail": "database temporarily unavailable",
@@ -541,8 +541,8 @@ Error cases:
 ```json
 // 404 — unknown code
 {
-  "type": "about:blank",
-  "title": "Not Found",
+  "type": "https://urlshortener.javaded78.dev/errors/link-not-found",
+  "title": "Link not found",
   "status": 404,
   "detail": "link not found: aB3xK92",
   "instance": "/aB3xK92"
@@ -552,8 +552,8 @@ Error cases:
 ```json
 // 410 — link existed but expired (also on cache hit; expiry is re-checked)
 {
-  "type": "about:blank",
-  "title": "Gone",
+  "type": "https://urlshortener.javaded78.dev/errors/link-expired",
+  "title": "Link expired",
   "status": 410,
   "detail": "link expired: aB3xK92",
   "instance": "/aB3xK92"
@@ -760,6 +760,14 @@ For updates to link metadata, the cache must either be refreshed with the new va
 ## 🔐 Error Model
 
 The API exposes a consistent error contract using `ProblemDetail`.
+
+Every error `type` is an absolute, machine-readable URI from the central
+`ErrorType` enum (`ErrorType.java`) under
+`https://urlshortener.javaded78.dev/errors/{error}` (e.g.
+`.../errors/validation-error`, `.../errors/link-not-found`). Clients can branch
+on the `type` without parsing the human-readable `title`. The full list of
+categories lives in `ErrorType` — keep it there in sync with
+`GlobalExceptionHandler` and `ErrorHandlingIT`.
 
 Recommended application-level error categories include:
 

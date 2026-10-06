@@ -3,7 +3,6 @@ package com.javaded78.urlshorter.api.error;
 import com.javaded78.urlshorter.domain.service.AliasAlreadyExistsException;
 import com.javaded78.urlshorter.domain.service.LinkExpiredException;
 import com.javaded78.urlshorter.domain.service.LinkNotFoundException;
-import java.net.URI;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -17,9 +16,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  *
  * <p>Stable, client-facing categories (Task 11.2): 400 invalid request, 404 not found, 409
  * conflict, 410 gone, 500 internal error. Every response carries the same keys — {@code type},
- * {@code title}, {@code status}, {@code detail}, {@code instance}. The unexpected-failure fallback
- * (Task 11.4) logs the cause server-side but never exposes stack traces, SQL, connection URLs or
- * Redis internals to the client.
+ * {@code title}, {@code status}, {@code detail}, {@code instance}. The {@code type} field is a
+ * machine-readable URI identifying each error class (so clients can branch on the error kind without
+ * parsing the human-readable {@code title}), while {@code title} stays stable for human consumption.
+ * The unexpected-failure fallback (Task 11.4) logs the cause server-side but never exposes stack
+ * traces, SQL, connection URLs or Redis internals to the client.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -31,8 +32,8 @@ public class GlobalExceptionHandler {
   public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "request validation failed");
-    problem.setType(URI.create("about:blank"));
-    problem.setTitle("Invalid request");
+    problem.setType(ErrorType.VALIDATION.uri());
+    problem.setTitle(ErrorType.VALIDATION.title());
     String fields =
         ex.getBindingResult().getFieldErrors().stream()
             .map(GlobalExceptionHandler::formatFieldError)
@@ -45,32 +46,31 @@ public class GlobalExceptionHandler {
   public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
-    problem.setType(URI.create("about:blank"));
-    problem.setTitle("Invalid request");
+    problem.setType(ErrorType.INVALID_REQUEST.uri());
+    problem.setTitle(ErrorType.INVALID_REQUEST.title());
     return problem;
   }
-
   @ExceptionHandler(AliasAlreadyExistsException.class)
   public ProblemDetail handleAliasConflict(AliasAlreadyExistsException ex) {
     ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
-    problem.setType(URI.create("about:blank"));
-    problem.setTitle("Code already taken");
+    problem.setType(ErrorType.CODE_ALREADY_TAKEN.uri());
+    problem.setTitle(ErrorType.CODE_ALREADY_TAKEN.title());
     return problem;
   }
 
   @ExceptionHandler(LinkNotFoundException.class)
   public ProblemDetail handleNotFound(LinkNotFoundException ex) {
     ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
-    problem.setType(URI.create("about:blank"));
-    problem.setTitle("Link not found");
+    problem.setType(ErrorType.LINK_NOT_FOUND.uri());
+    problem.setTitle(ErrorType.LINK_NOT_FOUND.title());
     return problem;
   }
 
   @ExceptionHandler(LinkExpiredException.class)
   public ProblemDetail handleExpired(LinkExpiredException ex) {
     ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.GONE, ex.getMessage());
-    problem.setType(URI.create("about:blank"));
-    problem.setTitle("Link expired");
+    problem.setType(ErrorType.LINK_EXPIRED.uri());
+    problem.setTitle(ErrorType.LINK_EXPIRED.title());
     return problem;
   }
 
@@ -86,8 +86,8 @@ public class GlobalExceptionHandler {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(
             HttpStatus.SERVICE_UNAVAILABLE, "database temporarily unavailable");
-    problem.setType(URI.create("about:blank"));
-    problem.setTitle("Service unavailable");
+    problem.setType(ErrorType.DATABASE_UNAVAILABLE.uri());
+    problem.setTitle(ErrorType.DATABASE_UNAVAILABLE.title());
     return problem;
   }
 
@@ -107,8 +107,8 @@ public class GlobalExceptionHandler {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(
             HttpStatus.SERVICE_UNAVAILABLE, "database temporarily unavailable");
-    problem.setType(URI.create("about:blank"));
-    problem.setTitle("Service unavailable");
+    problem.setType(ErrorType.DATABASE_UNAVAILABLE.uri());
+    problem.setTitle(ErrorType.DATABASE_UNAVAILABLE.title());
     return problem;
   }
 
@@ -137,15 +137,15 @@ public class GlobalExceptionHandler {
     log.warn("unreadable request body: {}", ex.toString());
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "request body is not readable");
-    problem.setType(URI.create("about:blank"));
-    problem.setTitle("Invalid request");
+    problem.setType(ErrorType.INVALID_REQUEST.uri());
+    problem.setTitle(ErrorType.INVALID_REQUEST.title());
     return problem;
   }
 
   private static ProblemDetail payloadTooLarge(String detail) {
     ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE, detail);
-    problem.setType(URI.create("about:blank"));
-    problem.setTitle("Payload too large");
+    problem.setType(ErrorType.PAYLOAD_TOO_LARGE.uri());
+    problem.setTitle(ErrorType.PAYLOAD_TOO_LARGE.title());
     return problem;
   }
 
@@ -158,8 +158,8 @@ public class GlobalExceptionHandler {
       org.springframework.web.servlet.resource.NoResourceFoundException ex) {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "resource not found");
-    problem.setType(URI.create("about:blank"));
-    problem.setTitle("Not found");
+    problem.setType(ErrorType.RESOURCE_NOT_FOUND.uri());
+    problem.setTitle(ErrorType.RESOURCE_NOT_FOUND.title());
     return problem;
   }
 
@@ -173,8 +173,8 @@ public class GlobalExceptionHandler {
     log.error("unexpected error while handling request", ex);
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "unexpected error");
-    problem.setType(URI.create("about:blank"));
-    problem.setTitle("Internal error");
+    problem.setType(ErrorType.INTERNAL_ERROR.uri());
+    problem.setTitle(ErrorType.INTERNAL_ERROR.title());
     return problem;
   }
 

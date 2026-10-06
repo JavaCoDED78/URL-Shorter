@@ -32,7 +32,7 @@ class OpenApiContractIT {
   /** path -> HTTP method -> response codes that must be documented. */
   private static final Map<String, Map<String, String[]>> DOCUMENTED_OPERATIONS =
       Map.of(
-          "/api/v1/links", Map.of("post", new String[] {"201", "400", "409"}),
+          "/api/v1/links", Map.of("post", new String[] {"201", "400", "409", "413"}),
           "/api/v1/links/{code}",
               Map.of(
                   "get", new String[] {"200", "404"},
@@ -102,7 +102,7 @@ class OpenApiContractIT {
   void documentedErrorsUseProblemDetailSchema() {
     JsonNode postResponses =
         apiDocs.required("paths").required("/api/v1/links").required("post").required("responses");
-    for (String code : new String[] {"400", "409"}) {
+    for (String code : new String[] {"400", "409", "413"}) {
       JsonNode content = postResponses.required(code).required("content");
       JsonNode schema = content.elements().next().required("schema");
       assertThat(schema.required("$ref").asText())

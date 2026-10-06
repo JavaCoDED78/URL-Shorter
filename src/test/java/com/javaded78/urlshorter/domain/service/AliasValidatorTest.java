@@ -19,7 +19,8 @@ class AliasValidatorTest {
           new ShortenerProperties.Create(5),
           new ShortenerProperties.Cache(java.time.Duration.ofHours(1)),
           new ShortenerProperties.Code(7),
-          org.springframework.util.unit.DataSize.ofKilobytes(16));
+          org.springframework.util.unit.DataSize.ofKilobytes(16),
+          1024);
 
   private final AliasValidator validator = new AliasValidator(properties);
 

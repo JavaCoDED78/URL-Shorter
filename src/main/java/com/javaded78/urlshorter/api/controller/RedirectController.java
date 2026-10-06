@@ -2,7 +2,6 @@ package com.javaded78.urlshorter.api.controller;
 
 import com.javaded78.urlshorter.domain.model.ResolvedLink;
 import com.javaded78.urlshorter.domain.service.LinkService;
-import com.javaded78.urlshorter.domain.service.MetricsRecorder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -34,11 +33,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class RedirectController {
 
   private final LinkService linkService;
-  private final MetricsRecorder metrics;
 
-  public RedirectController(LinkService linkService, MetricsRecorder metrics) {
+  public RedirectController(LinkService linkService) {
     this.linkService = linkService;
-    this.metrics = metrics;
   }
 
   @Operation(
@@ -63,7 +60,7 @@ public class RedirectController {
   })
   @GetMapping("/{code}")
   public ResponseEntity<Void> redirect(@PathVariable String code) {
-    ResolvedLink link = metrics.timeRedirect(() -> linkService.resolve(code));
+    ResolvedLink link = linkService.redirect(code);
     return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(link.originalUrl())).build();
   }
 }

@@ -67,6 +67,17 @@ public class LinkService {
   }
 
   /**
+   * Resolves a code for redirection (Tasks 5.1, 5.2, 5.4; cache-aside from Sprint 6, Task 6.3) and
+   * times the end-to-end redirect (controller → service) behind {@code MetricsRecorder#redirectDuration}.
+   *
+   * @throws LinkNotFoundException if no such link exists (404)
+   * @throws LinkExpiredException if the link's {@code expiresAt} has passed (410)
+   */
+  public ResolvedLink redirect(String code) {
+    return metrics.timeRedirect(() -> resolve(code));
+  }
+
+  /**
    * Creates a new short link.
    *
    * @param originalUrl destination URL, validated
@@ -97,7 +108,7 @@ public class LinkService {
    * @throws LinkNotFoundException if no such link exists
    */
   public Link getByCode(String code) {
-    return repository.findByCode(code).map(this::toDomain).orElseThrow(() -> notFound(code));
+    return repository.findByCodeIgnoreCase(code).map(this::toDomain).orElseThrow(() -> notFound(code));
   }
 
   /**

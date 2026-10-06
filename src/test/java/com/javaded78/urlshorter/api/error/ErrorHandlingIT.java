@@ -44,7 +44,8 @@ class ErrorHandlingIT {
   void missingFieldsProduce400ProblemDetail() {
     ResponseEntity<Map> response = post(Map.of());
 
-    assertProblemContract(response, 400, "Invalid request");
+    assertProblemContract(
+        response, "https://urlshortener.javaded78.dev/errors/validation-error", 400, "Invalid request");
     assertThat(response.getBody()).containsKey("errors");
   }
 
@@ -52,7 +53,8 @@ class ErrorHandlingIT {
   void invalidUrlProduces400ProblemDetail() {
     ResponseEntity<Map> response = post(Map.of("originalUrl", "not-a-url"));
 
-    assertProblemContract(response, 400, "Invalid request");
+    assertProblemContract(
+        response, "https://urlshortener.javaded78.dev/errors/invalid-request", 400, "Invalid request");
   }
 
   @Test
@@ -60,7 +62,11 @@ class ErrorHandlingIT {
     ResponseEntity<Map> response =
         post(Map.of("originalUrl", "https://example.com", "alias", "bad alias!"));
 
-    assertProblemContract(response, 400, "Invalid request");
+    // alias pattern is a Bean Validation constraint, so this is a
+    // #validation-error rather than a semantic #invalid-request
+    assertProblemContract(
+        response, "https://urlshortener.javaded78.dev/errors/validation-error", 400, "Invalid request");
+    assertThat(response.getBody()).containsKey("errors");
   }
 
   @Test
@@ -73,7 +79,8 @@ class ErrorHandlingIT {
                 "expiresAt",
                 Instant.now().minus(1, ChronoUnit.HOURS).toString()));
 
-    assertProblemContract(response, 400, "Invalid request");
+    assertProblemContract(
+        response, "https://urlshortener.javaded78.dev/errors/invalid-request", 400, "Invalid request");
     assertThat((String) response.getBody().get("detail")).contains("expiresAt");
   }
 
@@ -164,10 +171,15 @@ class ErrorHandlingIT {
     assertThat(response.getStatusCode().value()).isEqualTo(status);
     assertThat(response.getBody())
         .containsKeys("type", "title", "status", "detail", "instance")
-        .containsEntry("type", "about:blank")
         .containsEntry("title", title)
         .containsEntry("status", status);
     assertThat(response.getBody().get("instance")).isNotNull();
+  }
+
+  private void assertProblemContract(
+      ResponseEntity<Map> response, String type, int status, String title) {
+    assertProblemContract(response, status, title);
+    assertThat(response.getBody()).containsEntry("type", type);
   }
 
   private String url(String path) {

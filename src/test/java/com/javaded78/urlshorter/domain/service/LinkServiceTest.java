@@ -28,7 +28,8 @@ class LinkServiceTest {
           new ShortenerProperties.Create(3),
           new ShortenerProperties.Cache(java.time.Duration.ofHours(1)),
           new ShortenerProperties.Code(7),
-          org.springframework.util.unit.DataSize.ofKilobytes(16));
+          org.springframework.util.unit.DataSize.ofKilobytes(16),
+          1024);
 
   private final com.javaded78.urlshorter.domain.repository.LinkRepository repository =
       mock(com.javaded78.urlshorter.domain.repository.LinkRepository.class);
@@ -173,7 +174,7 @@ class LinkServiceTest {
   @Test
   void returnsExistingLinkByCode() {
     LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    when(repository.findByCode("abc1234")).thenReturn(java.util.Optional.of(entity));
+    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
 
     Link link = service.getByCode("abc1234");
 
@@ -182,7 +183,7 @@ class LinkServiceTest {
 
   @Test
   void throwsWhenLinkNotFound() {
-    when(repository.findByCode("missing")).thenReturn(java.util.Optional.empty());
+    when(repository.findByCodeIgnoreCase("missing")).thenReturn(java.util.Optional.empty());
 
     assertThatThrownBy(() -> service.getByCode("missing"))
         .isInstanceOf(LinkNotFoundException.class);
