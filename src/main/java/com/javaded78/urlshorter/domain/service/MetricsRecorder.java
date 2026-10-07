@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  * urlshorter.linksNotFound}, {@code urlshorter.linksExpired}, {@code urlshorter.linksDeleted},
  * {@code urlshorter.cacheHit}, {@code urlshorter.cacheMiss}, {@code urlshorter.clicksIncremented},
  * {@code urlshorter.clicksFlushed}, {@code urlshorter.clicksFlushFailed}, {@code
- * urlshorter.clicksIncrementFailed}.
+ * urlshorter.clicksIncrementFailed}, {@code urlshorter.rateLimiterDenied}.
  *
  * <p>Timers: {@code urlshorter.redirectDuration}, {@code urlshorter.postgresLookupDuration}, {@code
  * urlshorter.redisLookupDuration}.
@@ -37,6 +37,7 @@ public class MetricsRecorder {
   private final Counter clicksIncrementFailed;
   private final Counter clicksFlushed;
   private final Counter clicksFlushFailed;
+  private final Counter rateLimiterDenied;
 
   private final Timer redirectDuration;
   private final Timer postgresLookupDuration;
@@ -54,6 +55,7 @@ public class MetricsRecorder {
     clicksIncrementFailed = registry.counter("urlshorter.clicksIncrementFailed");
     clicksFlushed = registry.counter("urlshorter.clicksFlushed");
     clicksFlushFailed = registry.counter("urlshorter.clicksFlushFailed");
+    rateLimiterDenied = registry.counter("urlshorter.rateLimiterDenied");
 
     redirectDuration = Timer.builder("urlshorter.redirectDuration").register(registry);
     postgresLookupDuration = Timer.builder("urlshorter.postgresLookupDuration").register(registry);
@@ -103,6 +105,11 @@ public class MetricsRecorder {
 
   public void clickFlushFailed() {
     clicksFlushFailed.increment();
+  }
+
+  /** A create-rate-limit probe was denied (Task 20.4). */
+  public void rateLimiterDenied() {
+    rateLimiterDenied.increment();
   }
 
   /** Times a redirect resolution end-to-end (controller → service). */

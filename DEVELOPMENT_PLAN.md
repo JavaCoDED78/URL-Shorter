@@ -1558,15 +1558,29 @@ EVICT cache
 - [x] whitespace;
 - [x] control characters.
 
-- [x] **Task 20.4 — Rate limiting foundation**
+- [x] **Task 20.4 — Create-endpoint rate limiting (Redis-backed)**
 
-Даже если Bucket4j пока не добавляется, подготовить abstraction:
+A real, key-scoped, fixed-window Redis limiter replaces the port-only
+`NoOpRateLimiter`:
 
 ```text
-RateLimiter
+RateLimiter (port)
+   ↓
+RateLimitConfig ── enabled=true  → RedisRateLimiter (INCR + EXPIRE per window)
+   │                  enabled=false → NoOpRateLimiter (admits everything)
+   ↓
+LinkService.create → rateLimiter.tryAcquire("create") → denied → 429
 ```
 
-с future Redis-backed implementation.
+- `RedisRateLimiter` (`infra/redis/limiter`): one `ratelimit:{key}` counter,
+  `INCR` per probe, TTL armed on the first probe of a window, admission
+  `count <= maxRequests`. Fail-open on Redis outage (availability-wins).
+- `RateLimitProperties` (`shortener.rate-limiter.enabled|window|max-requests`,
+  env `SHORTENER_RATE_LIMITER_*`), `RateLimitConfig` (mutually exclusive
+  beans), `RateLimitExceededException` → `429` `retryAfter: 1`.
+- Disabled by default so the high-volume suites stay green.
+- New counter `urlshorter.rateLimiterDenied`, verified by
+  `RedisRateLimiterIT` + `LinkServiceTest`.
 
 ---
 

@@ -195,7 +195,10 @@ benchmarks (Sprint 23), Prometheus + Grafana metrics pipeline as code
 Still open:
 
 - Click analytics (user agent, referrer, device), daily click aggregation
-- Bucket4j + Redis rate limiting (the `RateLimiter` port exists with a no-op default)
+- Rate limiting beyond the create endpoint: the `RateLimiter` port now has a
+  Redis-backed fixed-window implementation (Task 20.4, gated by
+  `shortener.rate-limiter.enabled`); a Bucket4j token-bucket variant would be a
+  drop-in bean swap behind the same port
 - Authentication + "my links"
 - QR code generation
 - GraalVM native image comparison

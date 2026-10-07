@@ -14,6 +14,7 @@
 | 006 | [ADR-006](ADR-006-expiration-semantics.md) | Business expiration carried in the cached value, re-checked on every read | Accepted | 2026-09 | Sprint 6 | Resilience |
 | 007 | [ADR-007](ADR-007-prometheus-grafana-monitoring-stack.md) | Prometheus + Grafana monitoring stack | Accepted | 2026-10 | Sprint 29 | Observability |
 | 008 | [ADR-008](ADR-008-monitoring-configuration-as-code.md) | Monitoring configuration as code | Accepted | 2026-10 | Sprint 29 | Observability |
+| 009 | [ADR-009](ADR-009-create-rate-limiter.md) | Redis-backed fixed-window rate limiting on the create endpoint | Accepted | 2026-10 | Sprint 20.4 | Resilience |
 
 ## Records
 
@@ -64,3 +65,9 @@
 > All monitoring configuration is versioned in Git under `monitoring/`. No manual configuration through Prometheus or Grafana UI.
 
 **Why:** Manual configuration is not reproducible, not reviewable, lost on restart, and has no audit trail. CI gates invalid configuration (broken PromQL or YAML).
+
+### [ADR-009](ADR-009-create-rate-limiter.md) — Redis-backed fixed-window rate limiting on the create endpoint
+
+> The create endpoint is protected by a key-scoped, fixed-window Redis limiter (`ratelimit:{key}`, `INCR` per probe, `EXPIRE` on the first probe of a window). The bean is selected by `shortener.rate-limiter.enabled`: `RedisRateLimiter` when enabled, `NoOpRateLimiter` (admits everything) otherwise.
+
+**Why:** The unauthenticated, cheap `POST /api/v1/links` is the natural abuse target (alias squatting, enumeration, insert spam). A limiter behind the `RateLimiter` port is a drop-in bean swap — no call-site change — and fails open on a Redis outage so it can't take down link creation.

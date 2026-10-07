@@ -1,13 +1,10 @@
 package com.javaded78.urlshorter.domain.service;
 
-import org.springframework.stereotype.Component;
-
 /**
- * Default {@link RateLimiter} (Task 20.4): admits everything. Exists so the port is wired and
- * testable today; the Redis-backed Bucket4j implementation on the roadmap replaces this bean
- * without changing call sites or application behavior when disabled.
+ * Default {@link RateLimiter} (Task 20.4): admits everything. Bound by {@link RateLimitConfig} when
+ * {@code shortener.rate-limiter.enabled=false}; the Redis-backed {@code RedisRateLimiter} replaces
+ * it when the limiter is enabled, without changing call sites.
  */
-@Component
 public class NoOpRateLimiter implements RateLimiter {
 
   @Override

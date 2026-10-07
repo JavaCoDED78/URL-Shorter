@@ -4,6 +4,7 @@ import com.javaded78.urlshorter.config.PayloadTooLargeException;
 import com.javaded78.urlshorter.domain.service.AliasAlreadyExistsException;
 import com.javaded78.urlshorter.domain.service.LinkExpiredException;
 import com.javaded78.urlshorter.domain.service.LinkNotFoundException;
+import com.javaded78.urlshorter.domain.service.RateLimitExceededException;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +79,22 @@ public class GlobalExceptionHandler {
     ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.GONE, ex.getMessage());
     problem.setType(ErrorType.LINK_EXPIRED.uri());
     problem.setTitle(ErrorType.LINK_EXPIRED.title());
+    return problem;
+  }
+
+  /**
+   * Create-endpoint rate limit exceeded (Task 20.4): the {@link
+   * com.javaded78.urlshorter.domain.service.RateLimiter} probe is denied, so the request is
+   * rejected with a 429. Distinct from {@link DataAccessException} (503) and the unexpected-failure
+   * fallback (500): this is a deliberate, client-facing rate-limit outcome.
+   */
+  @ExceptionHandler(RateLimitExceededException.class)
+  public ProblemDetail handleRateLimited(RateLimitExceededException ex) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+    problem.setProperty("retryAfter", 1);
+    problem.setType(ErrorType.RATE_LIMITED.uri());
+    problem.setTitle(ErrorType.RATE_LIMITED.title());
     return problem;
   }
 

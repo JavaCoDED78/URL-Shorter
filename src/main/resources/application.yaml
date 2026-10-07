@@ -59,6 +59,16 @@ shortener:
   # compose stack enables it explicitly.
   benchmark:
     enabled: ${SHORTENER_BENCHMARK_ENABLED:false}
+  # Create-endpoint rate limiter (Task 20.4): key-scoped, fixed-window,
+  # Redis-backed. Disabled by default so the existing suites (which fire
+  # hundreds of concurrent creates) are unaffected; enable it in production
+  # or a staging stack to protect the create endpoint from abuse. When
+  # enabled, `RedisRateLimiter` protects `/api/v1/links`; a denied probe
+  # answers 429. A Redis outage fails open (the request is allowed through).
+  rate-limiter:
+    enabled: ${SHORTENER_RATE_LIMITER_ENABLED:false}
+    window: ${SHORTENER_RATE_LIMITER_WINDOW:PT1M}
+    max-requests: ${SHORTENER_RATE_LIMITER_MAX:100}
 
 management:
   endpoints:

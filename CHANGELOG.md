@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.1.2 — Create-endpoint rate limiter (Sprint 20.4)
+
+A real, Redis-backed, key-scoped fixed-window rate limiter for
+`POST /api/v1/links` replaces the port-only `NoOpRateLimiter`.
+
+- New `RateLimiter` beans bound by `RateLimitConfig`: `RedisRateLimiter`
+  (when enabled) and `NoOpRateLimiter` (the disabled-by-default admit-
+  everything default). Exactly one is registered per process.
+- `LinkService.create` probes the limiter first (`RateLimiter.tryAcquire`);
+  a denied probe short-circuits before any validation or DB work.
+- New `RateLimitExceededException` → `429 Too Many Requests` with
+  `retryAfter: 1` (`RateLimiter` / `ErrorType.RATE_LIMITED`), handled by
+  `GlobalExceptionHandler`.
+- New `shortener.rate-limiter` config (`RateLimitProperties`,
+  `@ConfigurationProperties`): `enabled` (default `false`), `window`
+  (`PT1M`), `max-requests` (`100`), driven by
+  `SHORTENER_RATE_LIMITER_*` env vars. Disabled by default so the existing
+  high-volume suites (which fire hundreds of concurrent creates) stay green.
+- Fail-open: a Redis outage admits the request (availability-wins, like
+  Tasks 17.1/17.2) and does not count as a denial.
+- New counter `urlshorter.rateLimiterDenied`
+  (`urlshorter_rateLimiterDenied_total`); verified end-to-end by
+  `RedisRateLimiterIT`.
+
 ## 1.1.1 — Centralized error types (2026-10-06)
 
 The `type` field in RFC 9457 `ProblemDetail` responses was previously

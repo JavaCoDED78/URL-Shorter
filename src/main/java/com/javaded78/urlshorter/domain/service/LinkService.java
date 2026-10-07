@@ -46,6 +46,7 @@ public class LinkService {
   private final LinkCache linkCache;
   private final ClickCounter clickCounter;
   private final MetricsRecorder metrics;
+  private final RateLimiter rateLimiter;
 
   public LinkService(
       LinkRepository repository,
@@ -55,7 +56,8 @@ public class LinkService {
       ShortenerProperties properties,
       LinkCache linkCache,
       ClickCounter clickCounter,
-      MetricsRecorder metrics) {
+      MetricsRecorder metrics,
+      RateLimiter rateLimiter) {
     this.repository = repository;
     this.codeGenerator = codeGenerator;
     this.urlValidator = urlValidator;
@@ -64,6 +66,7 @@ public class LinkService {
     this.linkCache = linkCache;
     this.clickCounter = clickCounter;
     this.metrics = metrics;
+    this.rateLimiter = rateLimiter;
   }
 
   /**
@@ -86,9 +89,16 @@ public class LinkService {
    * @param expiresAt optional expiration instant (UTC); {@code null} means the link never expires
    * @throws IllegalArgumentException on invalid URL or alias
    * @throws AliasAlreadyExistsException if the code is already taken
+   * @throws RateLimitExceededException if the create-endpoint rate limit is exceeded (429)
    * @throws IllegalStateException if generated codes keep colliding
    */
   public Link create(String originalUrl, String alias, Instant expiresAt) {
+    // Enforce the create-endpoint rate limit before any other work. A denied
+    // probe returns immediately as 429 and never consumes a DB/Redis round-trip;
+    // the key-scoped probe (RateLimiter) must not itself be rate limited.
+    if (!rateLimiter.tryAcquire("create")) {
+      throw new RateLimitExceededException();
+    }
     urlValidator.validate(originalUrl);
     if (expiresAt != null && !expiresAt.isAfter(Instant.now())) {
       throw new IllegalArgumentException("expiresAt must be in the future, got: " + expiresAt);

@@ -20,6 +20,7 @@ The service uses PostgreSQL as the source of truth, Redis for low-latency redire
 - **Stats without flush lag**: `clickCount` = persisted PostgreSQL count + pending Redis counter.
 - **Graceful infrastructure degradation**: a PostgreSQL outage answers create/miss lookups with a fast `503` (bounded by a 5 s pool timeout) while Redis cache hits keep redirecting; a failed flush restores counters instead of losing clicks.
 - **Request size limit**: oversized bodies are rejected with `413` before parsing.
+- **Create-endpoint rate limiting** (Task 20.4): a key-scoped, Redis-backed fixed-window limiter (`shortener.rate-limiter`) protects `/api/v1/links` from abuse, answering `429 Too Many Requests` (`retryAfter: 1`) when the limit is exceeded. Disabled by default (`enabled: false`) so existing high-volume suites stay green; a Redis outage fails open so a create request is never lost to a transient outage.
 - **RFC 9457 error responses** based on Spring's `ProblemDetail`.
 - **OpenAPI 3 documentation** with interactive Swagger UI.
 - **Java virtual threads** enabled through a single Spring Boot property.
@@ -270,6 +271,10 @@ reproduce the monitoring setup from these files alone.
 POST /api/v1/links
       │
       ▼
+Rate limit probe (when enabled)
+      │
+      └── denied → 429 Too Many Requests
+      ▼
 Validate request
       │
       ▼
@@ -281,6 +286,10 @@ Insert into PostgreSQL
       ▼
 Return 201 Created
 ```
+
+The `RateLimiter` probe is the first gate in `LinkService.create`: a denied
+probe answers `429` (`retryAfter: 1`) without touching PostgreSQL or Redis.
+When the limiter is disabled (the default) it admits everything.
 
 The database `UNIQUE` constraint is the final protection against code collisions. An optimistic `existsByCode(...)` check may reduce avoidable database conflicts, but it is not sufficient for concurrency by itself.
 
@@ -444,7 +453,7 @@ codes longer.
 
 | Method | Path | Description | Success / Error Codes |
 |---|---|---|---|
-| `POST` | `/api/v1/links` | Create a short link | `201`, `400`, `409` |
+| `POST` | `/api/v1/links` | Create a short link | `201`, `400`, `409`, `429` |
 | `GET` | `/{code}` | Redirect to the original URL | `302`, `404`, `410` |
 | `GET` | `/api/v1/links/{code}` | Get link details | `200`, `404` |
 | `GET` | `/api/v1/links/{code}/stats` | Get click statistics | `200`, `404` |
@@ -519,6 +528,20 @@ Error cases:
   "title": "Service unavailable",
   "status": 503,
   "detail": "database temporarily unavailable",
+  "instance": "/api/v1/links"
+}
+```
+
+```json
+// 429 — create-endpoint rate limit exceeded (429 Too Many Requests)
+// Only when the limiter is enabled via `shortener.rate-limiter.enabled`
+// (disabled by default). `retryAfter` is a hint, in seconds.
+{
+  "type": "https://urlshortener.javaded78.dev/errors/rate-limited",
+  "title": "Too many requests",
+  "status": 429,
+  "detail": "rate limit exceeded",
+  "retryAfter": 1,
   "instance": "/api/v1/links"
 }
 ```
@@ -638,6 +661,7 @@ The test suite uses Testcontainers to run real PostgreSQL and Redis instances. D
   - unknown code → `404`
   - expired link → `410`
   - taken custom alias → `409`
+  - create-endpoint rate limit exceeded → `429` (when enabled)
   - oversized body → `413`
   - database outage → `503`
 
@@ -685,6 +709,9 @@ The following environment variables are used by the application.
 | `SHORTENER_FLUSH_INTERVAL` | `PT5S` | Click counter flush interval |
 | `SHORTENER_MAX_PAYLOAD_SIZE` | `16KB` | Raw request body ceiling |
 | `SHORTENER_BENCHMARK_ENABLED` | `false` | Enables `GET /bench-hit` for k6 load tests |
+| `SHORTENER_RATE_LIMITER_ENABLED` | `false` | Enables the Redis-backed create-endpoint rate limiter (`shortener.rate-limiter.enabled`) |
+| `SHORTENER_RATE_LIMITER_WINDOW` | `PT1M` | Fixed-window length (see `SHORTENER_RATE_LIMITER_ENABLED`) |
+| `SHORTENER_RATE_LIMITER_MAX` | `100` | Max create probes admitted per key per window (see `SHORTENER_RATE_LIMITER_ENABLED`) |
 
 All values also follow Spring relaxed binding — e.g. `SPRING_DATASOURCE_URL`
 overrides `DB_URL` the same way `spring.datasource.url` would.
@@ -775,6 +802,7 @@ Recommended application-level error categories include:
 |---|---:|
 | Invalid request / URL | `400` |
 | Short code or alias already exists | `409` |
+| Create-endpoint rate limit exceeded (when enabled) | `429` |
 | Link does not exist | `404` |
 | Link exists but has expired | `410` |
 | Request body over the size limit | `413` |
@@ -819,6 +847,7 @@ urlshorter_linksRedirected_total
 urlshorter_linksNotFound_total
 urlshorter_linksExpired_total
 urlshorter_linksDeleted_total
+urlshorter_rateLimiterDenied_total
 
 urlshorter_cacheHit_total
 urlshorter_cacheMiss_total
@@ -995,8 +1024,10 @@ docker compose -f docker-compose.dev.yml up -d
 
 - [ ] Click analytics: user agent, referrer, country/device metadata
 - [ ] Daily click statistics and aggregation
-- [ ] Rate limiting for link creation: the `RateLimiter` port exists with a
-      no-op default — replace the bean with a Bucket4j + Redis implementation
+- [ ] Rate limiting for link creation: the Redis-backed fixed-window
+      `RateLimiter` (Task 20.4) is implemented behind the port and gated by
+      `shortener.rate-limiter.enabled`; future work is a token-bucket
+      (`Bucket4j`) implementation with smoother admission
 - [ ] Authentication and "my links"
 - [ ] QR code generation
 - [ ] GraalVM native image startup/memory comparison

@@ -3,8 +3,10 @@ package com.javaded78.urlshorter.domain.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,17 +40,21 @@ class LinkServiceTest {
       mock(com.javaded78.urlshorter.domain.cache.LinkCache.class);
   private final com.javaded78.urlshorter.domain.counter.ClickCounter clickCounter =
       mock(com.javaded78.urlshorter.domain.counter.ClickCounter.class);
+  private final RateLimiter rateLimiter = mock(RateLimiter.class);
+  private final UrlValidator urlValidator = spy(new UrlValidator(properties));
+  private final AliasValidator aliasValidator = spy(new AliasValidator(properties));
 
   private final LinkService service =
       new LinkService(
           repository,
           codeGenerator,
-          new UrlValidator(properties),
-          new AliasValidator(properties),
+          urlValidator,
+          aliasValidator,
           properties,
           linkCache,
           clickCounter,
-          metricsStub());
+          metricsStub(),
+          rateLimiter);
 
   /** The metrics facade must pass calls through (timers wrap suppliers). */
   private static MetricsRecorder metricsStub() {
@@ -68,6 +74,8 @@ class LinkServiceTest {
   public LinkServiceTest() {
     // default: cache misses everywhere; cache-aware tests override
     when(linkCache.get(any())).thenReturn(java.util.Optional.empty());
+    // default: rate limit admits everything (a denied probe is tested separately)
+    when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
   }
 
   private static LinkEntity persisted(LinkEntity entity) {
@@ -114,6 +122,35 @@ class LinkServiceTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("collision");
     verify(codeGenerator, times(3)).generate();
+  }
+
+  @Test
+  void createIsDeniedWhenRateLimiterRejectsProbe() {
+    when(rateLimiter.tryAcquire("create")).thenReturn(false);
+
+    assertThatThrownBy(() -> service.create("https://example.com", null, null))
+        .isInstanceOf(RateLimitExceededException.class);
+    // A denied probe short-circuits before any other work: no validation, no insert.
+    verify(repository, never()).existsByCode(any());
+    verify(codeGenerator, never()).generate();
+  }
+
+  @Test
+  void rateLimiterIsProbedBeforeValidation() {
+    when(rateLimiter.tryAcquire("create")).thenReturn(false);
+
+    assertThatThrownBy(() -> service.create("not-a-url", null, null))
+        .isInstanceOf(RateLimitExceededException.class);
+    verify(urlValidator, never()).validate(any());
+  }
+
+  @Test
+  void createIsDeniedForAliasPathToo() {
+    when(rateLimiter.tryAcquire("create")).thenReturn(false);
+
+    assertThatThrownBy(() -> service.create("https://example.com", "my-alias", null))
+        .isInstanceOf(RateLimitExceededException.class);
+    verify(aliasValidator, never()).validateAndNormalize(any());
   }
 
   @Test

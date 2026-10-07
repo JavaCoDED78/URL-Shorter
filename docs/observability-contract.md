@@ -30,6 +30,7 @@ Prometheus name is the Micrometer name plus the `_total` suffix for counters.
 | `urlshorter.clicksIncremented` | `urlshorter_clicksIncremented_total` | counter | total | `application` | A click counter was successfully incremented in Redis. |
 | `urlshorter.clicksIncrementFailed` | `urlshorter_clicksIncrementFailed_total` | counter | total | `application` | A click could not be counted because Redis was unavailable (best-effort analytics drop). |
 | `urlshorter.clicksFlushed` | `urlshorter_clicksFlushed_total` | counter | total | `application` | Total drained click count persisted to PostgreSQL. Each flush call increments by the sum of drained counters (task 8.4, `CounterFlushService`). |
+| `urlshorter.rateLimiterDenied` | `urlshorter_rateLimiterDenied_total` | counter | total | `application` | A create-rate-limit probe was denied (Task 20.4). Incremented only when the enabled limiter rejects a probe; a Redis outage fails open and does not increment it. |
 | `urlshorter.clicksFlushFailed` | `urlshorter_clicksFlushFailed_total` | counter | total | `application` | A flush cycle failed (either Redis drain or PostgreSQL batch update). |
 
 ---
@@ -109,9 +110,12 @@ persisted to PostgreSQL across the lifetime of the application.
 
 ## 7. Verification
 
-Each metric above is verified by integration tests in
-`infra/observability/ObservabilityIT` which asserts counter values change
-correctly through the create → redirect → expire → delete → flush lifecycle.
+Each counter and timer above is verified by integration tests that assert
+counter values change correctly through the create → redirect → expire →
+delete → flush lifecycle (`infra/observability/ObservabilityIT`). The
+`urlshorter.rateLimiterDenied` counter is additionally verified end-to-end by
+`infra/redis/limiter/RedisRateLimiterIT`, which enables the real limiter and
+confirms that a denied probe increments the metric.
 
 ---
 
