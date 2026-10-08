@@ -11,7 +11,7 @@ import static org.mockito.Mockito.verify;
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.domain.service.CounterFlushService;
-import com.javaded78.urlshorter.domain.service.LinkService;
+import com.javaded78.urlshorter.domain.service.WriteLinkService;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -74,7 +74,7 @@ class ConcurrencyIT {
 
   @Autowired private CounterFlushService flushService;
 
-  @Autowired private LinkService linkService;
+  @Autowired private WriteLinkService linkService;
 
   @Autowired private LinkRepository repository;
 

@@ -4,7 +4,9 @@ import com.javaded78.urlshorter.api.dto.CreateLinkRequest;
 import com.javaded78.urlshorter.api.dto.LinkResponse;
 import com.javaded78.urlshorter.api.dto.LinkStatsResponse;
 import com.javaded78.urlshorter.domain.model.Link;
-import com.javaded78.urlshorter.domain.service.LinkService;
+import com.javaded78.urlshorter.domain.model.LinkStats;
+import com.javaded78.urlshorter.domain.service.ReadLinkService;
+import com.javaded78.urlshorter.domain.service.WriteLinkService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,10 +34,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/links")
 public class LinkController {
 
-  private final LinkService linkService;
+  private final WriteLinkService writeService;
+  private final ReadLinkService readService;
 
-  public LinkController(LinkService linkService) {
-    this.linkService = linkService;
+  public LinkController(WriteLinkService writeService, ReadLinkService readService) {
+    this.writeService = writeService;
+    this.readService = readService;
   }
 
   @Operation(
@@ -59,7 +63,7 @@ public class LinkController {
   })
   @PostMapping
   public ResponseEntity<LinkResponse> create(@Valid @RequestBody CreateLinkRequest request) {
-    Link created = linkService.create(request.originalUrl(), request.alias(), request.expiresAt());
+    Link created = writeService.create(request.originalUrl(), request.alias(), request.expiresAt());
     LinkResponse body = LinkResponse.from(created);
     return ResponseEntity.created(URI.create("/api/v1/links/" + created.code())).body(body);
   }
@@ -74,7 +78,7 @@ public class LinkController {
   })
   @GetMapping("/{code}")
   public LinkResponse getByCode(@PathVariable String code) {
-    return LinkResponse.from(linkService.getByCode(code));
+    return LinkResponse.from(readService.getByCode(code));
   }
 
   @Operation(
@@ -91,7 +95,7 @@ public class LinkController {
   })
   @GetMapping("/{code}/stats")
   public LinkStatsResponse stats(@PathVariable String code) {
-    return LinkStatsResponse.from(linkService.getStats(code));
+    return LinkStatsResponse.from(readService.getStats(code));
   }
 
   @Operation(
@@ -108,7 +112,7 @@ public class LinkController {
   })
   @DeleteMapping("/{code}")
   public ResponseEntity<Void> delete(@PathVariable String code) {
-    linkService.delete(code);
+    writeService.delete(code);
     return ResponseEntity.noContent().build();
   }
 }

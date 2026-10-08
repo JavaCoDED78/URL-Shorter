@@ -5,7 +5,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
-import com.javaded78.urlshorter.domain.service.LinkService;
+import com.javaded78.urlshorter.domain.service.ReadLinkService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -38,7 +38,7 @@ class ErrorHandlingIT {
 
   @Autowired private TestRestTemplate restTemplate;
 
-  @MockitoSpyBean private LinkService linkService;
+  @MockitoSpyBean private ReadLinkService linkService;
 
   @Test
   void missingFieldsProduce400ProblemDetail() {

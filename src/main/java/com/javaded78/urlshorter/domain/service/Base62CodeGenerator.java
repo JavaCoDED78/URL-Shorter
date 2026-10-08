@@ -31,9 +31,10 @@ public class Base62CodeGenerator implements CodeGenerator {
 
   /** Package-visible for deterministic tests with a seeded generator. */
   Base62CodeGenerator(Base62Codec codec, RandomGenerator random, int codeLength) {
-    if (codeLength < 1 || codeLength > 11) {
+    if (codeLength < 1 || codeLength > 10) {
       throw new IllegalArgumentException(
-          "code length must be between 1 and 11 (a long holds at most 11 base62 digits): "
+          "code length must be between 1 and 10 (a long holds and round-trips at most 10 base62 "
+              + "digits; 11 overflows): "
               + codeLength);
     }
     this.codec = codec;

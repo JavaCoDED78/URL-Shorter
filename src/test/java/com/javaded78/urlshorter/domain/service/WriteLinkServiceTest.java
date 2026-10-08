@@ -13,15 +13,21 @@ import static org.mockito.Mockito.when;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
 import com.javaded78.urlshorter.domain.model.Link;
-import com.javaded78.urlshorter.domain.model.LinkStats;
 import com.javaded78.urlshorter.infra.persistence.LinkEntity;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 
-class LinkServiceTest {
+/**
+ * Unit tests for {@link WriteLinkService}: the request-side path — URL/alias validation, rate
+ * limiting, collision retries, transactional inserts and the cache/counter eviction around delete.
+ * Read-side behaviour (redirect/getStats) is covered by {@link ReadLinkServiceTest}.
+ */
+class WriteLinkServiceTest {
 
   private final ShortenerProperties properties =
       new ShortenerProperties(
@@ -43,9 +49,11 @@ class LinkServiceTest {
   private final RateLimiter rateLimiter = mock(RateLimiter.class);
   private final UrlValidator urlValidator = spy(new UrlValidator(properties));
   private final AliasValidator aliasValidator = spy(new AliasValidator(properties));
+  private final Clock clock = Clock.fixed(Instant.parse("2025-06-01T00:00:00Z"), ZoneOffset.UTC);
 
-  private final LinkService service =
-      new LinkService(
+  private final WriteLinkService service =
+      new WriteLinkService(
+          clock,
           repository,
           codeGenerator,
           urlValidator,
@@ -71,9 +79,7 @@ class LinkServiceTest {
     return metrics;
   }
 
-  public LinkServiceTest() {
-    // default: cache misses everywhere; cache-aware tests override
-    when(linkCache.get(any())).thenReturn(java.util.Optional.empty());
+  public WriteLinkServiceTest() {
     // default: rate limit admits everything (a denied probe is tested separately)
     when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
   }
@@ -83,6 +89,11 @@ class LinkServiceTest {
     entity.setUpdatedAt(Instant.now());
     return entity;
   }
+
+  /** The fixed reference instant all tests run against (see {@link #clock}). */
+  private static final Instant NOW = Instant.parse("2025-06-01T00:00:00Z");
+
+  // --- create: generated code ---
 
   @Test
   void createsLinkWithGeneratedCode() {
@@ -153,6 +164,8 @@ class LinkServiceTest {
     verify(aliasValidator, never()).validateAndNormalize(any());
   }
 
+  // --- create: alias ---
+
   @Test
   void createsLinkWithNormalizedAlias() {
     when(repository.saveAndFlush(any(LinkEntity.class)))
@@ -195,8 +208,7 @@ class LinkServiceTest {
 
   @Test
   void rejectsExpirationInThePast() {
-    assertThatThrownBy(
-            () -> service.create("https://example.com", null, Instant.now().minusSeconds(60)))
+    assertThatThrownBy(() -> service.create("https://example.com", null, NOW.minusSeconds(60)))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("expiresAt");
     verify(repository, never()).saveAndFlush(any(LinkEntity.class));
@@ -204,175 +216,8 @@ class LinkServiceTest {
 
   @Test
   void rejectsExpirationEqualToNow() {
-    assertThatThrownBy(() -> service.create("https://example.com", null, Instant.now()))
+    assertThatThrownBy(() -> service.create("https://example.com", null, NOW))
         .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  void returnsExistingLinkByCode() {
-    LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
-
-    Link link = service.getByCode("abc1234");
-
-    assertThat(link.originalUrl()).isEqualTo("https://example.com");
-  }
-
-  @Test
-  void throwsWhenLinkNotFound() {
-    when(repository.findByCodeIgnoreCase("missing")).thenReturn(java.util.Optional.empty());
-
-    assertThatThrownBy(() -> service.getByCode("missing"))
-        .isInstanceOf(LinkNotFoundException.class);
-  }
-
-  // --- resolve: lookup + expiration (Tasks 5.1, 5.2, 5.4) ---
-
-  @Test
-  void resolvesActiveLink() {
-    LinkEntity entity =
-        persisted(new LinkEntity("abc1234", "https://example.com", Instant.now().plusSeconds(60)));
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
-
-    com.javaded78.urlshorter.domain.model.ResolvedLink link = service.resolve("abc1234");
-
-    assertThat(link.originalUrl()).isEqualTo("https://example.com");
-    verify(linkCache)
-        .put(
-            new com.javaded78.urlshorter.domain.cache.CachedLink(
-                "abc1234", "https://example.com", entity.getExpiresAt()));
-    verify(clickCounter).increment("abc1234");
-  }
-
-  @Test
-  void resolveCountsClickOnCacheHit() {
-    when(linkCache.get("abc1234"))
-        .thenReturn(
-            java.util.Optional.of(
-                new com.javaded78.urlshorter.domain.cache.CachedLink(
-                    "abc1234", "https://cached.example", null)));
-
-    service.resolve("abc1234");
-
-    verify(clickCounter).increment("abc1234");
-  }
-
-  @Test
-  void resolvesNeverExpiringLink() {
-    LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
-
-    assertThat(service.resolve("abc1234").originalUrl()).isEqualTo("https://example.com");
-  }
-
-  @Test
-  void resolveServesCacheHitWithoutTouchingDb() {
-    when(linkCache.get("abc1234"))
-        .thenReturn(
-            java.util.Optional.of(
-                new com.javaded78.urlshorter.domain.cache.CachedLink(
-                    "abc1234", "https://cached.example", null)));
-
-    com.javaded78.urlshorter.domain.model.ResolvedLink link = service.resolve("abc1234");
-
-    assertThat(link.originalUrl()).isEqualTo("https://cached.example");
-    verify(repository, never()).findByCodeIgnoreCase(any());
-    verify(linkCache, never()).put(any());
-  }
-
-  @Test
-  void resolveThrowsGoneForExpiredCacheHit() {
-    when(linkCache.get("abc1234"))
-        .thenReturn(
-            java.util.Optional.of(
-                new com.javaded78.urlshorter.domain.cache.CachedLink(
-                    "abc1234", "https://cached.example", Instant.now().minusSeconds(1))));
-
-    assertThatThrownBy(() -> service.resolve("abc1234")).isInstanceOf(LinkExpiredException.class);
-    verify(repository, never()).findByCodeIgnoreCase(any());
-  }
-
-  @Test
-  void resolveThrowsNotFoundForUnknownCode() {
-    when(repository.findByCodeIgnoreCase("missing")).thenReturn(java.util.Optional.empty());
-
-    assertThatThrownBy(() -> service.resolve("missing")).isInstanceOf(LinkNotFoundException.class);
-  }
-
-  @Test
-  void resolveThrowsGoneForExpiredLink() {
-    LinkEntity entity =
-        persisted(new LinkEntity("abc1234", "https://example.com", Instant.now().minusSeconds(1)));
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
-
-    assertThatThrownBy(() -> service.resolve("abc1234")).isInstanceOf(LinkExpiredException.class);
-    verify(linkCache, never()).put(any());
-    verify(clickCounter, never()).increment(any());
-  }
-
-  @Test
-  void resolveDoesNotCountClickForExpiredCacheHit() {
-    when(linkCache.get("abc1234"))
-        .thenReturn(
-            java.util.Optional.of(
-                new com.javaded78.urlshorter.domain.cache.CachedLink(
-                    "abc1234", "https://cached.example", Instant.now().minusSeconds(1))));
-
-    assertThatThrownBy(() -> service.resolve("abc1234")).isInstanceOf(LinkExpiredException.class);
-    verify(clickCounter, never()).increment(any());
-  }
-
-  @Test
-  void resolveDoesNotCountClickForUnknownCode() {
-    when(repository.findByCodeIgnoreCase("missing")).thenReturn(java.util.Optional.empty());
-
-    assertThatThrownBy(() -> service.resolve("missing")).isInstanceOf(LinkNotFoundException.class);
-    verify(clickCounter, never()).increment(any());
-  }
-
-  // --- getStats: persisted DB count + pending Redis counter (Task 9.2) ---
-
-  @Test
-  void getStatsSumsPersistedAndPendingClicks() {
-    LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    entity.setClickCount(7);
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
-    when(clickCounter.get("abc1234")).thenReturn(3L);
-
-    LinkStats stats = service.getStats("abc1234");
-
-    assertThat(stats.code()).isEqualTo("abc1234");
-    assertThat(stats.clickCount()).isEqualTo(10);
-  }
-
-  @Test
-  void getStatsWithZeroClicks() {
-    LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
-    when(clickCounter.get("abc1234")).thenReturn(0L);
-
-    assertThat(service.getStats("abc1234").clickCount()).isZero();
-  }
-
-  @Test
-  void getStatsUsesStoredCodeForPendingLookup() {
-    LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    entity.setClickCount(5);
-    when(repository.findByCodeIgnoreCase("ABC1234")).thenReturn(java.util.Optional.of(entity));
-    when(clickCounter.get("abc1234")).thenReturn(2L);
-
-    LinkStats stats = service.getStats("ABC1234");
-
-    assertThat(stats.code()).isEqualTo("abc1234");
-    assertThat(stats.clickCount()).isEqualTo(7);
-  }
-
-  @Test
-  void getStatsForMissingLinkThrowsNotFound() {
-    when(repository.findByCodeIgnoreCase(any())).thenReturn(java.util.Optional.empty());
-
-    assertThatThrownBy(() -> service.getStats("missing1"))
-        .isInstanceOf(LinkNotFoundException.class);
   }
 
   // --- delete: cache eviction + counter cleanup (Tasks 10.1-10.3) ---

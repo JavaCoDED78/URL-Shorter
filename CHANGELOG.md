@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.1.3 — Read/write split and sealed error hierarchy
+
+A set of structural changes to the request-handling core: the monolithic
+`LinkService` is split into separate write and read layers, time is injected
+through `Clock` instead of calling `Instant.now()` in app/infra seams, and the
+expected-error hierarchy becomes `sealed` so the exception→HTTP mapping is
+exhaustive by construction.
+
+- **CQRS-lite split (`LinkService` → `WriteLinkService` / `ReadLinkService`)**:
+  the write path (`create`, `delete` — validation, rate-limit, collision
+  retries, transactional inserts, cache/counter eviction) is separated from the
+  hot read path (`resolve`/redirect, `getByCode`, `getStats` — cache-aside,
+  click increment, pending-counter stats). Each path is tested on its own
+  (`WriteLinkServiceTest`, `ReadLinkServiceTest`); `LinkServiceTest` is removed.
+  This decouples the hot redirect path from the write path's rate-limit probe.
+- **Injected `Clock`**: `WriteLinkService`, `ReadLinkService`, and
+  `RedisLinkCache` take a `Clock` instead of calling `Instant.now()` directly,
+  so `create` and the `expiresAt` re-checks are deterministic in tests.
+  `UrlShorterApplication` registers a `Clock.systemUTC()` bean.
+- **`sealed` error hierarchy**: `ShortenerException` is `sealed` with four
+  permitted subtypes (`LinkNotFoundException`, `LinkExpiredException`,
+  `AliasAlreadyExistsException`, `RateLimitExceededException`, all `final`), and
+  `GlobalExceptionHandler.handleShortenerException` maps them in a single
+  pattern-matching `switch` — exhaustive by construction, so a new subtype
+  without a mapping is a compile error rather than a silent 500.
+
 ## 1.1.2 — Create-endpoint rate limiter (Sprint 20.4)
 
 A real, Redis-backed, key-scoped fixed-window rate limiter for

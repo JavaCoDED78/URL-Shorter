@@ -8,8 +8,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.javaded78.urlshorter.config.ShortenerProperties;
 import com.javaded78.urlshorter.domain.cache.CachedLink;
 import com.javaded78.urlshorter.domain.cache.LinkCache;
+import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -41,18 +41,23 @@ public class RedisLinkCache implements LinkCache {
   private final StringRedisTemplate redis;
   private final ObjectMapper objectMapper;
   private final Duration configuredTtl;
+  private final Clock clock;
 
   @Autowired
-  public RedisLinkCache(StringRedisTemplate redis, ShortenerProperties properties) {
-    this(redis, cacheObjectMapper(), properties);
+  public RedisLinkCache(StringRedisTemplate redis, ShortenerProperties properties, Clock clock) {
+    this(redis, cacheObjectMapper(), properties, clock);
   }
 
-  /** Package-private for tests that inject a pre-configured mapper. */
+  /** Package-private for tests that inject a pre-configured mapper and a fixed clock. */
   RedisLinkCache(
-      StringRedisTemplate redis, ObjectMapper objectMapper, ShortenerProperties properties) {
+      StringRedisTemplate redis,
+      ObjectMapper objectMapper,
+      ShortenerProperties properties,
+      Clock clock) {
     this.redis = redis;
     this.objectMapper = objectMapper;
     this.configuredTtl = properties.cache().ttl();
+    this.clock = clock;
   }
 
   private static ObjectMapper cacheObjectMapper() {
@@ -91,7 +96,7 @@ public class RedisLinkCache implements LinkCache {
 
   @Override
   public void put(CachedLink link) {
-    CacheTtlPolicy.ttlFor(link.expiresAt(), Instant.now(), configuredTtl)
+    CacheTtlPolicy.ttlFor(link.expiresAt(), clock.instant(), configuredTtl)
         .ifPresent(
             ttl -> {
               try {

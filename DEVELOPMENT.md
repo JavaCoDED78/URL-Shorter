@@ -96,8 +96,8 @@ docker ps
 ## Debugging
 
 - **From the IDE:** run `bootRun` in debug mode; breakpoints in controllers,
-  `LinkService`, `CounterFlushService` and the Lua script wrapper all work
-  normally.
+  `WriteLinkService`, `ReadLinkService`, `CounterFlushService` and the Lua
+  script wrapper all work normally.
 - **Logging:** Spring Boot logs at INFO; `com.javaded78.urlshorter` does not
   log payloads or secrets. The startup diagnostics line prints the
   effective non-secret configuration once.

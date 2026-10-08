@@ -65,9 +65,23 @@ class Base62CodeGeneratorTest {
   }
 
   @Test
-  void rejectsLengthAboveEleven() {
-    // 12+ base62 digits cannot be produced from a single non-negative long.
+  void rejectsLengthAboveTen() {
+    // 11 base62 digits cannot round-trip through a single non-negative long
+    // (62^11 overflows), so the generator caps at length 10.
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> new Base62CodeGenerator(codec, new SecureRandom(), 11));
     assertThatIllegalArgumentException()
         .isThrownBy(() -> new Base62CodeGenerator(codec, new SecureRandom(), 12));
+  }
+
+  @Test
+  void lengthTenRoundTrips() {
+    // 10 is the largest length that both encodes into a long and decodes back exactly.
+    Base62CodeGenerator generator = new Base62CodeGenerator(codec, new SecureRandom(), 10);
+    for (int i = 0; i < 1_000; i++) {
+      String code = generator.generate();
+      assertThat(code).hasSize(10);
+      assertThat(codec.decode(code)).isNotNegative();
+    }
   }
 }

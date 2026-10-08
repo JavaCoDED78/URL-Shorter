@@ -4,7 +4,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.javaded78.urlshorter.domain.service.MetricsRecorder;
+import com.javaded78.urlshorter.infra.redis.script.CounterDrainScript;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -22,10 +22,8 @@ class RedisClickCounterTest {
 
   private final com.javaded78.urlshorter.infra.redis.script.CounterDrainScript drainScript =
       mock(com.javaded78.urlshorter.infra.redis.script.CounterDrainScript.class);
-  private final MetricsRecorder metrics =
-      new MetricsRecorder(new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
 
-  private final RedisClickCounter counter = new RedisClickCounter(redis, drainScript, metrics);
+  private final RedisClickCounter counter = new RedisClickCounter(redis, drainScript);
 
   RedisClickCounterTest() {
     when(redis.opsForValue()).thenReturn(ops);

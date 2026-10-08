@@ -4,6 +4,7 @@ import com.javaded78.urlshorter.config.ShortenerProperties;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 /**
@@ -32,7 +33,7 @@ public class AliasValidator {
     this.reserved =
         properties.alias().reserved().stream()
             .map(word -> word.toLowerCase(Locale.ROOT))
-            .collect(java.util.stream.Collectors.toSet());
+            .collect(Collectors.toSet());
   }
 
   /**

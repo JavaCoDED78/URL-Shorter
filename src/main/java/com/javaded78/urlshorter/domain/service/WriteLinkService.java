@@ -1,14 +1,12 @@
 package com.javaded78.urlshorter.domain.service;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
-import com.javaded78.urlshorter.domain.cache.CachedLink;
 import com.javaded78.urlshorter.domain.cache.LinkCache;
 import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import com.javaded78.urlshorter.domain.model.Link;
-import com.javaded78.urlshorter.domain.model.LinkStats;
-import com.javaded78.urlshorter.domain.model.ResolvedLink;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.infra.persistence.LinkEntity;
+import java.time.Clock;
 import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,13 +14,23 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 /**
- * Create/read application service (Task 4.4).
+ * Write path for short links (CQRS-lite split from {@link ReadLinkService}).
+ *
+ * <p>Owns create and delete — the request-side concerns: URL/alias validation, rate limiting,
+ * collision retries, transactional inserts and the cache-evict dance around a delete. Deliberately
+ * does NOT know about redirects, cache-aside lookups, click counting or read stats — those live in
+ * {@link ReadLinkService}. Keeping the write and read responsibilities in separate beans means the
+ * hot redirect path never pays for a rate-limit probe, and each path can evolve (and be tested)
+ * on its own.
+ *
+ * <p>All time is sourced from an injected {@link Clock} ({@code clock.instant()}), never
+ * {@code Instant.now()} directly, so {@code create} and its {@code expiresAt} validation are
+ * deterministic in tests.
  *
  * <p>Create algorithm:
  *
  * <ul>
- *   <li>validate the URL (scheme/host/length) and, when present, the alias (charset/length/reserved
- *       words, normalized to lowercase);
+ *   <li>validate the URL and, when present, the alias (normalized to lowercase);
  *   <li>with an alias: pre-check {@code existsByCode}, insert, and translate a constraint violation
  *       into {@link AliasAlreadyExistsException} — the pre-check is an optimization, the database
  *       unique index is the concurrency guarantee;
@@ -32,12 +40,17 @@ import org.springframework.stereotype.Service;
  *
  * <p>Inserts use {@code saveAndFlush} so the unique-constraint outcome is known inside the retry
  * loop, not at an unpredictable commit point.
+ *
+ * <p>Throws {@link IllegalArgumentException} (400 on invalid URL/alias/expiration), {@link
+ * AliasAlreadyExistsException} (409), {@link RateLimitExceededException} (429) and {@link
+ * IllegalStateException} (generated codes keep colliding).
  */
 @Service
-public class LinkService {
+public class WriteLinkService {
 
-  private static final Logger log = LoggerFactory.getLogger(LinkService.class);
+  private static final Logger log = LoggerFactory.getLogger(WriteLinkService.class);
 
+  private final Clock clock;
   private final LinkRepository repository;
   private final CodeGenerator codeGenerator;
   private final UrlValidator urlValidator;
@@ -48,7 +61,8 @@ public class LinkService {
   private final MetricsRecorder metrics;
   private final RateLimiter rateLimiter;
 
-  public LinkService(
+  public WriteLinkService(
+      Clock clock,
       LinkRepository repository,
       CodeGenerator codeGenerator,
       UrlValidator urlValidator,
@@ -58,6 +72,7 @@ public class LinkService {
       ClickCounter clickCounter,
       MetricsRecorder metrics,
       RateLimiter rateLimiter) {
+    this.clock = clock;
     this.repository = repository;
     this.codeGenerator = codeGenerator;
     this.urlValidator = urlValidator;
@@ -70,23 +85,12 @@ public class LinkService {
   }
 
   /**
-   * Resolves a code for redirection (Tasks 5.1, 5.2, 5.4; cache-aside from Sprint 6, Task 6.3) and
-   * times the end-to-end redirect (controller → service) behind {@code
-   * MetricsRecorder#redirectDuration}.
-   *
-   * @throws LinkNotFoundException if no such link exists (404)
-   * @throws LinkExpiredException if the link's {@code expiresAt} has passed (410)
-   */
-  public ResolvedLink redirect(String code) {
-    return metrics.timeRedirect(() -> resolve(code));
-  }
-
-  /**
    * Creates a new short link.
    *
    * @param originalUrl destination URL, validated
    * @param alias optional custom alias; {@code null} or blank requests a generated code
    * @param expiresAt optional expiration instant (UTC); {@code null} means the link never expires
+   * @return the created link
    * @throws IllegalArgumentException on invalid URL or alias
    * @throws AliasAlreadyExistsException if the code is already taken
    * @throws RateLimitExceededException if the create-endpoint rate limit is exceeded (429)
@@ -100,8 +104,9 @@ public class LinkService {
       throw new RateLimitExceededException();
     }
     urlValidator.validate(originalUrl);
-    if (expiresAt != null && !expiresAt.isAfter(Instant.now())) {
-      throw new IllegalArgumentException("expiresAt must be in the future, got: " + expiresAt);
+    if (expiresAt != null && !expiresAt.isAfter(clock.instant())) {
+      throw new IllegalArgumentException(
+          "expiresAt must be in the future, got: " + expiresAt);
     }
     if (alias == null || alias.isBlank()) {
       Link link = createWithGeneratedCode(originalUrl, expiresAt);
@@ -111,32 +116,6 @@ public class LinkService {
     Link link = createWithAlias(originalUrl, alias, expiresAt);
     metrics.linkCreated();
     return link;
-  }
-
-  /**
-   * Returns the link with the given code.
-   *
-   * @throws LinkNotFoundException if no such link exists
-   */
-  public Link getByCode(String code) {
-    return repository
-        .findByCodeIgnoreCase(code)
-        .map(this::toDomain)
-        .orElseThrow(() -> notFound(code));
-  }
-
-  /**
-   * Click statistics for a code (Task 9.2): persisted DB count plus the pending Redis counter — the
-   * logically current value, without waiting for the flush interval. Lookup is case-insensitive
-   * like redirects, because counters are keyed by the stored (lowercase) code.
-   *
-   * @throws LinkNotFoundException if no such link exists
-   */
-  public LinkStats getStats(String code) {
-    Link link =
-        repository.findByCodeIgnoreCase(code).map(this::toDomain).orElseThrow(() -> notFound(code));
-    long pending = clickCounter.get(link.code());
-    return new LinkStats(link.code(), link.clickCount() + pending);
   }
 
   /**
@@ -168,61 +147,6 @@ public class LinkService {
     linkCache.evict(link.code());
   }
 
-  /**
-   * Resolves a code for redirection (Tasks 5.1, 5.2, 5.4; cache-aside from Sprint 6, Task 6.3):
-   *
-   * <pre>
-   * cache.get(code)
-   *   ├─ HIT  → re-check expiresAt from the cached value → redirect target
-   *   └─ MISS → PostgreSQL (case-insensitive) → 404 / 410
-   *             → active: cache.put(min(cacheTtl, remainingLifetime)) → target
-   * </pre>
-   *
-   * <p>Expiration is business logic, not a Redis TTL side effect: the cached value carries {@code
-   * expiresAt} and it is validated on every hit, so a link never stays usable because its cache
-   * entry outlived it.
-   *
-   * @throws LinkNotFoundException if no such link exists (404)
-   * @throws LinkExpiredException if the link's {@code expiresAt} has passed (410)
-   */
-  public ResolvedLink resolve(String code) {
-    java.util.Optional<CachedLink> cached = metrics.timeRedisLookup(() -> linkCache.get(code));
-    if (cached.isPresent()) {
-      metrics.cacheHit();
-      CachedLink hit = cached.get();
-      if (hit.isExpired(Instant.now())) {
-        metrics.linkExpired();
-        throw new LinkExpiredException(code);
-      }
-      // Click counts only after the redirect target is validated (Task 7.3).
-      clickCounter.increment(code);
-      metrics.linkRedirected();
-      return new ResolvedLink(hit.code(), hit.originalUrl());
-    }
-    metrics.cacheMiss();
-    Link link =
-        metrics.timePostgresLookup(
-            () ->
-                repository
-                    .findByCodeIgnoreCase(code)
-                    .map(this::toDomain)
-                    .orElseThrow(() -> notFound(code)));
-    if (link.isExpired(Instant.now())) {
-      // Expired links are never cached (Task 6.4) and never counted.
-      metrics.linkExpired();
-      throw new LinkExpiredException(code);
-    }
-    linkCache.put(new CachedLink(link.code(), link.originalUrl(), link.expiresAt()));
-    clickCounter.increment(code);
-    metrics.linkRedirected();
-    return new ResolvedLink(link.code(), link.originalUrl());
-  }
-
-  private LinkNotFoundException notFound(String code) {
-    metrics.linkNotFound();
-    return new LinkNotFoundException(code);
-  }
-
   private Link createWithAlias(String originalUrl, String alias, Instant expiresAt) {
     String code = aliasValidator.validateAndNormalize(alias);
     if (repository.existsByCode(code)) {
@@ -248,7 +172,9 @@ public class LinkService {
       }
     }
     throw new IllegalStateException(
-        "could not generate a unique code after " + maxCollisionRetries + " collision retries");
+        "could not generate a unique code after "
+            + maxCollisionRetries
+            + " collision retries");
   }
 
   private Link save(String code, String originalUrl, Instant expiresAt) {
@@ -263,5 +189,10 @@ public class LinkService {
         entity.getExpiresAt(),
         entity.getClickCount(),
         entity.getCreatedAt());
+  }
+
+  private LinkNotFoundException notFound(String code) {
+    metrics.linkNotFound();
+    return new LinkNotFoundException(code);
   }
 }

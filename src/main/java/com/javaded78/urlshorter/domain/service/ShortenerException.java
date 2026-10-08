@@ -15,8 +15,13 @@ package com.javaded78.urlshorter.domain.service;
  *
  * <p>Request validation failures (bad URL, bad alias, bad expiration) stay plain {@link
  * IllegalArgumentException} — they are all one 400 category and do not deserve dedicated classes.
+ *
+ * <p>{@code sealed}: the {@code switch} in {@link
+ * com.javaded78.urlshorter.api.error.GlobalExceptionHandler#handleShortenerException} is exhaustive
+ * by construction, so adding a subtype without a mapping is a compile error, not a silent 500.
  */
-public abstract class ShortenerException extends RuntimeException {
+public sealed abstract class ShortenerException extends RuntimeException
+    permits LinkNotFoundException, LinkExpiredException, AliasAlreadyExistsException, RateLimitExceededException {
 
   protected ShortenerException(String message) {
     super(message);

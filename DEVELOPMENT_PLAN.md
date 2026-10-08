@@ -582,7 +582,7 @@ expiresAt <= now
 ```text
 Controller
   ↓
-LinkService
+WriteLinkService / ReadLinkService
   ↓
 Repository
 ```
@@ -1569,7 +1569,7 @@ RateLimiter (port)
 RateLimitConfig ── enabled=true  → RedisRateLimiter (INCR + EXPIRE per window)
    │                  enabled=false → NoOpRateLimiter (admits everything)
    ↓
-LinkService.create → rateLimiter.tryAcquire("create") → denied → 429
+`WriteLinkService.create` → rateLimiter.tryAcquire("create") → denied → 429
 ```
 
 - `RedisRateLimiter` (`infra/redis/limiter`): one `ratelimit:{key}` counter,
@@ -1580,7 +1580,7 @@ LinkService.create → rateLimiter.tryAcquire("create") → denied → 429
   beans), `RateLimitExceededException` → `429` `retryAfter: 1`.
 - Disabled by default so the high-volume suites stay green.
 - New counter `urlshorter.rateLimiterDenied`, verified by
-  `RedisRateLimiterIT` + `LinkServiceTest`.
+  `RedisRateLimiterIT` + `WriteLinkServiceTest`.
 
 ---
 

@@ -5,6 +5,7 @@ import com.javaded78.urlshorter.domain.service.AliasAlreadyExistsException;
 import com.javaded78.urlshorter.domain.service.LinkExpiredException;
 import com.javaded78.urlshorter.domain.service.LinkNotFoundException;
 import com.javaded78.urlshorter.domain.service.RateLimitExceededException;
+import com.javaded78.urlshorter.domain.service.ShortenerException;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,43 +59,36 @@ public class GlobalExceptionHandler {
     return problem;
   }
 
-  @ExceptionHandler(AliasAlreadyExistsException.class)
-  public ProblemDetail handleAliasConflict(AliasAlreadyExistsException ex) {
-    ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
-    problem.setType(ErrorType.CODE_ALREADY_TAKEN.uri());
-    problem.setTitle(ErrorType.CODE_ALREADY_TAKEN.title());
-    return problem;
-  }
-
-  @ExceptionHandler(LinkNotFoundException.class)
-  public ProblemDetail handleNotFound(LinkNotFoundException ex) {
-    ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
-    problem.setType(ErrorType.LINK_NOT_FOUND.uri());
-    problem.setTitle(ErrorType.LINK_NOT_FOUND.title());
-    return problem;
-  }
-
-  @ExceptionHandler(LinkExpiredException.class)
-  public ProblemDetail handleExpired(LinkExpiredException ex) {
-    ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.GONE, ex.getMessage());
-    problem.setType(ErrorType.LINK_EXPIRED.uri());
-    problem.setTitle(ErrorType.LINK_EXPIRED.title());
-    return problem;
-  }
-
   /**
-   * Create-endpoint rate limit exceeded (Task 20.4): the {@link
-   * com.javaded78.urlshorter.domain.service.RateLimiter} probe is denied, so the request is
-   * rejected with a 429. Distinct from {@link DataAccessException} (503) and the unexpected-failure
-   * fallback (500): this is a deliberate, client-facing rate-limit outcome.
+   * Maps the four {@link ShortenerException} subtypes — 404, 410, 409, 429 — to {@link ProblemDetail}.
+   *
+   * <p>{@link ShortenerException} is {@code sealed} with exactly four permitted subtypes, so this
+   * {@code switch} is <b>exhaustive by construction</b>: every branch covers one stable error
+   * category, and the compiler forbids a subtype reaching the API without a mapping. Adding a new
+   * subtype (or dropping one) is a compile-time error, not a silent fallback to 500 — which keeps
+   * the {@code ErrorType} contract stable.
+   *
+   * <p>The rate-limit case carries an extra {@code retryAfter} property (Task 20.4); it is distinct
+   * from {@link DataAccessException} (503) and the unexpected-failure fallback (500).
    */
-  @ExceptionHandler(RateLimitExceededException.class)
-  public ProblemDetail handleRateLimited(RateLimitExceededException ex) {
-    ProblemDetail problem =
-        ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
-    problem.setProperty("retryAfter", 1);
-    problem.setType(ErrorType.RATE_LIMITED.uri());
-    problem.setTitle(ErrorType.RATE_LIMITED.title());
+  @ExceptionHandler(ShortenerException.class)
+  public ProblemDetail handleShortenerException(ShortenerException ex) {
+    return switch (ex) {
+      case LinkNotFoundException e -> mapped(ErrorType.LINK_NOT_FOUND, e);
+      case LinkExpiredException e -> mapped(ErrorType.LINK_EXPIRED, e);
+      case AliasAlreadyExistsException e -> mapped(ErrorType.CODE_ALREADY_TAKEN, e);
+      case RateLimitExceededException e -> {
+        ProblemDetail problem = mapped(ErrorType.RATE_LIMITED, e);
+        problem.setProperty("retryAfter", 1);
+        yield problem;
+      }
+    };
+  }
+
+  private static ProblemDetail mapped(ErrorType type, ShortenerException ex) {
+    ProblemDetail problem = ProblemDetail.forStatusAndDetail(type.status(), ex.getMessage());
+    problem.setType(type.uri());
+    problem.setTitle(type.title());
     return problem;
   }
 

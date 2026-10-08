@@ -41,7 +41,7 @@ All timers use Micrometer `Timer` (prometheus: `*_seconds` bucket histogram + `*
 
 | Metric name (Micrometer) | Prometheus name | Unit | Labels | Semantics |
 |---|---|---|---|---|
-| `urlshorter.redirectDuration` | `urlshorter_redirectDuration_seconds` | seconds | `application` | End-to-end time for a redirect resolution (controller → `LinkService.resolve`), including cache, DB, and Redis lookups. |
+| `urlshorter.redirectDuration` | `urlshorter_redirectDuration_seconds` | seconds | `application` | End-to-end time for a redirect resolution (controller → `ReadLinkService.resolve`), including cache, DB, and Redis lookups. |
 | `urlshorter.postgresLookupDuration` | `urlshorter_postgresLookupDuration_seconds` | seconds | `application` | Time spent in a PostgreSQL lookup during a redirect cache-miss path. |
 | `urlshorter.redisLookupDuration` | `urlshorter_redisLookupDuration_seconds` | seconds | `application` | Time spent in a Redis cache-aside lookup during a redirect. |
 

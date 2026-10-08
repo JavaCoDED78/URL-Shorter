@@ -1,7 +1,6 @@
 package com.javaded78.urlshorter.infra.redis.counter;
 
 import com.javaded78.urlshorter.domain.counter.ClickCounter;
-import com.javaded78.urlshorter.domain.service.MetricsRecorder;
 import com.javaded78.urlshorter.infra.redis.script.CounterDrainScript;
 import java.util.HashMap;
 import java.util.List;
@@ -19,8 +18,9 @@ import org.springframework.stereotype.Component;
  * CounterDrainScript} per key — read-and-reset happens atomically inside one Lua run.
  *
  * <p>Increment failure policy (Task 17.2): redirect availability wins. If Redis is unavailable the
- * click is dropped and counted via the {@code clicks.increment.failed} metric — click counting is
- * best-effort analytics, the redirect itself is the product.
+ * click is dropped and the caller reports the loss via
+ * {@code MetricsRecorder#clickIncrementFailed} — click counting is best-effort analytics, the
+ * redirect itself is the product.
  */
 @Component
 public class RedisClickCounter implements ClickCounter {
@@ -32,25 +32,23 @@ public class RedisClickCounter implements ClickCounter {
 
   private final StringRedisTemplate redis;
   private final CounterDrainScript drainScript;
-  private final MetricsRecorder metrics;
 
-  public RedisClickCounter(
-      StringRedisTemplate redis, CounterDrainScript drainScript, MetricsRecorder metrics) {
+  public RedisClickCounter(StringRedisTemplate redis, CounterDrainScript drainScript) {
     this.redis = redis;
     this.drainScript = drainScript;
-    this.metrics = metrics;
   }
 
   @Override
-  public void increment(String code) {
+  public boolean increment(String code) {
     try {
       redis.opsForValue().increment(key(code));
-      metrics.clickIncremented();
+      return true;
     } catch (org.springframework.dao.DataAccessException ex) {
       // Task 17.2: the redirect must survive a dead Redis; the click is
-      // dropped and counted so the loss is observable.
-      metrics.clickIncrementFailed();
+      // dropped (the caller reports the failure via
+      // MetricsRecorder#clickIncrementFailed) so redirect availability wins.
       log.warn("click counter unavailable for {} — click dropped: {}", key(code), ex.toString());
+      return false;
     }
   }
 

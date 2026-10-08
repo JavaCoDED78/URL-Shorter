@@ -20,8 +20,12 @@ the check and both attempt to insert.
   guarantee. A bounded number of retries on collision (default 5,
   configurable) turns a conflict into a fresh candidate.
 - `SecureRandom` is the source; length is configurable
-  (`SHORTENER_CODE_LENGTH`, default 7; hard cap 11 = what fits in a
-  `long`).
+  (`SHORTENER_CODE_LENGTH`, default 7; hard cap 10). A single
+  `long` both encodes and round-trips back exactly only up to
+  10 base62 digits — at 11 the range `[62^10, 62^11)` overflows
+  `Long.MAX_VALUE`, so `62^10 * 62` wraps negative and the generator
+  throws. Lengths are therefore bounded to `[1, 10]` at both the
+  configuration (`@Max(10)`) and generator level.
 - Custom aliases go through the same insert path — the same constraint and
   the same `409` contract.
 

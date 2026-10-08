@@ -287,7 +287,7 @@ Insert into PostgreSQL
 Return 201 Created
 ```
 
-The `RateLimiter` probe is the first gate in `LinkService.create`: a denied
+The `RateLimiter` probe is the first gate in `WriteLinkService.create`: a denied
 probe answers `429` (`retryAfter: 1`) without touching PostgreSQL or Redis.
 When the limiter is disabled (the default) it admits everything.
 
@@ -701,7 +701,7 @@ The following environment variables are used by the application.
 | `REDIS_HOST` | `localhost` | Redis host |
 | `REDIS_PORT` | `6379` | Redis port |
 | `REDIS_TIMEOUT` | `2s` | Redis command timeout |
-| `SHORTENER_CODE_LENGTH` | `7` | Generated Base62 code length (1–11) |
+| `SHORTENER_CODE_LENGTH` | `7` | Generated Base62 code length (1–10) |
 | `SHORTENER_URL_MAX_LENGTH` | `2048` | Maximum accepted original URL length |
 | `SHORTENER_ALIAS_MAX_LENGTH` | `64` | Maximum custom alias length |
 | `SHORTENER_MAX_COLLISION_RETRIES` | `5` | Bounded retries on generated-code collision |

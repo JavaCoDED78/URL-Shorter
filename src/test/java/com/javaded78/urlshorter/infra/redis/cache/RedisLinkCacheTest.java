@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.javaded78.urlshorter.config.ShortenerProperties;
 import com.javaded78.urlshorter.domain.cache.CachedLink;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -37,7 +38,8 @@ class RedisLinkCacheTest {
           org.springframework.util.unit.DataSize.ofKilobytes(16),
           1024);
 
-  private final RedisLinkCache cache = new RedisLinkCache(redis, objectMapper, properties);
+  private final RedisLinkCache cache =
+      new RedisLinkCache(redis, objectMapper, properties, Clock.systemUTC());
 
   RedisLinkCacheTest() {
     when(redis.opsForValue()).thenReturn(ops);

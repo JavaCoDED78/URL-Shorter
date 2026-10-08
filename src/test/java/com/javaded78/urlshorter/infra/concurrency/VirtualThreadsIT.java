@@ -5,7 +5,7 @@ import static org.mockito.Mockito.doAnswer;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.domain.service.CounterFlushService;
-import com.javaded78.urlshorter.domain.service.LinkService;
+import com.javaded78.urlshorter.domain.service.ReadLinkService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +49,7 @@ class VirtualThreadsIT {
 
   @Autowired private TestRestTemplate restTemplate;
 
-  @MockitoSpyBean private LinkService linkService;
+  @MockitoSpyBean private ReadLinkService linkService;
 
   @MockitoSpyBean private CounterFlushService flushService;
 

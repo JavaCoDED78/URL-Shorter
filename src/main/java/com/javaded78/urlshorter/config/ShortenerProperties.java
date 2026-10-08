@@ -61,8 +61,9 @@ public record ShortenerProperties(
   public record Cache(@PositiveDuration java.time.Duration ttl) {}
 
   /**
-   * @param length number of characters in generated Base62 codes; bounded by {@code [1, 11]} — a
-   *     {@code long} holds at most 11 base62 digits
+   * @param length number of characters in generated Base62 codes; bounded by {@code [1, 10]} — the
+   *     largest length that both encodes into a {@code long} and round-trips back to the exact
+   *     value (length 11 would overflow the {@code long} range used by the generator)
    */
-  public record Code(@Min(1) @Max(11) int length) {}
+  public record Code(@Min(1) @Max(10) int length) {}
 }

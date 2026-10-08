@@ -1,7 +1,7 @@
 package com.javaded78.urlshorter.api.controller;
 
 import com.javaded78.urlshorter.domain.model.ResolvedLink;
-import com.javaded78.urlshorter.domain.service.LinkService;
+import com.javaded78.urlshorter.domain.service.ReadLinkService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Root redirect endpoint (Tasks 5.1, 5.4): {@code GET /{code}} resolves the code through {@link
- * LinkService} and answers {@link HttpStatus#FOUND 302 Found} with the destination in {@code
+ * ReadLinkService} and answers {@link HttpStatus#FOUND 302 Found} with the destination in {@code
  * Location}.
  *
  * <p>302 (not 301) is deliberate: a 301 can be cached by clients and intermediaries, silently
@@ -32,9 +32,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Redirects", description = "Root redirect endpoint")
 public class RedirectController {
 
-  private final LinkService linkService;
+  private final ReadLinkService linkService;
 
-  public RedirectController(LinkService linkService) {
+  public RedirectController(ReadLinkService linkService) {
     this.linkService = linkService;
   }
 
