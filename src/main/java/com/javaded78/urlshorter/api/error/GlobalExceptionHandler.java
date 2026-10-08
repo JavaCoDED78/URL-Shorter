@@ -60,7 +60,8 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * Maps the four {@link ShortenerException} subtypes — 404, 410, 409, 429 — to {@link ProblemDetail}.
+   * Maps the four {@link ShortenerException} subtypes — 404, 410, 409, 429 — to {@link
+   * ProblemDetail}.
    *
    * <p>{@link ShortenerException} is {@code sealed} with exactly four permitted subtypes, so this
    * {@code switch} is <b>exhaustive by construction</b>: every branch covers one stable error

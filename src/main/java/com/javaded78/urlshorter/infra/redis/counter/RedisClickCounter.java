@@ -18,9 +18,8 @@ import org.springframework.stereotype.Component;
  * CounterDrainScript} per key — read-and-reset happens atomically inside one Lua run.
  *
  * <p>Increment failure policy (Task 17.2): redirect availability wins. If Redis is unavailable the
- * click is dropped and the caller reports the loss via
- * {@code MetricsRecorder#clickIncrementFailed} — click counting is best-effort analytics, the
- * redirect itself is the product.
+ * click is dropped and the caller reports the loss via {@code MetricsRecorder#clickIncrementFailed}
+ * — click counting is best-effort analytics, the redirect itself is the product.
  */
 @Component
 public class RedisClickCounter implements ClickCounter {

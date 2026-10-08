@@ -20,12 +20,12 @@ import org.springframework.stereotype.Service;
  * collision retries, transactional inserts and the cache-evict dance around a delete. Deliberately
  * does NOT know about redirects, cache-aside lookups, click counting or read stats — those live in
  * {@link ReadLinkService}. Keeping the write and read responsibilities in separate beans means the
- * hot redirect path never pays for a rate-limit probe, and each path can evolve (and be tested)
- * on its own.
+ * hot redirect path never pays for a rate-limit probe, and each path can evolve (and be tested) on
+ * its own.
  *
- * <p>All time is sourced from an injected {@link Clock} ({@code clock.instant()}), never
- * {@code Instant.now()} directly, so {@code create} and its {@code expiresAt} validation are
- * deterministic in tests.
+ * <p>All time is sourced from an injected {@link Clock} ({@code clock.instant()}), never {@code
+ * Instant.now()} directly, so {@code create} and its {@code expiresAt} validation are deterministic
+ * in tests.
  *
  * <p>Create algorithm:
  *
@@ -105,8 +105,7 @@ public class WriteLinkService {
     }
     urlValidator.validate(originalUrl);
     if (expiresAt != null && !expiresAt.isAfter(clock.instant())) {
-      throw new IllegalArgumentException(
-          "expiresAt must be in the future, got: " + expiresAt);
+      throw new IllegalArgumentException("expiresAt must be in the future, got: " + expiresAt);
     }
     if (alias == null || alias.isBlank()) {
       Link link = createWithGeneratedCode(originalUrl, expiresAt);
@@ -172,9 +171,7 @@ public class WriteLinkService {
       }
     }
     throw new IllegalStateException(
-        "could not generate a unique code after "
-            + maxCollisionRetries
-            + " collision retries");
+        "could not generate a unique code after " + maxCollisionRetries + " collision retries");
   }
 
   private Link save(String code, String originalUrl, Instant expiresAt) {

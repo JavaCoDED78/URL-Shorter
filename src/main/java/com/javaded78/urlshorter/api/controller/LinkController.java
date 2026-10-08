@@ -4,7 +4,6 @@ import com.javaded78.urlshorter.api.dto.CreateLinkRequest;
 import com.javaded78.urlshorter.api.dto.LinkResponse;
 import com.javaded78.urlshorter.api.dto.LinkStatsResponse;
 import com.javaded78.urlshorter.domain.model.Link;
-import com.javaded78.urlshorter.domain.model.LinkStats;
 import com.javaded78.urlshorter.domain.service.ReadLinkService;
 import com.javaded78.urlshorter.domain.service.WriteLinkService;
 import io.swagger.v3.oas.annotations.Operation;

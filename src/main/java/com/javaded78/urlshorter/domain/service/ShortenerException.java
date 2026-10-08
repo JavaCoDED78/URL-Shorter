@@ -20,8 +20,11 @@ package com.javaded78.urlshorter.domain.service;
  * com.javaded78.urlshorter.api.error.GlobalExceptionHandler#handleShortenerException} is exhaustive
  * by construction, so adding a subtype without a mapping is a compile error, not a silent 500.
  */
-public sealed abstract class ShortenerException extends RuntimeException
-    permits LinkNotFoundException, LinkExpiredException, AliasAlreadyExistsException, RateLimitExceededException {
+public abstract sealed class ShortenerException extends RuntimeException
+    permits LinkNotFoundException,
+        LinkExpiredException,
+        AliasAlreadyExistsException,
+        RateLimitExceededException {
 
   protected ShortenerException(String message) {
     super(message);

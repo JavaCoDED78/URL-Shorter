@@ -18,9 +18,9 @@ public interface ClickCounter {
   /**
    * Increments the counter for the code; keys are case-insensitive.
    *
-   * <p>Success is reported to the caller (which owns the {@code clicksIncremented}/
-   * {@code clicksIncrementFailed} metrics) rather than recorded here, so this infrastructure class
-   * never depends on domain-level observability.
+   * <p>Success is reported to the caller (which owns the {@code clicksIncremented}/ {@code
+   * clicksIncrementFailed} metrics) rather than recorded here, so this infrastructure class never
+   * depends on domain-level observability.
    *
    * @return {@code true} if the increment was applied to Redis, {@code false} if Redis was
    *     unavailable (best-effort — the caller counts the loss via {@code

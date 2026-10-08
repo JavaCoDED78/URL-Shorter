@@ -9,7 +9,6 @@ import com.javaded78.urlshorter.domain.model.ResolvedLink;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.infra.persistence.LinkEntity;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,9 +28,9 @@ import org.springframework.stereotype.Service;
  * metrics) from the write path (validation + DB writes), so a hot read never pays for a rate-limit
  * probe and the two paths evolve independently.
  *
- * <p>All time is sourced from an injected {@link Clock} ({@code clock.instant()}), never
- * {@code Instant.now()} directly, so the {@code expiresAt} re-checks in {@code resolve} are
- * deterministic in tests.
+ * <p>All time is sourced from an injected {@link Clock} ({@code clock.instant()}), never {@code
+ * Instant.now()} directly, so the {@code expiresAt} re-checks in {@code resolve} are deterministic
+ * in tests.
  *
  * <p>Throws {@link LinkNotFoundException} (404) and {@link LinkExpiredException} (410); both are
  * reported to {@code MetricsRecorder}.
@@ -78,7 +77,8 @@ public class ReadLinkService {
    * @throws LinkNotFoundException if no such link exists
    */
   public Link getByCode(String code) {
-    return repository.findByCodeIgnoreCase(code)
+    return repository
+        .findByCodeIgnoreCase(code)
         .map(this::toDomain)
         .orElseThrow(() -> notFound(code));
   }

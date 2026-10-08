@@ -20,7 +20,6 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.DataIntegrityViolationException;
 
 /**
  * Unit tests for {@link ReadLinkService}: the hot request-side path — cache-aside redirect,
@@ -48,15 +47,11 @@ class ReadLinkServiceTest {
 
   /** The fixed reference instant all resolve/expiration assertions run against. */
   private static final Instant NOW = Instant.parse("2025-06-01T00:00:00Z");
+
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
   private final ReadLinkService service =
-      new ReadLinkService(
-          repository,
-          linkCache,
-          clickCounter,
-          metricsStub(),
-          clock);
+      new ReadLinkService(repository, linkCache, clickCounter, metricsStub(), clock);
 
   /** The metrics facade must pass calls through (timers wrap suppliers). */
   private static MetricsRecorder metricsStub() {
@@ -113,10 +108,7 @@ class ReadLinkServiceTest {
     ResolvedLink link = service.resolve("abc1234");
 
     assertThat(link.originalUrl()).isEqualTo("https://example.com");
-    verify(linkCache)
-        .put(
-            new CachedLink(
-                "abc1234", "https://example.com", entity.getExpiresAt()));
+    verify(linkCache).put(new CachedLink("abc1234", "https://example.com", entity.getExpiresAt()));
     verify(clickCounter).increment("abc1234");
   }
 
@@ -124,8 +116,7 @@ class ReadLinkServiceTest {
   void resolveCountsClickOnCacheHit() {
     when(linkCache.get("abc1234"))
         .thenReturn(
-            java.util.Optional.of(
-                new CachedLink("abc1234", "https://cached.example", null)));
+            java.util.Optional.of(new CachedLink("abc1234", "https://cached.example", null)));
 
     service.resolve("abc1234");
 
@@ -144,8 +135,7 @@ class ReadLinkServiceTest {
   void resolveServesCacheHitWithoutTouchingDb() {
     when(linkCache.get("abc1234"))
         .thenReturn(
-            java.util.Optional.of(
-                new CachedLink("abc1234", "https://cached.example", null)));
+            java.util.Optional.of(new CachedLink("abc1234", "https://cached.example", null)));
 
     ResolvedLink link = service.resolve("abc1234");
 
