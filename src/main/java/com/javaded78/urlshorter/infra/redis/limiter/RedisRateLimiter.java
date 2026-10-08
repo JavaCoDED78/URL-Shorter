@@ -31,7 +31,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  * {@code clicks:} keys used elsewhere.
  *
  * <p>Bean registration is conditional and property-driven (see {@code RateLimitConfig}); the {@code
- * NoOpRateLimiter} remains the default (admits everything) when the limiter is disabled.
+ * {@code true} when the limiter is disabled — see {@code RateLimitConfig}.
  */
 public class RedisRateLimiter implements RateLimiter {
 

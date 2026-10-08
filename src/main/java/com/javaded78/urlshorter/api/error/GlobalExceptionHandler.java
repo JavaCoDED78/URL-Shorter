@@ -1,11 +1,11 @@
 package com.javaded78.urlshorter.api.error;
 
 import com.javaded78.urlshorter.config.PayloadTooLargeException;
-import com.javaded78.urlshorter.domain.service.AliasAlreadyExistsException;
-import com.javaded78.urlshorter.domain.service.LinkExpiredException;
-import com.javaded78.urlshorter.domain.service.LinkNotFoundException;
-import com.javaded78.urlshorter.domain.service.RateLimitExceededException;
-import com.javaded78.urlshorter.domain.service.ShortenerException;
+import com.javaded78.urlshorter.domain.exception.AliasAlreadyExistsException;
+import com.javaded78.urlshorter.domain.exception.LinkExpiredException;
+import com.javaded78.urlshorter.domain.exception.LinkNotFoundException;
+import com.javaded78.urlshorter.domain.exception.RateLimitExceededException;
+import com.javaded78.urlshorter.domain.exception.ShortenerException;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

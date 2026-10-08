@@ -1,8 +1,8 @@
 package com.javaded78.urlshorter.config;
 
 import com.javaded78.urlshorter.domain.service.MetricsRecorder;
-import com.javaded78.urlshorter.domain.service.NoOpRateLimiter;
 import com.javaded78.urlshorter.domain.service.RateLimiter;
+import com.javaded78.urlshorter.infra.redis.limiter.NoOpRateLimiter;
 import com.javaded78.urlshorter.infra.redis.limiter.RedisRateLimiter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;

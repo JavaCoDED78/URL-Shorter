@@ -15,7 +15,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
+import com.javaded78.urlshorter.domain.exception.AliasAlreadyExistsException;
+import com.javaded78.urlshorter.domain.exception.LinkNotFoundException;
+import com.javaded78.urlshorter.domain.exception.RateLimitExceededException;
 import com.javaded78.urlshorter.domain.model.Link;
+import com.javaded78.urlshorter.domain.validation.AliasValidator;
+import com.javaded78.urlshorter.domain.validation.UrlValidator;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;

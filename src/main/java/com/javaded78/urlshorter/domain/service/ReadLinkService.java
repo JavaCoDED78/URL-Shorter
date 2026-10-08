@@ -3,6 +3,8 @@ package com.javaded78.urlshorter.domain.service;
 import com.javaded78.urlshorter.domain.cache.CachedLink;
 import com.javaded78.urlshorter.domain.cache.LinkCache;
 import com.javaded78.urlshorter.domain.counter.ClickCounter;
+import com.javaded78.urlshorter.domain.exception.LinkExpiredException;
+import com.javaded78.urlshorter.domain.exception.LinkNotFoundException;
 import com.javaded78.urlshorter.domain.model.ExpirationPolicy;
 import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.model.LinkStats;

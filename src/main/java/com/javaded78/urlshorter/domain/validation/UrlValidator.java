@@ -1,4 +1,4 @@
-package com.javaded78.urlshorter.domain.service;
+package com.javaded78.urlshorter.domain.validation;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
 import java.net.URI;
