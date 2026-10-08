@@ -54,10 +54,8 @@ public class CounterFlushService {
     if (drained.isEmpty()) {
       return 0;
     }
-    String[] codes = drained.keySet().toArray(String[]::new);
-    Long[] increments = drained.values().toArray(Long[]::new);
     try {
-      int updated = repository.batchIncrementClickCounts(codes, increments);
+      int updated = repository.batchIncrementClicks(drained);
       long totalClicks = drained.values().stream().mapToLong(Long::longValue).sum();
       metrics.clicksFlushed(totalClicks);
       log.info("flushed {} click counters into {} link rows", drained.size(), updated);

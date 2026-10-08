@@ -31,6 +31,16 @@ public record Link(
   }
 
   /**
+   * Creates a link with zero click count — the write path supplies the persistence instant
+   * (normally {@code clock.instant()}), keeping link creation deterministic under an injected
+   * {@link Clock} in tests.
+   */
+  public static Link created(
+      String code, String originalUrl, Instant expiresAt, Instant createdAt) {
+    return new Link(code, originalUrl, expiresAt, 0, createdAt);
+  }
+
+  /**
    * Expiration policy (Task 5.2): {@code expiresAt == null} never expires; {@code expiresAt > now}
    * is active; {@code expiresAt <= now} is expired. All timestamps are UTC {@link Instant}s.
    *

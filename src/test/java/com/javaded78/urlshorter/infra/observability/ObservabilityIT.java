@@ -130,7 +130,7 @@ class ObservabilityIT {
 
     doThrow(new DataAccessException("db down") {})
         .when(repository)
-        .batchIncrementClickCounts(any(), any());
+        .batchIncrementClicks(any(Map.class));
     redirect("obs04");
     assertThatThrownBy(flushService::flush).isNotNull();
     assertThat(metric("urlshorter.clicksFlushFailed")).isEqualTo(1);

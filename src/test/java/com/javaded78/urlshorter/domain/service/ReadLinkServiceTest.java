@@ -13,11 +13,11 @@ import com.javaded78.urlshorter.domain.cache.CachedLink;
 import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.model.LinkStats;
 import com.javaded78.urlshorter.domain.model.ResolvedLink;
-import com.javaded78.urlshorter.infra.persistence.LinkEntity;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -73,20 +73,14 @@ class ReadLinkServiceTest {
     when(linkCache.get(any())).thenReturn(java.util.Optional.empty());
   }
 
-  private static LinkEntity persisted(LinkEntity entity) {
-    entity.setCreatedAt(Instant.now());
-    entity.setUpdatedAt(Instant.now());
-    return entity;
-  }
-
   @Test
   void returnsExistingLinkByCode() {
-    LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+    Link link = new Link("abc1234", "https://example.com", null, 0, NOW);
+    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(Optional.of(link));
 
-    Link link = service.getByCode("abc1234");
+    Link result = service.getByCode("abc1234");
 
-    assertThat(link.originalUrl()).isEqualTo("https://example.com");
+    assertThat(result.originalUrl()).isEqualTo("https://example.com");
   }
 
   @Test
@@ -101,14 +95,13 @@ class ReadLinkServiceTest {
 
   @Test
   void resolvesActiveLink() {
-    LinkEntity entity =
-        persisted(new LinkEntity("abc1234", "https://example.com", NOW.plusSeconds(60)));
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+    Link link = new Link("abc1234", "https://example.com", NOW.plusSeconds(60), 0, NOW);
+    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(Optional.of(link));
 
-    ResolvedLink link = service.resolve("abc1234");
+    ResolvedLink result = service.resolve("abc1234");
 
-    assertThat(link.originalUrl()).isEqualTo("https://example.com");
-    verify(linkCache).put(new CachedLink("abc1234", "https://example.com", entity.getExpiresAt()));
+    assertThat(result.originalUrl()).isEqualTo("https://example.com");
+    verify(linkCache).put(new CachedLink("abc1234", "https://example.com", link.expiresAt()));
     verify(clickCounter).increment("abc1234");
   }
 
@@ -125,8 +118,8 @@ class ReadLinkServiceTest {
 
   @Test
   void resolvesNeverExpiringLink() {
-    LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+    Link link = new Link("abc1234", "https://example.com", null, 0, NOW);
+    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(Optional.of(link));
 
     assertThat(service.resolve("abc1234").originalUrl()).isEqualTo("https://example.com");
   }
@@ -137,9 +130,9 @@ class ReadLinkServiceTest {
         .thenReturn(
             java.util.Optional.of(new CachedLink("abc1234", "https://cached.example", null)));
 
-    ResolvedLink link = service.resolve("abc1234");
+    ResolvedLink result = service.resolve("abc1234");
 
-    assertThat(link.originalUrl()).isEqualTo("https://cached.example");
+    assertThat(result.originalUrl()).isEqualTo("https://cached.example");
     verify(repository, never()).findByCodeIgnoreCase(any());
     verify(linkCache, never()).put(any());
   }
@@ -164,9 +157,8 @@ class ReadLinkServiceTest {
 
   @Test
   void resolveThrowsGoneForExpiredLink() {
-    LinkEntity entity =
-        persisted(new LinkEntity("abc1234", "https://example.com", NOW.minusSeconds(1)));
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+    Link link = new Link("abc1234", "https://example.com", NOW.minusSeconds(1), 0, NOW);
+    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(Optional.of(link));
 
     assertThatThrownBy(() -> service.resolve("abc1234")).isInstanceOf(LinkExpiredException.class);
     verify(linkCache, never()).put(any());
@@ -196,9 +188,8 @@ class ReadLinkServiceTest {
 
   @Test
   void getStatsSumsPersistedAndPendingClicks() {
-    LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    entity.setClickCount(7);
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+    Link link = new Link("abc1234", "https://example.com", null, 7, NOW);
+    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(Optional.of(link));
     when(clickCounter.get("abc1234")).thenReturn(3L);
 
     LinkStats stats = service.getStats("abc1234");
@@ -209,8 +200,8 @@ class ReadLinkServiceTest {
 
   @Test
   void getStatsWithZeroClicks() {
-    LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+    Link link = new Link("abc1234", "https://example.com", null, 0, NOW);
+    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(Optional.of(link));
     when(clickCounter.get("abc1234")).thenReturn(0L);
 
     assertThat(service.getStats("abc1234").clickCount()).isZero();
@@ -218,9 +209,8 @@ class ReadLinkServiceTest {
 
   @Test
   void getStatsUsesStoredCodeForPendingLookup() {
-    LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    entity.setClickCount(5);
-    when(repository.findByCodeIgnoreCase("ABC1234")).thenReturn(java.util.Optional.of(entity));
+    Link link = new Link("abc1234", "https://example.com", null, 5, NOW);
+    when(repository.findByCodeIgnoreCase("ABC1234")).thenReturn(Optional.of(link));
     when(clickCounter.get("abc1234")).thenReturn(2L);
 
     LinkStats stats = service.getStats("ABC1234");

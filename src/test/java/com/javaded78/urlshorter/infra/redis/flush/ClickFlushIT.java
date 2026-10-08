@@ -114,7 +114,7 @@ class ClickFlushIT {
     click("flush06", 7);
     doThrow(new org.springframework.dao.DataAccessException("connection lost") {})
         .when(repository)
-        .batchIncrementClickCounts(any(), any());
+        .batchIncrementClicks(any(Map.class));
 
     assertThatThrownBy(() -> flushService.flush())
         .isInstanceOf(IllegalStateException.class)

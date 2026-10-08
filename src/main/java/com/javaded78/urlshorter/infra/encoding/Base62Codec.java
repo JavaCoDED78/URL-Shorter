@@ -1,4 +1,4 @@
-package com.javaded78.urlshorter.domain.service;
+package com.javaded78.urlshorter.infra.encoding;
 
 import org.springframework.stereotype.Component;
 
@@ -18,6 +18,10 @@ import org.springframework.stereotype.Component;
  * values above it would cause.
  *
  * <p>The component is stateless, so it is trivially thread-safe.
+ *
+ * <p>This is a Base62 <em>implementation</em> detail (an external encoding with no business
+ * meaning), so it lives behind {@code infra.encoding} rather than in the domain — the domain only
+ * depends on the {@link com.javaded78.urlshorter.domain.service.CodeGenerator} port.
  */
 @Component
 public class Base62Codec {

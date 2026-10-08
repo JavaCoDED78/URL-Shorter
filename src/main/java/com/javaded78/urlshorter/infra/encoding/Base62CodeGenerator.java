@@ -1,13 +1,15 @@
-package com.javaded78.urlshorter.domain.service;
+package com.javaded78.urlshorter.infra.encoding;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
+import com.javaded78.urlshorter.domain.service.CodeGenerator;
 import java.security.SecureRandom;
 import java.util.random.RandomGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Base62 code generator (Task 3.4 implementation).
+ * Base62 code generator — the production {@link CodeGenerator} (the {@code infra.encoding}
+ * implementation of the {@code domain.service.CodeGenerator} port).
  *
  * <p>Draws a uniform value from the whole {@code [62^(length-1), 62^length)} range and encodes it,
  * so every code has exactly {@code length} characters and the full keyspace is used — no

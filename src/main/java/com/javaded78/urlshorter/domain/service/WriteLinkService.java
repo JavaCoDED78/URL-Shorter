@@ -5,7 +5,6 @@ import com.javaded78.urlshorter.domain.cache.LinkCache;
 import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
-import com.javaded78.urlshorter.infra.persistence.LinkEntity;
 import java.time.Clock;
 import java.time.Instant;
 import org.slf4j.Logger;
@@ -137,8 +136,7 @@ public class WriteLinkService {
    * @throws LinkNotFoundException if no such link exists
    */
   public void delete(String code) {
-    Link link =
-        repository.findByCodeIgnoreCase(code).map(this::toDomain).orElseThrow(() -> notFound(code));
+    Link link = repository.findByCodeIgnoreCase(code).orElseThrow(() -> notFound(code));
     linkCache.evict(link.code());
     clickCounter.delete(link.code());
     repository.deleteByCode(link.code());
@@ -152,7 +150,9 @@ public class WriteLinkService {
       throw new AliasAlreadyExistsException(code);
     }
     try {
-      return save(code, originalUrl, expiresAt);
+      Link link = Link.created(code, originalUrl, expiresAt, clock.instant());
+      repository.save(link);
+      return link;
     } catch (DataIntegrityViolationException ex) {
       // Lost the race between existsByCode and insert — the database
       // unique index is the final authority.
@@ -164,7 +164,9 @@ public class WriteLinkService {
     for (int attempt = 1; attempt <= maxCollisionRetries; attempt++) {
       String code = codeGenerator.generate();
       try {
-        return save(code, originalUrl, expiresAt);
+        Link link = Link.created(code, originalUrl, expiresAt, clock.instant());
+        repository.save(link);
+        return link;
       } catch (DataIntegrityViolationException ex) {
         log.debug(
             "generated code collision on attempt {}/{}: {}", attempt, maxCollisionRetries, code);
@@ -172,20 +174,6 @@ public class WriteLinkService {
     }
     throw new IllegalStateException(
         "could not generate a unique code after " + maxCollisionRetries + " collision retries");
-  }
-
-  private Link save(String code, String originalUrl, Instant expiresAt) {
-    LinkEntity entity = repository.saveAndFlush(new LinkEntity(code, originalUrl, expiresAt));
-    return toDomain(entity);
-  }
-
-  private Link toDomain(LinkEntity entity) {
-    return new Link(
-        entity.getCode(),
-        entity.getOriginalUrl(),
-        entity.getExpiresAt(),
-        entity.getClickCount(),
-        entity.getCreatedAt());
   }
 
   private LinkNotFoundException notFound(String code) {

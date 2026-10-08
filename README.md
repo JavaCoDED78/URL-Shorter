@@ -358,11 +358,12 @@ src/main/java/com/javaded78/urlshorter/
 │   ├── model/            # domain objects (no Redis/JPA specifics)
 │   ├── cache/            # cache port: CachedLink (stable wire format) + LinkCache
 │   ├── counter/          # counter port: ClickCounter (no Redis types in signatures)
-│   ├── repository/       # persistence port (Spring Data repository = JPA boundary)
+│   ├── repository/       # pure persistence port (domain interface; no Spring Data/JPA)
 │   └── service/          # application/domain services
 │
 ├── infra/
-│   ├── persistence/      # JPA entity, LinkRepository implementation concerns
+│   ├── encoding/         # Base62Codec + Base62CodeGenerator (implements domain.service.CodeGenerator)
+│   ├── persistence/      # JPA entity, JpaLinkRepository + LinkJpaRepository (Spring Data)
 │   └── redis/
 │       ├── cache/        # Redis cache implementation (RedisLinkCache)
 │       ├── counter/      # Redis click counters (RedisClickCounter)
@@ -390,9 +391,10 @@ monitoring/                # repo-root Prometheus/Grafana configuration as code
 
 The service layer talks to Redis only through the `domain/cache` and
 `domain/counter` ports — never through Redis command details. The
-`domain/repository` port is a Spring Data repository, which is the
-deliberate JPA boundary of the domain (see
-[`docs/adr/`](docs/adr/) for the recorded decisions).
+`domain/repository` port is a pure domain interface (no Spring Data, JPA, or
+`LinkEntity`); the JPA boundary lives in `infra.persistence` as
+`JpaLinkRepository` (a thin adapter) over the Spring Data
+`LinkJpaRepository`, where `LinkEntity`, JPQL and `@Transactional` all belong.
 
 ## 🚀 Quick Start
 

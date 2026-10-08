@@ -1,10 +1,9 @@
-package com.javaded78.urlshorter.domain.repository;
+package com.javaded78.urlshorter.infra.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
-import com.javaded78.urlshorter.infra.persistence.LinkEntity;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,11 +11,19 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 
+/**
+ * JPA slice for {@link LinkEntity} (the {@code infra.persistence} implementation of the {@code
+ * domain.repository.LinkRepository} port, adapted by {@link JpaLinkRepository}).
+ *
+ * <p>This is the persistence-only slice — the port and its {@link JpaLinkRepository} adapter are
+ * covered by the domain/service tests. Here we assert the JPA/PostgreSQL behaviour: the unique
+ * constraint, the atomic bulk updates, case-insensitive lookup and {@code null} expiration.
+ */
 @DataJpaTest
 @Import(TestcontainersConfiguration.class)
-class LinkRepositoryTest {
+class LinkJpaRepositoryTest {
 
-  @Autowired LinkRepository repository;
+  @Autowired LinkJpaRepository repository;
 
   @Test
   void savesAndFindsLinkByCode() {

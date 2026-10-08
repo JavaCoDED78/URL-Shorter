@@ -3,11 +3,11 @@ package com.javaded78.urlshorter.domain.service;
 import com.javaded78.urlshorter.domain.cache.CachedLink;
 import com.javaded78.urlshorter.domain.cache.LinkCache;
 import com.javaded78.urlshorter.domain.counter.ClickCounter;
+import com.javaded78.urlshorter.domain.model.ExpirationPolicy;
 import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.model.LinkStats;
 import com.javaded78.urlshorter.domain.model.ResolvedLink;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
-import com.javaded78.urlshorter.infra.persistence.LinkEntity;
 import java.time.Clock;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -77,10 +77,7 @@ public class ReadLinkService {
    * @throws LinkNotFoundException if no such link exists
    */
   public Link getByCode(String code) {
-    return repository
-        .findByCodeIgnoreCase(code)
-        .map(this::toDomain)
-        .orElseThrow(() -> notFound(code));
+    return repository.findByCodeIgnoreCase(code).orElseThrow(() -> notFound(code));
   }
 
   /**
@@ -91,8 +88,7 @@ public class ReadLinkService {
    * @throws LinkNotFoundException if no such link exists
    */
   public LinkStats getStats(String code) {
-    Link link =
-        repository.findByCodeIgnoreCase(code).map(this::toDomain).orElseThrow(() -> notFound(code));
+    Link link = repository.findByCodeIgnoreCase(code).orElseThrow(() -> notFound(code));
     long pending = clickCounter.get(link.code());
     return new LinkStats(link.code(), link.clickCount() + pending);
   }
@@ -119,7 +115,7 @@ public class ReadLinkService {
     if (cached.isPresent()) {
       metrics.cacheHit();
       CachedLink hit = cached.get();
-      if (hit.isExpired(clock.instant())) {
+      if (ExpirationPolicy.isExpired(hit.expiresAt(), clock.instant())) {
         metrics.linkExpired();
         throw new LinkExpiredException(code);
       }
@@ -131,12 +127,8 @@ public class ReadLinkService {
     metrics.cacheMiss();
     Link link =
         metrics.timePostgresLookup(
-            () ->
-                repository
-                    .findByCodeIgnoreCase(code)
-                    .map(this::toDomain)
-                    .orElseThrow(() -> notFound(code)));
-    if (link.isExpired(clock.instant())) {
+            () -> repository.findByCodeIgnoreCase(code).orElseThrow(() -> notFound(code)));
+    if (ExpirationPolicy.isExpired(link.expiresAt(), clock.instant())) {
       // Expired links are never cached (Task 6.4) and never counted.
       metrics.linkExpired();
       throw new LinkExpiredException(code);
@@ -163,14 +155,5 @@ public class ReadLinkService {
   private LinkNotFoundException notFound(String code) {
     metrics.linkNotFound();
     return new LinkNotFoundException(code);
-  }
-
-  private Link toDomain(LinkEntity entity) {
-    return new Link(
-        entity.getCode(),
-        entity.getOriginalUrl(),
-        entity.getExpiresAt(),
-        entity.getClickCount(),
-        entity.getCreatedAt());
   }
 }

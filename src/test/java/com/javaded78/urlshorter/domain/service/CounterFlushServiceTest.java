@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import java.util.Map;
-import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataAccessException;
@@ -34,22 +33,14 @@ class CounterFlushServiceTest {
   @Test
   void flushAppliesBatchUpdateForDrainedCounters() {
     when(clickCounter.drainAll()).thenReturn(Map.of("abc1234", 3L, "other12", 7L));
-    when(repository.batchIncrementClickCounts(any(), any())).thenReturn(2);
+    when(repository.batchIncrementClicks(any(Map.class))).thenReturn(2);
 
     int updated = flushService.flush();
 
     assertThat(updated).isEqualTo(2);
-    // reassemble code -> increment; map iteration order is not guaranteed
-    ArgumentCaptor<String[]> codes = ArgumentCaptor.forClass(String[].class);
-    ArgumentCaptor<Long[]> increments = ArgumentCaptor.forClass(Long[].class);
-    verify(repository).batchIncrementClickCounts(codes.capture(), increments.capture());
-    Map<String, Long> applied =
-        IntStream.range(0, codes.getValue().length)
-            .boxed()
-            .collect(
-                java.util.stream.Collectors.toMap(
-                    i -> codes.getValue()[i], i -> increments.getValue()[i]));
-    assertThat(applied).isEqualTo(Map.of("abc1234", 3L, "other12", 7L));
+    ArgumentCaptor<Map<String, Long>> captured = ArgumentCaptor.forClass(Map.class);
+    verify(repository).batchIncrementClicks(captured.capture());
+    assertThat(captured.getValue()).isEqualTo(Map.of("abc1234", 3L, "other12", 7L));
   }
 
   @Test
@@ -59,13 +50,13 @@ class CounterFlushServiceTest {
     int updated = flushService.flush();
 
     assertThat(updated).isZero();
-    verify(repository, never()).batchIncrementClickCounts(any(), any());
+    verify(repository, never()).batchIncrementClicks(any(Map.class));
   }
 
   @Test
   void dbFailureRestoresDrainedCountersToRedis() {
     when(clickCounter.drainAll()).thenReturn(Map.of("abc1234", 3L));
-    when(repository.batchIncrementClickCounts(any(), any()))
+    when(repository.batchIncrementClicks(any(Map.class)))
         .thenThrow(new DataAccessException("connection lost") {});
 
     assertThatThrownBy(() -> flushService.flush())

@@ -75,7 +75,7 @@ class PostgresFailureIT {
   void createReturns503WhenDatabaseUnavailable() {
     doThrow(new CannotGetJdbcConnectionException("simulated database outage"))
         .when(repository)
-        .saveAndFlush(any());
+        .save(any(com.javaded78.urlshorter.domain.model.Link.class));
 
     long started = System.nanoTime();
     ResponseEntity<Map> response = post("https://example.com/db-down", "s18create");
@@ -105,7 +105,7 @@ class PostgresFailureIT {
                 "Could not open JPA EntityManager for transaction",
                 new CannotGetJdbcConnectionException("simulated database outage")))
         .when(repository)
-        .saveAndFlush(any());
+        .save(any(com.javaded78.urlshorter.domain.model.Link.class));
 
     ResponseEntity<Map> response = post("https://example.com/db-down-tx", "s18txbegin");
 
@@ -151,20 +151,19 @@ class PostgresFailureIT {
               if (dbDown.get()) {
                 throw new CannotGetJdbcConnectionException("simulated database outage");
               }
-              String[] codes = invocation.getArgument(0);
-              Long[] increments = invocation.getArgument(1);
+              Map<String, Long> clicks = invocation.getArgument(0);
               int updated = 0;
-              for (int i = 0; i < codes.length; i++) {
+              for (Map.Entry<String, Long> entry : clicks.entrySet()) {
                 updated +=
                     jdbcTemplate.update(
                         "UPDATE links SET click_count = click_count + ? WHERE code = ?",
-                        increments[i],
-                        codes[i]);
+                        entry.getValue(),
+                        entry.getKey());
               }
               return updated;
             })
         .when(repository)
-        .batchIncrementClickCounts(any(), any());
+        .batchIncrementClicks(any(Map.class));
 
     // DB down during flush: counters restored to Redis, failure surfaces
     org.assertj.core.api.Assertions.assertThatThrownBy(flushService::flush)

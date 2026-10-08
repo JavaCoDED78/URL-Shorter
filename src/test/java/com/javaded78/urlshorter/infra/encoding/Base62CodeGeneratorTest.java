@@ -1,8 +1,9 @@
-package com.javaded78.urlshorter.domain.service;
+package com.javaded78.urlshorter.infra.encoding;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
+import com.javaded78.urlshorter.domain.service.CodeGenerator;
 import java.security.SecureRandom;
 import java.util.HashSet;
 import java.util.Set;

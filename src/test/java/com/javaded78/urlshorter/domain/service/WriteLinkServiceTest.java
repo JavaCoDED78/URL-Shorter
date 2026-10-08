@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -13,12 +16,13 @@ import static org.mockito.Mockito.when;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
 import com.javaded78.urlshorter.domain.model.Link;
-import com.javaded78.urlshorter.infra.persistence.LinkEntity;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 
@@ -84,12 +88,6 @@ class WriteLinkServiceTest {
     when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
   }
 
-  private static LinkEntity persisted(LinkEntity entity) {
-    entity.setCreatedAt(Instant.now());
-    entity.setUpdatedAt(Instant.now());
-    return entity;
-  }
-
   /** The fixed reference instant all tests run against (see {@link #clock}). */
   private static final Instant NOW = Instant.parse("2025-06-01T00:00:00Z");
 
@@ -98,8 +96,7 @@ class WriteLinkServiceTest {
   @Test
   void createsLinkWithGeneratedCode() {
     when(codeGenerator.generate()).thenReturn("abc1234");
-    when(repository.saveAndFlush(any(LinkEntity.class)))
-        .thenAnswer(invocation -> persisted(invocation.getArgument(0)));
+    doNothing().when(repository).save(any(Link.class));
 
     Link link = service.create("https://example.com", null, null);
 
@@ -113,9 +110,20 @@ class WriteLinkServiceTest {
   @Test
   void retriesOnGeneratedCodeCollision() {
     when(codeGenerator.generate()).thenReturn("taken1", "fresh12");
-    when(repository.saveAndFlush(any(LinkEntity.class)))
-        .thenThrow(new DataIntegrityViolationException("duplicate key"))
-        .thenAnswer(invocation -> persisted(invocation.getArgument(0)));
+    // Sequential per-call behavior: first save collides, second succeeds.
+    // A void method can't be `when(...).thenThrow().thenAnswer()` chained, so
+    // use an Answer instead of doThrow()/doNothing() (which would collapse to
+    // the last registration and never throw).
+    AtomicInteger saveCalls = new AtomicInteger();
+    doAnswer(
+            invocation -> {
+              if (saveCalls.getAndIncrement() == 0) {
+                throw new DataIntegrityViolationException("duplicate key");
+              }
+              return null;
+            })
+        .when(repository)
+        .save(any(Link.class));
 
     Link link = service.create("https://example.com", null, null);
 
@@ -126,8 +134,9 @@ class WriteLinkServiceTest {
   @Test
   void failsWhenCollisionRetriesAreExhausted() {
     when(codeGenerator.generate()).thenReturn("taken1");
-    when(repository.saveAndFlush(any(LinkEntity.class)))
-        .thenThrow(new DataIntegrityViolationException("duplicate key"));
+    doThrow(new DataIntegrityViolationException("duplicate key"))
+        .when(repository)
+        .save(any(Link.class));
 
     assertThatThrownBy(() -> service.create("https://example.com", null, null))
         .isInstanceOf(IllegalStateException.class)
@@ -168,8 +177,7 @@ class WriteLinkServiceTest {
 
   @Test
   void createsLinkWithNormalizedAlias() {
-    when(repository.saveAndFlush(any(LinkEntity.class)))
-        .thenAnswer(invocation -> persisted(invocation.getArgument(0)));
+    doNothing().when(repository).save(any(Link.class));
 
     Link link = service.create("https://example.com", "My-Link", null);
 
@@ -187,8 +195,9 @@ class WriteLinkServiceTest {
   @Test
   void rejectsAliasThatWinsTheRaceBetweenCheckAndInsert() {
     when(repository.existsByCode("racer1")).thenReturn(false);
-    when(repository.saveAndFlush(any(LinkEntity.class)))
-        .thenThrow(new DataIntegrityViolationException("duplicate key"));
+    doThrow(new DataIntegrityViolationException("duplicate key"))
+        .when(repository)
+        .save(any(Link.class));
 
     assertThatThrownBy(() -> service.create("https://example.com", "racer1", null))
         .isInstanceOf(AliasAlreadyExistsException.class);
@@ -211,7 +220,7 @@ class WriteLinkServiceTest {
     assertThatThrownBy(() -> service.create("https://example.com", null, NOW.minusSeconds(60)))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("expiresAt");
-    verify(repository, never()).saveAndFlush(any(LinkEntity.class));
+    verify(repository, never()).save(any(Link.class));
   }
 
   @Test
@@ -224,8 +233,8 @@ class WriteLinkServiceTest {
 
   @Test
   void deleteEvictsCacheAroundTheDatabaseDelete() {
-    LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+    Link link = new Link("abc1234", "https://example.com", null, 0, NOW);
+    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(Optional.of(link));
 
     service.delete("abc1234");
 
@@ -241,8 +250,8 @@ class WriteLinkServiceTest {
 
   @Test
   void deleteUsesStoredLowercaseCode() {
-    LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    when(repository.findByCodeIgnoreCase("ABC1234")).thenReturn(java.util.Optional.of(entity));
+    Link link = new Link("abc1234", "https://example.com", null, 0, NOW);
+    when(repository.findByCodeIgnoreCase("ABC1234")).thenReturn(Optional.of(link));
 
     service.delete("ABC1234");
 
@@ -263,8 +272,8 @@ class WriteLinkServiceTest {
 
   @Test
   void deleteDoesNotEvictAgainWhenDatabaseDeleteFails() {
-    LinkEntity entity = persisted(new LinkEntity("abc1234", "https://example.com", null));
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.of(entity));
+    Link link = new Link("abc1234", "https://example.com", null, 0, NOW);
+    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(Optional.of(link));
     org.mockito.Mockito.doThrow(new DataIntegrityViolationException("db down"))
         .when(repository)
         .deleteByCode("abc1234");

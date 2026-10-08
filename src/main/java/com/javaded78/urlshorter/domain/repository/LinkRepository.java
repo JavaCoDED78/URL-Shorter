@@ -1,68 +1,46 @@
 package com.javaded78.urlshorter.domain.repository;
 
-import com.javaded78.urlshorter.infra.persistence.LinkEntity;
+import com.javaded78.urlshorter.domain.model.Link;
+import java.util.Map;
 import java.util.Optional;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Persistence operations for {@link LinkEntity} (Task 2.2). The interface lives in the domain;
- * {@code LinkEntity} and the JPA mappings stay in {@code infra.persistence} — this import is the
- * deliberate JPA boundary of the domain: the port is a Spring Data repository, so the domain
- * already speaks JPA through it and the entity type appears in signatures.
+ * Persistence port for {@link Link} (Task 2.2).
  *
- * <p>Operation split (Task 2.4):
+ * <p>A <b>pure domain interface</b> — no Spring Data, no JPA, no {@code LinkEntity}: the domain
+ * depends only on the {@link Link} model, and the {@link JpaLinkRepository} adapter ({@code
+ * infra.persistence}) implements this port over Spring Data JPA. That is the single boundary that
+ * keeps Spring Data out of the domain (rule 6).
+ *
+ * <p>Operation split:
  *
  * <ul>
- *   <li>JPA derived queries: point lookups by {@code code} — the primary key index makes them
- *       cheap, and entities are needed in full.
- *   <li>Bulk JPQL: {@code UPDATE} of click counts and {@code DELETE} by {@code code} — single
- *       statements, no entity load into the persistence context. Click increments are the hot write
- *       path (flush, Sprint 8), so load-modify-save would be wasted work and a lost-update risk.
+ *   <li>Point lookups by {@code code} — {@link #findByCodeIgnoreCase(String)} (case-insensitive,
+ *       matching the {@code lower(code)} unique index) and {@link #existsByCode(String)} (alias
+ *       pre-check optimization).
+ *   <li>{@link #save(Link)} — insert with an immediate flush, so a unique-constraint collision
+ *       surfaces inside {@link com.javaded78.urlshorter.domain.service.WriteLinkService}'s retry
+ *       loop (the database unique index is the real concurrency guarantee).
+ *   <li>Bulk {@link #batchIncrementClicks(Map)} — one statement for the whole drain batch; the
+ *       flush relies on this being atomic.
+ *   <li>{@link #deleteByCode(String)} — bulk delete of the row and its pending counter.
  * </ul>
  */
-public interface LinkRepository extends JpaRepository<LinkEntity, String> {
+public interface LinkRepository {
 
-  Optional<LinkEntity> findByCode(String code);
-
-  /**
-   * Case-insensitive lookup for the redirect endpoint (Sprint 5). Matches the {@code lower(code)}
-   * functional unique index from V2, so PostgreSQL can serve it from the index.
-   */
-  @Query("SELECT l FROM LinkEntity l WHERE lower(l.code) = lower(:code)")
-  Optional<LinkEntity> findByCodeIgnoreCase(@Param("code") String code);
+  Optional<Link> findByCodeIgnoreCase(String code);
 
   boolean existsByCode(String code);
 
-  @Transactional
-  @Modifying(clearAutomatically = true, flushAutomatically = true)
-  @Query("UPDATE LinkEntity l SET l.clickCount = l.clickCount + :increment WHERE l.code = :code")
-  int incrementClickCount(@Param("code") String code, @Param("increment") long increment);
+  /** Total number of links — used by tests and operational checks, not the hot path. */
+  long count();
 
-  @Transactional
-  @Modifying(clearAutomatically = true, flushAutomatically = true)
-  @Query("DELETE FROM LinkEntity l WHERE l.code = :code")
-  int deleteByCode(@Param("code") String code);
+  /** Persists {@code link}; the unique constraint rejects duplicate codes (flushed immediately). */
+  void save(Link link);
 
-  /**
-   * Batch click-count update for the flush (Task 8.5): one statement for all drained counters via
-   * {@code unnest}, not one UPDATE per code. The statement is atomic — on failure nothing is
-   * applied, which the flush recovery relies on.
-   */
-  @Transactional
-  @Modifying(clearAutomatically = true, flushAutomatically = true)
-  @Query(
-      value =
-          """
-            UPDATE links l
-            SET click_count = l.click_count + batch.inc
-            FROM unnest(:codes, :increments) AS batch(code, inc)
-            WHERE l.code = batch.code
-            """,
-      nativeQuery = true)
-  int batchIncrementClickCounts(
-      @Param("codes") String[] codes, @Param("increments") Long[] increments);
+  /** Bulk-raises persisted click counts for the drained Redis counters (atomic batch). */
+  int batchIncrementClicks(Map<String, Long> clicks);
+
+  /** Removes the row by code (bulk DELETE, no entity load). */
+  int deleteByCode(String code);
 }

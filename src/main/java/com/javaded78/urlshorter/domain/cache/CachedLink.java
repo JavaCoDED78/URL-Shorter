@@ -27,12 +27,4 @@ public record CachedLink(String code, String originalUrl, Instant expiresAt) {
       throw new IllegalArgumentException("originalUrl must not be null or blank");
     }
   }
-
-  /**
-   * Same policy as the domain: {@code expiresAt <= now} is expired, {@code null} never expires. All
-   * timestamps are UTC.
-   */
-  public boolean isExpired(Instant now) {
-    return expiresAt != null && !expiresAt.isAfter(now);
-  }
 }

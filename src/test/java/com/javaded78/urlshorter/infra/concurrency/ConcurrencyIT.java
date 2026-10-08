@@ -130,7 +130,7 @@ class ConcurrencyIT {
     assertThat(statsClickCount("conc10k")).isEqualTo(MASSIVE_CLICKS);
     var persisted = spiedRepository.findByCodeIgnoreCase("conc10k");
     assertThat(persisted).isPresent();
-    assertThat(persisted.get().getClickCount()).isEqualTo(MASSIVE_CLICKS);
+    assertThat(persisted.get().clickCount()).isEqualTo(MASSIVE_CLICKS);
   }
 
   @Test
@@ -174,13 +174,13 @@ class ConcurrencyIT {
   void collisionRetriesAreBounded() {
     doThrow(new DataIntegrityViolationException("duplicate key"))
         .when(spiedRepository)
-        .saveAndFlush(any());
+        .save(any(com.javaded78.urlshorter.domain.model.Link.class));
 
     assertThatThrownBy(() -> linkService.create("https://example.com/boom", null, null))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("collision retries");
 
-    verify(spiedRepository, times(5)).saveAndFlush(any());
+    verify(spiedRepository, times(5)).save(any(com.javaded78.urlshorter.domain.model.Link.class));
   }
 
   @Test

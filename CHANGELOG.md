@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.2.0 — Pure domain repository port and infrastructure separation (2026-10-08)
+
+Clean-architecture reorganization that removes the JPA/Spring Data layer from
+the domain. The `domain.repository.LinkRepository` was previously the Spring
+Data interface (the concrete JPA boundary leaking into the domain, against the
+repository's own rule that infra stays out of the domain).
+
+- **New pure port**: `domain.repository.LinkRepository` is now a domain
+  interface only (`findByCodeIgnoreCase`, `existsByCode`, `count()`, `save(Link)`,
+  `deleteByCode`, `batchIncrementClicks(Map)`). It knows nothing about Spring
+  Data, JPA, or `LinkEntity`.
+- **New infra split** in `infra.persistence`:
+  - `LinkJpaRepository` — the Spring Data JPA slice for `LinkEntity` (JPQL /
+    native statements, `@Transactional` boundaries).
+  - `JpaLinkRepository` — the adapter implementing the port over
+    `LinkJpaRepository`, with the single `LinkEntity ↔ Link` mapping. The
+    `save()` semantic keeps an immediate flush so a unique-constraint collision
+    surfaces in `WriteLinkService`'s retry loop.
+- **Code generation moved out of the domain**: `Base62Codec` and
+  `Base62CodeGenerator` now live in `infra.encoding` and implement the still-domain
+  `CodeGenerator` port. Tests migrated to `infra.encoding`.
+- **Shared expiration value object**: `domain.model.ExpirationPolicy`
+  centralizes the `isExpired` business rule so `Link` and `CachedLink` cannot
+  diverge; `Link.created(...)` now takes an explicit `createdAt` for
+  deterministic tests under the injected `Clock`.
+- **Port API change**: `WriteLinkService.save()` returns `void` (previously
+  the entity) and `batchIncrementClicks` takes a `Map<String, Long>`. Tests
+  updated accordingly (unit + `ConcurrencyIT`, `PostgresFailureIT`,
+  `ObservabilityIT`, `ClickFlushIT`).
+
+Result: the dependency rule is enforced at the boundary — Spring Data, JPQL and
+`@Transactional` now live exclusively in `infra.persistence`, and the domain
+depends only on the `Link` model and its ports. `./gradlew test`: 250/250
+green; `./gradlew clean build` green; `spotlessCheck` clean.
+
 ## 1.1.3 — Read/write split and sealed error hierarchy
 
 A set of structural changes to the request-handling core: the monolithic

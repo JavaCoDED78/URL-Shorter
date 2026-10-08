@@ -61,14 +61,17 @@ src/main/java/com/javaded78/urlshorter/
 │   ├── model/            # domain objects (no Redis-specific fields here)
 │   ├── cache/            # cache port: CachedLink (stable wire format) + LinkCache
 │   ├── counter/          # counter port: ClickCounter (no Redis types in signatures)
-│   ├── repository/       # persistence ports/repositories
+│   ├── repository/       # pure persistence port (domain interface; no Spring Data/JPA)
 │   └── service/          # application/domain services
 ├── infra/
+│   ├── encoding/         # Base62Codec + Base62CodeGenerator (implements domain.service.CodeGenerator)
+│   ├── persistence/      # JPA entity + LinkRepository implementation (JpaLinkRepository over LinkJpaRepository)
 │   └── redis/
 │       ├── cache/        # Redis cache implementation (LinkCache: get/put/evict)
 │       ├── counter/      # click counters
 │       ├── script/       # Lua scripts
-│       └── flush/        # scheduled flush job
+│       ├── flush/        # scheduled flush job
+│       └── limiter/      # rate limiter (Redis-backed fixed window)
 └── config/               # properties, filters, OpenAPI, startup diagnostics
 
 monitoring/               # repo-root Prometheus/Grafana configuration as code
