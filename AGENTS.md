@@ -63,6 +63,8 @@ src/main/java/com/javaded78/urlshorter/
 │   ├── counter/          # counter port: ClickCounter (no Redis types in signatures)
 │   ├── repository/       # pure persistence port (domain interface; no Spring Data/JPA)
 │   └── service/          # application/domain services
+│   ├── exception/        # @ControllerAdvice-driven errors (sealed hierarchy)
+│   └── validation/       # input validators (AliasValidator, UrlValidator)
 ├── infra/
 │   ├── encoding/         # Base62Codec + Base62CodeGenerator (implements domain.service.CodeGenerator)
 │   ├── persistence/      # JPA entity + LinkRepository implementation (JpaLinkRepository over LinkJpaRepository)
