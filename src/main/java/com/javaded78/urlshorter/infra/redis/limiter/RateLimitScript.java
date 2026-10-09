@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.infra.redis.limiter;
 
+import java.time.Duration;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
@@ -35,7 +36,7 @@ public class RateLimitScript {
   }
 
   /** Redis-script argument: the window expressed in whole seconds. */
-  static String windowInSeconds(java.time.Duration window) {
+  static String windowInSeconds(Duration window) {
     return String.valueOf(window.getSeconds());
   }
 }

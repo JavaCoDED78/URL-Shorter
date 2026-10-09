@@ -6,6 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -26,8 +29,7 @@ public class RedisClickCounter implements ClickCounter {
 
   static final String KEY_PREFIX = "clicks:";
 
-  private static final org.slf4j.Logger log =
-      org.slf4j.LoggerFactory.getLogger(RedisClickCounter.class);
+  private static final Logger log = LoggerFactory.getLogger(RedisClickCounter.class);
 
   private final StringRedisTemplate redis;
   private final CounterDrainScript drainScript;
@@ -42,7 +44,7 @@ public class RedisClickCounter implements ClickCounter {
     try {
       redis.opsForValue().increment(key(code));
       return true;
-    } catch (org.springframework.dao.DataAccessException ex) {
+    } catch (DataAccessException ex) {
       // Task 17.2: the redirect must survive a dead Redis; the click is
       // dropped (the caller reports the failure via
       // MetricsRecorder#clickIncrementFailed) so redirect availability wins.
