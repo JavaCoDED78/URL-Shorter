@@ -2,7 +2,7 @@ package com.javaded78.urlshorter.infra.redis.limiter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -14,37 +14,33 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 
 /**
  * Key-scoped fixed-window rate limiter (Task 20.4): a single Redis counter ({@code
- * ratelimit:{key}}) is {@code INCR}ed on every probe; the first probe of a window arms a {@code
- * Duration} TTL via {@code EXPIRE}, after which Redis self-deletes the key and the next probe
- * restarts the window. Admission is {@code count <= maxRequests}.
+ * ratelimit:{key}}) is {@code INCR}ed on every probe. {@code INCR} and the window {@code EXPIRE}
+ * run inside one atomic Lua script (see {@link RateLimitScript}), so the count and its TTL are
+ * never two separate round-trips that could drift apart. Admission is {@code count <= maxRequests}.
  */
 class RedisRateLimiterTest {
 
   private final StringRedisTemplate redis = mock(StringRedisTemplate.class);
 
-  @SuppressWarnings("unchecked")
-  private final ValueOperations<String, String> ops = mock(ValueOperations.class);
-
   private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
   private final MetricsRecorder metrics = new MetricsRecorder(registry);
 
+  private final RateLimitScript script = new RateLimitScript();
+
   private final RedisRateLimiter limiter =
-      new RedisRateLimiter(redis, Duration.ofSeconds(10), 5, metrics);
+      new RedisRateLimiter(redis, Duration.ofSeconds(10), 5, metrics, script);
 
   RedisRateLimiterTest() {
-    when(redis.opsForValue()).thenReturn(ops);
+    // INCR inside the Lua script: first four probes admit, fifth exceeds the ceiling.
+    when(redis.execute(any(), anyList(), any())).thenReturn(1L, 2L, 3L, 4L, 6L);
   }
 
   @Test
   void admitsUpToLimitThenDenies() {
-    // First four probes: INCR returns 1..4, all admitted; the fifth probe exceeds the limit.
-    when(ops.increment("ratelimit:create")).thenReturn(1L, 2L, 3L, 4L, 6L);
-
     assertThat(limiter.tryAcquire("create")).isTrue();
     assertThat(limiter.tryAcquire("create")).isTrue();
     assertThat(limiter.tryAcquire("create")).isTrue();
@@ -53,29 +49,27 @@ class RedisRateLimiterTest {
   }
 
   @Test
-  void firstProbeOfWindowArmsTtl() {
-    when(ops.increment("ratelimit:create")).thenReturn(1L, 2L);
+  void oneLuaRoundTripPerProbeArmsWindow() {
+    when(redis.execute(any(), anyList(), any())).thenReturn(1L, 2L);
 
-    assertThat(limiter.tryAcquire("create")).isTrue();
-    assertThat(limiter.tryAcquire("create")).isTrue();
+    limiter.tryAcquire("create");
+    limiter.tryAcquire("create");
 
-    // The TTL is armed exactly once — on the first probe of the window. Redis owns the window and
-    // self-deletes the key when it elapses, so subsequent probes never re-arm it.
-    verify(redis, times(1)).expire(anyString(), any(Duration.class));
+    // One Lua round-trip per probe — the window TTL is armed inside the script, so there is a
+    // single atomic call per probe (no separate INCR then EXPIRE round-trip).
+    verify(redis, times(2)).execute(any(), anyList(), any());
   }
 
   @Test
   void keysAreNamespacedSoTheyDoNotCollide() {
-    when(ops.increment(anyString())).thenReturn(1L);
-
     assertThat(limiter.tryAcquire("create")).isTrue();
     assertThat(limiter.tryAcquire("redirect:abc")).isTrue();
-    verify(redis, times(2)).expire(anyString(), any(Duration.class));
+    verify(redis, times(2)).execute(any(), anyList(), any());
   }
 
   @Test
   void failureOnRedisAllowsToPreserveAvailability() {
-    when(ops.increment("ratelimit:create"))
+    when(redis.execute(any(), anyList(), any()))
         .thenAnswer(
             invocation -> {
               throw new InvalidDataAccessApiUsageException("redis down");

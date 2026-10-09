@@ -46,7 +46,7 @@ public class RedisClickCounter implements ClickCounter {
       // Task 17.2: the redirect must survive a dead Redis; the click is
       // dropped (the caller reports the failure via
       // MetricsRecorder#clickIncrementFailed) so redirect availability wins.
-      log.warn("click counter unavailable for {} — click dropped: {}", key(code), ex.toString());
+      log.warn("click counter unavailable for {} — click dropped: {}", key(code), ex);
       return false;
     }
   }
@@ -54,7 +54,18 @@ public class RedisClickCounter implements ClickCounter {
   @Override
   public long get(String code) {
     String value = redis.opsForValue().get(key(code));
-    return value == null ? 0 : Long.parseLong(value);
+    // A corrupted/foreign value would surface as an uncontrolled NumberFormatException; treat it as
+    // "no counter" (zero) rather than blowing up the redirect's read path.
+    return value == null ? 0 : safeLong(value);
+  }
+
+  private static long safeLong(String value) {
+    try {
+      return Long.parseLong(value);
+    } catch (NumberFormatException ex) {
+      log.warn("unexpected non-numeric Redis counter value for {}: '{}'", key(value), value);
+      return 0;
+    }
   }
 
   @Override

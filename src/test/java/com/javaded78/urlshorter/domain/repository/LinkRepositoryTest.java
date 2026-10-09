@@ -42,10 +42,10 @@ class LinkJpaRepositoryTest {
   }
 
   @Test
-  void incrementsClickCountInBulk() {
+  void incrementsClickCountViaBatchUpdate() {
     repository.saveAndFlush(new LinkEntity("counter1", "https://example.com", null));
 
-    int updated = repository.incrementClickCount("counter1", 5);
+    int updated = repository.batchIncrementClickCounts(new String[] {"counter1"}, new Long[] {5L});
 
     assertThat(updated).isEqualTo(1);
     assertThat(repository.findByCode("counter1"))

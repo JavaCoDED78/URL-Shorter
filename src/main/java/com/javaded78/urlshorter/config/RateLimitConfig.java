@@ -3,6 +3,7 @@ package com.javaded78.urlshorter.config;
 import com.javaded78.urlshorter.domain.service.MetricsRecorder;
 import com.javaded78.urlshorter.domain.service.RateLimiter;
 import com.javaded78.urlshorter.infra.redis.limiter.NoOpRateLimiter;
+import com.javaded78.urlshorter.infra.redis.limiter.RateLimitScript;
 import com.javaded78.urlshorter.infra.redis.limiter.RedisRateLimiter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -28,8 +29,12 @@ public class RateLimitConfig {
   @Bean
   @ConditionalOnProperty(prefix = "shortener.rate-limiter", value = "enabled", havingValue = "true")
   public RateLimiter redisRateLimiter(
-      StringRedisTemplate redis, RateLimitProperties properties, MetricsRecorder metrics) {
-    return new RedisRateLimiter(redis, properties.window(), properties.maxRequests(), metrics);
+      StringRedisTemplate redis,
+      RateLimitProperties properties,
+      MetricsRecorder metrics,
+      RateLimitScript script) {
+    return new RedisRateLimiter(
+        redis, properties.window(), properties.maxRequests(), metrics, script);
   }
 
   @Bean

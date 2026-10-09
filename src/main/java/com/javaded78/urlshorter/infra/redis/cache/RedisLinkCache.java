@@ -77,7 +77,7 @@ public class RedisLinkCache implements LinkCache {
     } catch (DataAccessException ex) {
       // Redis down: degrade to a miss so the caller falls back to
       // PostgreSQL (Task 17.1).
-      log.warn("redis unavailable on cache read for {}: {}", key, ex.toString());
+      log.warn("redis unavailable on cache read for {}: {}", key, ex);
       return Optional.empty();
     }
     if (json == null) {
@@ -88,7 +88,7 @@ public class RedisLinkCache implements LinkCache {
     } catch (JsonProcessingException | RuntimeException ex) {
       // Corrupted entry: evict and fall back to the database rather
       // than failing the redirect (Task 6.5).
-      log.warn("evicting unreadable cache entry {}: {}", key, ex.toString());
+      log.warn("evicting unreadable cache entry {}: {}", key, ex);
       evict(code);
       return Optional.empty();
     }
@@ -109,8 +109,7 @@ public class RedisLinkCache implements LinkCache {
               } catch (DataAccessException ex) {
                 // Redis down: the redirect itself is unaffected —
                 // PostgreSQL serves the reads (Task 17.1).
-                log.warn(
-                    "redis unavailable on cache write for {}: {}", key(link.code()), ex.toString());
+                log.warn("redis unavailable on cache write for {}: {}", key(link.code()), ex);
               }
             });
   }
@@ -120,7 +119,7 @@ public class RedisLinkCache implements LinkCache {
     try {
       redis.delete(key(code));
     } catch (DataAccessException ex) {
-      log.warn("redis unavailable on cache evict for {}: {}", key(code), ex.toString());
+      log.warn("redis unavailable on cache evict for {}: {}", key(code), ex);
     }
   }
 

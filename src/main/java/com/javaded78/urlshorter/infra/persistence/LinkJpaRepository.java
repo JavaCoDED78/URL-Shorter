@@ -42,11 +42,6 @@ public interface LinkJpaRepository extends JpaRepository<LinkEntity, String> {
 
   @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
-  @Query("UPDATE LinkEntity l SET l.clickCount = l.clickCount + :increment WHERE l.code = :code")
-  int incrementClickCount(@Param("code") String code, @Param("increment") long increment);
-
-  @Transactional
-  @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("DELETE FROM LinkEntity l WHERE l.code = :code")
   int deleteByCode(@Param("code") String code);
 

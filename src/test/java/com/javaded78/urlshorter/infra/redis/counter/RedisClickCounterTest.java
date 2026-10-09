@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.infra.redis.counter;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -40,5 +41,12 @@ class RedisClickCounterTest {
     counter.increment("ABC1234");
 
     verify(ops).increment("clicks:abc1234");
+  }
+
+  @Test
+  void nonNumericCounterValueReadsAsZero() {
+    when(ops.get("clicks:abc1234")).thenReturn("not-a-number");
+
+    assertEquals(0L, counter.get("abc1234"));
   }
 }
