@@ -1,13 +1,27 @@
 """Preparation for the Sprint 23 benchmark runs.
 
-Creates the link pool consumed by benchmarks/k6-scenario.js (a pool of
-never-requested codes) and empties Redis so the first
-'run -e SCENARIO=miss' measures genuine PostgreSQL lookups. The 'bench-hit'
-redirect is served by a benchmark-only endpoint (shortener.benchmark.enabled)
+Resets the benchmark state and creates the link pool consumed by
+benchmarks/k6-scenario.js (a pool of never-requested codes).
+
+Run order, one pipeline — a single `prepare.py` call leaves the stack clean:
+
+    1. TRUNCATE links          — stateful scenarios (create/delete) generate
+                                 deterministic aliases (c-<id>-<iter>); without
+                                 a truncate they collide with prior runs' rows
+                                 and k6 reports 409s that are *correct* app
+                                 behaviour, not a regression. See
+                                 references/k6-analysis.md.
+    2. Redis FLUSHALL          — cold cache so the first 'run -e SCENARIO=miss'
+                                 measures genuine PostgreSQL lookups.
+    3. POST /api/v1/links      — the created pool (p<id>), written to
+                                 benchmarks/links.json for the miss/stats
+                                 scenarios.
+
+The 'bench-hit' redirect is served by a benchmark-only endpoint (shortener.benchmark.enabled)
 and needs no link row — 'bench-hit' is a reserved alias and cannot be
 created.
 
-Usage: python benchmarks/prepare.py [pool_size]
+Usage: python benchmarks/prepare.py [pool_size]   (truncate + flush + pool)
 """
 import http.client
 import itertools
@@ -79,6 +93,19 @@ def main() -> None:
     if failures:
         raise SystemExit(f"{len(failures)} creations failed, first: {failures[:3]}")
 
+    # Truncate links first: stateful scenarios (create/delete) use deterministic
+    # aliases (c-<id>-<iter>), so a dirty DB makes them collide with prior runs'
+    # rows and k6 reports 409s that are *correct* app behaviour, not a regression.
+    # links has no FK references (parent table), so a plain TRUNCATE is safe.
+    pg_container = "urlshorter-postgres-dev"
+    if subprocess.run(["docker", "inspect", pg_container],
+                      capture_output=True).returncode != 0:
+        pg_container = "urlshorter-postgres"
+    subprocess.run(
+        ["docker", "exec", pg_container, "psql", "-U", "postgres", "-d",
+         "urlshortener", "-c", "TRUNCATE links"],
+        check=True, capture_output=True)
+
     # Dev compose names the container urlshorter-redis-dev, the full stack
     # urlshorter-redis — pick whichever is running.
     redis_container = "urlshorter-redis-dev"
@@ -90,8 +117,9 @@ def main() -> None:
         check=True, capture_output=True)
     with open("benchmarks/links.json", "w", encoding="utf-8") as fh:
         json.dump({"codes": aliases[1:]}, fh)
-    print(f"created {len(aliases)} links in {time.time() - started:.1f}s; "
-          f"redis flushed; links.json written")
+    print(
+        f"truncated links, flushed {len(aliases)} links in {time.time() - started:.1f}s; "
+        f"redis flushed; links.json written")
 
 
 if __name__ == "__main__":

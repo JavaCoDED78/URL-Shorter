@@ -137,6 +137,13 @@ the benchmark-only `GET /bench-hit` endpoint, enabled via
 `SHORTENER_BENCHMARK_ENABLED=true` (default in the dev compose stack; off in
 production).
 
+> **Harness fix (2026-10-09):** `prepare.py` now resets the stack before
+> every run — `TRUNCATE links` (the create/delete scenarios emit deterministic
+> aliases `c-<id>-<iter>`, so a dirty DB makes them collide with prior runs'
+> rows and k6 reports 409s that are *correct* app behaviour, not a
+> regression) followed by `Redis FLUSHALL` for a cold-cache `miss`. Always
+> run `prepare.py` before a fresh benchmark run.
+
 ### Database notes (Sprint 24)
 
 **Query plans** (`EXPLAIN ANALYZE` on 200 000 links): all three hot queries
