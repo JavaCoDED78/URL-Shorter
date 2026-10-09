@@ -71,9 +71,7 @@ public class RedisRateLimiter implements RateLimiter {
       // window: the freshly-created key gets a TTL and Redis self-deletes it when the window
       // elapses, so the next probe INCRs from 1 again.
       final Long count =
-          (Long)
-              redis.execute(
-                  script.get(), List.of(counterKey), RateLimitScript.windowInSeconds(window));
+          redis.execute(script.get(), List.of(counterKey), RateLimitScript.windowInSeconds(window));
       boolean denied = count == null || count > maxRequests;
       if (denied) {
         metrics.rateLimiterDenied();
