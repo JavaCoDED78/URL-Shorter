@@ -2,6 +2,7 @@ package com.javaded78.urlshorter.api.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.javaded78.urlshorter.api.dto.LinkResponse;
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import java.time.Instant;
 import java.util.Map;
@@ -15,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.ParameterizedTypeReference;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
@@ -27,55 +29,54 @@ class LinkCreateFlowIT {
 
   @Test
   void createsLinkAndReturnsDetails() {
-    ResponseEntity<Map> created = post(Map.of("originalUrl", "https://example.com/some/page"));
+    ResponseEntity<LinkResponse> created =
+        post(Map.of("originalUrl", "https://example.com/some/page"));
 
     assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     assertThat(created.getBody()).isNotNull();
-    String code = (String) created.getBody().get("code");
-    assertThat(code).hasSize(7);
-    assertThat(created.getBody().get("originalUrl")).isEqualTo("https://example.com/some/page");
+    LinkResponse link = created.getBody();
+    assertThat(link.code()).hasSize(7);
+    assertThat(link.originalUrl()).isEqualTo("https://example.com/some/page");
 
-    ResponseEntity<Map> details = restTemplate.getForEntity(API + "/" + code, Map.class);
+    ResponseEntity<LinkResponse> details =
+        restTemplate.getForEntity(API + "/" + link.code(), LinkResponse.class);
 
     assertThat(details.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(details.getBody()).isNotNull();
-    assertThat(details.getBody().get("code")).isEqualTo(code);
-    assertThat(details.getBody().get("originalUrl")).isEqualTo("https://example.com/some/page");
-    assertThat(details.getBody()).containsKey("createdAt");
-    assertThat(details.getBody()).containsKey("expiresAt");
-    assertThat(details.getBody().get("clickCount")).isEqualTo(0);
+    assertThat(details.getBody().code()).isEqualTo(link.code());
+    assertThat(details.getBody().originalUrl()).isEqualTo("https://example.com/some/page");
+    assertThat(details.getBody().createdAt()).isNotNull();
+    assertThat(details.getBody().expiresAt()).isNull();
+    assertThat(details.getBody().clickCount()).isZero();
   }
 
   @Test
   void createsLinkWithCustomAlias() {
-    ResponseEntity<Map> created =
-        post(
-            Map.of(
-                "originalUrl", "https://example.com",
-                "alias", "My-Alias_1"));
+    ResponseEntity<LinkResponse> created =
+        post(Map.of("originalUrl", "https://example.com", "alias", "My-Alias_1"));
 
     assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     assertThat(created.getBody()).isNotNull();
-    assertThat(created.getBody().get("code")).isEqualTo("my-alias_1");
+    assertThat(created.getBody().code()).isEqualTo("my-alias_1");
   }
 
   @Test
   void createsLinkWithExpiration() {
     String expiresAt = Instant.now().plusSeconds(3600).toString();
 
-    ResponseEntity<Map> created =
+    ResponseEntity<LinkResponse> created =
         post(Map.of("originalUrl", "https://example.com", "expiresAt", expiresAt));
 
     assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     assertThat(created.getBody()).isNotNull();
-    assertThat(created.getBody().get("expiresAt")).isEqualTo(expiresAt);
+    assertThat(created.getBody().expiresAt().toString()).isEqualTo(expiresAt);
   }
 
   @Test
   void rejectsDuplicateAliasWithConflict() {
     post(Map.of("originalUrl", "https://example.com/a", "alias", "dupe-alias"));
-    ResponseEntity<Map> conflict =
-        post(Map.of("originalUrl", "https://example.com/b", "alias", "dupe-alias"));
+    ResponseEntity<Map<String, Object>> conflict =
+        postRaw(Map.of("originalUrl", "https://example.com/b", "alias", "dupe-alias"));
 
     assertThat(conflict.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
   }
@@ -86,9 +87,9 @@ class LinkCreateFlowIT {
     // UNIQUE constraint is the final arbiter, so exactly one request can
     // win regardless of timing.
     java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
-    java.util.concurrent.atomic.AtomicReference<ResponseEntity<Map>> first =
+    java.util.concurrent.atomic.AtomicReference<ResponseEntity<Map<String, Object>>> first =
         new java.util.concurrent.atomic.AtomicReference<>();
-    java.util.concurrent.atomic.AtomicReference<ResponseEntity<Map>> second =
+    java.util.concurrent.atomic.AtomicReference<ResponseEntity<Map<String, Object>>> second =
         new java.util.concurrent.atomic.AtomicReference<>();
 
     Thread t1 = Thread.ofVirtual().start(() -> awaitAndCreate(start, first));
@@ -105,7 +106,7 @@ class LinkCreateFlowIT {
 
   private void awaitAndCreate(
       java.util.concurrent.CountDownLatch start,
-      java.util.concurrent.atomic.AtomicReference<ResponseEntity<Map>> result) {
+      java.util.concurrent.atomic.AtomicReference<ResponseEntity<Map<String, Object>>> result) {
     try {
       start.await();
     } catch (InterruptedException e) {
@@ -113,20 +114,20 @@ class LinkCreateFlowIT {
       throw new IllegalStateException(e);
     }
     result.set(
-        post(Map.of("originalUrl", "https://example.com/concurrent", "alias", "race-alias")));
+        postRaw(Map.of("originalUrl", "https://example.com/concurrent", "alias", "race-alias")));
   }
 
   @Test
   void rejectsInvalidOriginalUrlWithBadRequest() {
-    ResponseEntity<Map> response = post(Map.of("originalUrl", "not-a-url"));
+    ResponseEntity<Map<String, Object>> response = postRaw(Map.of("originalUrl", "not-a-url"));
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
   }
 
   @Test
   void rejectsInvalidAliasWithBadRequest() {
-    ResponseEntity<Map> response =
-        post(
+    ResponseEntity<Map<String, Object>> response =
+        postRaw(
             Map.of(
                 "originalUrl", "https://example.com",
                 "alias", "bad alias!"));
@@ -136,8 +137,8 @@ class LinkCreateFlowIT {
 
   @Test
   void rejectsReservedAliasWithBadRequest() {
-    ResponseEntity<Map> response =
-        post(
+    ResponseEntity<Map<String, Object>> response =
+        postRaw(
             Map.of(
                 "originalUrl", "https://example.com",
                 "alias", "swagger"));
@@ -147,7 +148,7 @@ class LinkCreateFlowIT {
 
   @Test
   void rejectsMissingOriginalUrlWithBadRequest() {
-    ResponseEntity<Map> response = post(Map.of("alias", "something"));
+    ResponseEntity<Map<String, Object>> response = postRaw(Map.of("alias", "something"));
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
   }
@@ -159,8 +160,19 @@ class LinkCreateFlowIT {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
   }
 
-  private ResponseEntity<Map> post(Map<String, ?> body) {
+  private ResponseEntity<LinkResponse> post(Map<String, ?> body) {
     return restTemplate.exchange(
-        RequestEntity.post(API).contentType(MediaType.APPLICATION_JSON).body(body), Map.class);
+        RequestEntity.post(API).contentType(MediaType.APPLICATION_JSON).body(body), LinkResponse.class);
+  }
+
+  /**
+   * Raw POST that deserializes into a {@link Map}: used where the response may be an error
+   * {@code problem+json} (e.g. the concurrent-duplicate-alias 409), which {@link LinkResponse}
+   * cannot be deserialized into.
+   */
+  private ResponseEntity<Map<String, Object>> postRaw(Map<String, ?> body) {
+    return restTemplate.exchange(
+        RequestEntity.post(API).contentType(MediaType.APPLICATION_JSON).body(body),
+        new ParameterizedTypeReference<Map<String, Object>>() {});
   }
 }

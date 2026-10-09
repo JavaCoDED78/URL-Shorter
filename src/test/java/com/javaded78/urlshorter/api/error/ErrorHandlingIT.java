@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
+import com.javaded78.urlshorter.api.SteppingClock;
+import com.javaded78.urlshorter.api.SteppingClockConfig;
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.domain.service.ReadLinkService;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -31,12 +34,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, SteppingClockConfig.class})
 class ErrorHandlingIT {
 
   @LocalServerPort private int port;
 
   @Autowired private TestRestTemplate restTemplate;
+
+  /** Deterministic clock shared with the app context: advancing it expires links instantly. */
+  @Autowired private SteppingClock clock;
 
   @MockitoSpyBean private ReadLinkService linkService;
 
@@ -80,13 +86,15 @@ class ErrorHandlingIT {
 
   @Test
   void expirationInThePastProduces400ProblemDetail() {
+    // A request-time expiration in the past relative to the deterministic
+    // clock must be rejected with 400 (not persisted, not served).
     ResponseEntity<Map> response =
         post(
             Map.of(
                 "originalUrl",
                 "https://example.com",
                 "expiresAt",
-                Instant.now().minus(1, ChronoUnit.HOURS).toString()));
+                clock.instant().minus(1, ChronoUnit.HOURS).toString()));
 
     assertProblemContract(
         response,
@@ -132,7 +140,10 @@ class ErrorHandlingIT {
   }
 
   @Test
-  void expiredLinkProduces410ProblemDetail() throws InterruptedException {
+  void expiredLinkProduces410ProblemDetail() {
+    // Cannot create an already-expired link (Task 11.3): create with a
+    // future expiration relative to the deterministic clock, then step
+    // the clock past it — no Thread.sleep racing the real clock.
     post(
         Map.of(
             "originalUrl",
@@ -140,8 +151,10 @@ class ErrorHandlingIT {
             "alias",
             "gone01",
             "expiresAt",
-            Instant.now().plus(1, ChronoUnit.SECONDS).toString()));
-    Thread.sleep(1100);
+            clock.instant().plus(1, ChronoUnit.SECONDS).toString()));
+
+    // Advance time so the link has lapsed.
+    clock.step(Duration.ofSeconds(2));
 
     ResponseEntity<Map> response =
         restTemplate.exchange(url("/gone01"), HttpMethod.GET, HttpEntity.EMPTY, Map.class);

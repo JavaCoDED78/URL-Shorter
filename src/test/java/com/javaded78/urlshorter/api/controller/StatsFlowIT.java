@@ -2,6 +2,7 @@ package com.javaded78.urlshorter.api.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.javaded78.urlshorter.api.dto.LinkStatsResponse;
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.domain.service.CounterFlushService;
 import java.util.Map;
@@ -50,11 +51,12 @@ class StatsFlowIT {
   void statsAreZeroForFreshLink() {
     create("https://example.com", "stats01");
 
-    ResponseEntity<Map> response = stats("stats01");
+    ResponseEntity<LinkStatsResponse> response = stats("stats01");
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-    assertThat(response.getBody()).containsEntry("code", "stats01");
-    assertThat(response.getBody()).containsEntry("clickCount", 0);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getBody().code()).isEqualTo("stats01");
+    assertThat(response.getBody().clickCount()).isZero();
   }
 
   @Test
@@ -62,10 +64,11 @@ class StatsFlowIT {
     create("https://example.com", "stats02");
     click("stats02", 4);
 
-    ResponseEntity<Map> response = stats("stats02");
+    ResponseEntity<LinkStatsResponse> response = stats("stats02");
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-    assertThat(response.getBody()).containsEntry("clickCount", 4);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getBody().clickCount()).isEqualTo(4);
   }
 
   @Test
@@ -74,10 +77,11 @@ class StatsFlowIT {
     click("stats03", 6);
     flushService.flush();
 
-    ResponseEntity<Map> response = stats("stats03");
+    ResponseEntity<LinkStatsResponse> response = stats("stats03");
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-    assertThat(response.getBody()).containsEntry("clickCount", 6);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getBody().clickCount()).isEqualTo(6);
   }
 
   @Test
@@ -87,10 +91,11 @@ class StatsFlowIT {
     flushService.flush();
     click("stats04", 3);
 
-    ResponseEntity<Map> response = stats("stats04");
+    ResponseEntity<LinkStatsResponse> response = stats("stats04");
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-    assertThat(response.getBody()).containsEntry("clickCount", 9);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getBody().clickCount()).isEqualTo(9);
   }
 
   @Test
@@ -98,19 +103,22 @@ class StatsFlowIT {
     create("https://example.com", "stats05");
     click("stats05", 2);
 
-    ResponseEntity<Map> response = stats("STATS05");
+    ResponseEntity<LinkStatsResponse> response = stats("STATS05");
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-    assertThat(response.getBody()).containsEntry("code", "stats05");
-    assertThat(response.getBody()).containsEntry("clickCount", 2);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getBody().code()).isEqualTo("stats05");
+    assertThat(response.getBody().clickCount()).isEqualTo(2);
   }
 
   @Test
   void statsForMissingLinkReturn404() {
-    ResponseEntity<Map> response = stats("missing9");
+    // 404 body is a ProblemDetail — read into a Map and assert structurally.
+    ResponseEntity<Map> response = statsBody("missing9");
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-    assertThat(response.getBody()).containsEntry("status", 404);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getBody()).containsKey("status");
   }
 
   private void create(String originalUrl, String alias) {
@@ -131,7 +139,16 @@ class StatsFlowIT {
     }
   }
 
-  private ResponseEntity<Map> stats(String code) {
+  private ResponseEntity<LinkStatsResponse> stats(String code) {
+    return rest.exchange(
+        url("/api/v1/links/" + code + "/stats"), HttpMethod.GET, HttpEntity.EMPTY, LinkStatsResponse.class);
+  }
+
+  /**
+   * Stats endpoint for a missing code — the 404 body is a {@code ProblemDetail}, so it is read into
+   * a {@link Map} and asserted structurally.
+   */
+  private ResponseEntity<Map> statsBody(String code) {
     return rest.exchange(
         url("/api/v1/links/" + code + "/stats"), HttpMethod.GET, HttpEntity.EMPTY, Map.class);
   }
