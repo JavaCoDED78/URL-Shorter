@@ -53,7 +53,7 @@ management:
 | Credential | Storage | Production Handling |
 |-----------|---------|---------------------|
 | Grafana admin password | `GF_SECURITY_ADMIN_PASSWORD` env var | Set via Kubernetes secret or HashiCorp Vault; never committed to Git |
-| PostgreSQL credentials | `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` env vars | Set via Kubernetes secret or Vault; never committed to Git |
+| PostgreSQL credentials | `SPRING_DATASOURCE_URL` / `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` env vars | Set via Kubernetes secret or Vault; never committed to Git |
 | Redis credentials | `REDIS_HOST` / `REDIS_PORT` (+ auth via Spring `spring.data.redis` overrides) | Use TLS and authentication in production |
 
 ## 6. Metrics Content Rules

@@ -706,9 +706,9 @@ The following environment variables are used by the application.
 | Variable | Default | Description |
 |---|---|---|
 | `SERVER_PORT` | `8080` | Application HTTP port |
-| `DB_URL` | `jdbc:postgresql://localhost:5432/urlshortener` | PostgreSQL JDBC URL |
-| `DB_USERNAME` | `postgres` | PostgreSQL user |
-| `DB_PASSWORD` | `postgres` | PostgreSQL password |
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/urlshortener` | PostgreSQL JDBC URL (standard Spring Boot property) |
+| `SPRING_DATASOURCE_USERNAME` | `postgres` | PostgreSQL user |
+| `SPRING_DATASOURCE_PASSWORD` | `postgres` | PostgreSQL password (only read inside Docker Compose — see the note below) |
 | `REDIS_HOST` | `localhost` | Redis host |
 | `REDIS_PORT` | `6379` | Redis port |
 | `REDIS_TIMEOUT` | `2s` | Redis command timeout |
@@ -720,12 +720,21 @@ The following environment variables are used by the application.
 | `SHORTENER_FLUSH_INTERVAL` | `PT5S` | Click counter flush interval |
 | `SHORTENER_MAX_PAYLOAD_SIZE` | `16KB` | Raw request body ceiling |
 | `SHORTENER_BENCHMARK_ENABLED` | `false` | Enables `GET /bench-hit` for k6 load tests |
+| `SHORTENER_MAX_URI_LENGTH` | `1024` | Maximum request-URI length (characters); oversized paths answered `413` by `RequestUriLengthFilter` before any handler runs |
 | `SHORTENER_RATE_LIMITER_ENABLED` | `false` | Enables the Redis-backed create-endpoint rate limiter (`shortener.rate-limiter.enabled`) |
 | `SHORTENER_RATE_LIMITER_WINDOW` | `PT1M` | Fixed-window length (see `SHORTENER_RATE_LIMITER_ENABLED`) |
 | `SHORTENER_RATE_LIMITER_MAX` | `100` | Max create probes admitted per key per window (see `SHORTENER_RATE_LIMITER_ENABLED`) |
 
 All values also follow Spring relaxed binding — e.g. `SPRING_DATASOURCE_URL`
-overrides `DB_URL` the same way `spring.datasource.url` would.
+maps to `spring.datasource.url`. Postgres credentials are passed to the
+application exclusively through `SPRING_DATASOURCE_*`; the `DB_*` names above
+are only consumed by the Docker Compose stack to point the container at the
+Postgres service.
+
+Postgres password note: `SPRING_DATASOURCE_PASSWORD` (and the Compose
+`SPRING_DATASOURCE_URL`) are only wired inside `docker-compose.yml` — the app's
+`application.yaml` relies on Spring Boot defaults. For a non-Compose run, set
+`SPRING_DATASOURCE_URL`/`USERNAME`/`PASSWORD` directly.
 
 Prometheus and Grafana operational configuration is intentionally file-based
 under `monitoring/` rather than represented as application environment

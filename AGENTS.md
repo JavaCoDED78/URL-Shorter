@@ -135,9 +135,9 @@ The full sprint-by-sprint breakdown, with every task as a checkbox, lives in `DE
 | Variable | Default | Description |
 |---|---|---|
 | `SERVER_PORT` | `8080` | Application HTTP port |
-| `DB_URL` | `jdbc:postgresql://localhost:5432/urlshortener` | PostgreSQL JDBC URL |
-| `DB_USERNAME` | `postgres` | PostgreSQL user |
-| `DB_PASSWORD` | `postgres` | PostgreSQL password |
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/urlshortener` | PostgreSQL JDBC URL (standard Spring Boot property) |
+| `SPRING_DATASOURCE_USERNAME` | `postgres` | PostgreSQL user |
+| `SPRING_DATASOURCE_PASSWORD` | `postgres` | PostgreSQL password (only consumed inside Docker Compose) |
 | `REDIS_HOST` | `localhost` | Redis host |
 | `REDIS_PORT` | `6379` | Redis port |
 | `REDIS_TIMEOUT` | `2s` | Redis command timeout |
@@ -149,10 +149,14 @@ The full sprint-by-sprint breakdown, with every task as a checkbox, lives in `DE
 | `SHORTENER_FLUSH_INTERVAL` | `PT5S` | Click counter flush interval |
 | `SHORTENER_MAX_PAYLOAD_SIZE` | `16KB` | Raw request body ceiling |
 | `SHORTENER_BENCHMARK_ENABLED` | `false` (`true` in the dev compose stack) | Enables the benchmark-only `GET /bench-hit` redirect used by the k6 harness |
+| `SHORTENER_MAX_URI_LENGTH` | `1024` | Maximum request-URI length (characters); oversized paths answered `413` by `RequestUriLengthFilter` before any handler runs |
 
 All values also follow Spring relaxed binding — e.g. `SPRING_DATASOURCE_URL`
-overrides `DB_URL` the same way `spring.datasource.url` would. Prometheus and
-Grafana configuration is file-based under `monitoring/`, not env-var based.
+maps to `spring.datasource.url`. Postgres credentials are passed to the
+application exclusively through `SPRING_DATASOURCE_*`; the `DB_*` names above
+are only consumed by the Docker Compose stack to point the container at the
+Postgres service. Prometheus and Grafana configuration is file-based under
+`monitoring/`, not env-var based.
 
 ## 8. API surface
 

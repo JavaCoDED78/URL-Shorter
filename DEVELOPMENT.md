@@ -293,7 +293,7 @@ the README).
 | `docker: error during connect` | Docker Desktop not running | start it, wait for `docker ps` |
 | `./gradlew: Permission denied` | executable bit lost in checkout | `chmod +x gradlew` |
 | Tests fail with container startup timeouts | Docker under heavy load / first image pull | re-run; Ryuk and image pulls are one-time costs |
-| `Connection refused` from the app | dev containers down, or app started against the wrong `DB_URL` | `docker compose -f docker-compose.dev.yml ps`; check `SPRING_DATASOURCE_URL` |
+| `Connection refused` from the app | dev containers down, or app started against the wrong `SPRING_DATASOURCE_URL` | `docker compose -f docker-compose.dev.yml ps`; check `SPRING_DATASOURCE_URL` |
 | Create returns `503` quickly | PostgreSQL down or pool timeout (5 s) | check the database container health; this is the intended degradation, not a hang |
 | Redirect returns `503` for an uncached code | PostgreSQL down, cache miss | cached codes still return `302` — by design |
 | `413` on a legitimate create | body over `SHORTENER_MAX_PAYLOAD_SIZE` (default 16 KB) | the limit is far above a 2048-char URL; check for accidental padding |
