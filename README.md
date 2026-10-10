@@ -18,6 +18,7 @@ The service uses PostgreSQL as the source of truth, Redis for low-latency redire
 - **Cache-aside redirects**: hot links are served from Redis without a PostgreSQL query; the cached value carries `expiresAt`, so expiry is always re-checked on a hit.
 - **Click buffering in Redis** with atomic `INCR`, flushed to PostgreSQL every 5 seconds by a Lua script (`GET`+`DEL` atomic — no lost increments).
 - **Stats without flush lag**: `clickCount` = persisted PostgreSQL count + pending Redis counter.
+- **Distributed click flush**: the `@Scheduled` flush is serialized across instances with ShedLock (a PostgreSQL `shedlock` table) so a multi-pod deployment drains Redis exactly once per interval, not once per replica.
 - **Graceful infrastructure degradation**: a PostgreSQL outage answers create/miss lookups with a fast `503` (bounded by a 5 s pool timeout) while Redis cache hits keep redirecting; a failed flush restores counters instead of losing clicks.
 - **Request size limit**: oversized bodies are rejected with `413` before parsing.
 - **Create-endpoint rate limiting** (Task 20.4): a key-scoped, Redis-backed fixed-window limiter (`shortener.rate-limiter`) protects `/api/v1/links` from abuse, answering `429 Too Many Requests` (`retryAfter: 1`) when the limit is exceeded. Disabled by default (`enabled: false`) so existing high-volume suites stay green; a Redis outage fails open so a create request is never lost to a transient outage.

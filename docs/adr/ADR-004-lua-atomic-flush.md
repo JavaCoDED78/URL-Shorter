@@ -34,7 +34,13 @@ tested).
 - Zero lost increments from the drain itself; the only accepted loss
   window is a Redis crash inside one flush interval (ADR-003).
 - Lua is Redis's own transaction mechanism — no external locking, no
-  WATCH/MULTI round-trips, no retry logic in the application.
+  WATCH/MULTI round-trips, no retry logic in the application. (This is the
+  per-key drain; cross-instance serialization of the whole job is separate.)
+- A single instance always drains, but across replicas the drain runs once per
+  cycle, not once per replica. ShedLock serializes the job on a `shedlock` row
+  in PostgreSQL (`@SchedulerLock(name = "clickFlush")` on
+  `ClickFlushJob#flushClicks`, see `SchedulerLockIT`); a loser skips the drain
+  entirely instead of re-running the same drain→restore.
 
 ## Alternatives considered
 

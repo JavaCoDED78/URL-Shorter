@@ -26,6 +26,31 @@ domain-supplied instant.
 Verified: `./gradlew compileJava` clean (no new warnings); `./gradlew test` green —
 256/256.
 
+### Distributed click flush (ShedLock)
+
+The `@Scheduled` click flush (`ClickFlushJob#flushClicks`) previously ran on a
+plain `@Scheduled` with no coordination. In a multi-pod deployment every pod
+drained the same Redis counters every interval: the Lua drain is atomic per key
+so no increments were double-counted, but each replica still paid the full
+drain→persist→restore cost and a crash during the PostgreSQL write could race
+across replicas. The whole job is now serialized with ShedLock (JDBC provider,
+`shedlock` table in PostgreSQL — migration V3): `@SchedulerLock(name =
+"clickFlush")` wraps `flushClicks()`, `@EnableSchedulerLock` enables it on the
+entry point, and a losing instance skips the drain entirely.
+
+- **V3** creates the `shedlock` table (`name` VARCHAR(64) PK, `lock_until`,
+  `locked_at`, `locked_by` VARCHAR(255)).
+- **ShedLockConfig** builds the `LockProvider` from `JdbcTemplateLockProvider`
+  (`withTableName("shedlock")`, `usingDbTime`, `withLockedByValue` from
+  `shortener.shedlock.locked-by:instance`).
+- **`@EnableSchedulerLock(defaultLockAtMostFor = "PT5S")`** on the entry point
+  so a crash that holds the lock cannot pin it forever.
+- **`SchedulerLockIT`** asserts acquire when the table is free and skip when an
+  instance holds a future lock (`PT1H` interval keeps the real scheduler off).
+
+Verified: `./gradlew test` green; `defaultLockAtMostFor` attribute validated by
+`compileJava`.
+
 ### Transaction boundaries moved to the use-case (service) layer
 Previously the only `@Transactional` annotations lived on two `LinkJpaRepository`
 methods — Spring Data's `deleteByCode` and `batchIncrementClickCounts`. That

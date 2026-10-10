@@ -50,6 +50,12 @@ dependencies {
     // --- Observability: Prometheus exposition (Sprint 29) ---
     implementation("io.micrometer:micrometer-registry-prometheus")
 
+    // --- Multi-instance task serialization (Schedulock) ---
+    // JdbcLockProvider on the existing PostgreSQL source of truth. The 7.x line targets
+    // Spring Framework 7 (Boot 4.x); the 6.x line is for Spring 6 and must not be used here.
+    implementation("net.javacrumbs.shedlock:shedlock-spring:7.10.1")
+    implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:7.10.1")
+
     // --- Code generation: Lombok + config metadata ---
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
