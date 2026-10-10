@@ -69,6 +69,6 @@ public class JpaLinkRepository implements LinkRepository {
   }
 
   private LinkEntity toEntity(Link link) {
-    return new LinkEntity(link.code(), link.originalUrl(), link.expiresAt());
+    return new LinkEntity(link.code(), link.originalUrl(), link.expiresAt(), link.createdAt());
   }
 }

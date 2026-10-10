@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### Persistence timestamps now driven by the injected `Clock` (single source of truth)
+The `LinkEntity` previously stamped `created_at` and `updated_at` from `Instant.now()`
+inside `@PrePersist`/`@PreUpdate`. That broke the project's `Clock` discipline — every
+other seam threads an injected `Clock`, so those two entity callbacks were the only places
+still calling `Instant.now()` — and it was a **second source of truth** for `created_at`:
+`Link.created(...)` receives `createdAt` from the write path, but `JpaLinkRepository.toEntity()`
+mapped only `code`, `originalUrl` and `expiresAt`, so `@PrePersist` silently overwrote the
+domain-supplied instant.
+
+- **`created_at` is now mapped explicitly** from the domain: `JpaLinkRepository.toEntity()`
+  passes `link.createdAt()` into the new 4-arg `LinkEntity` constructor, so the persistence
+  layer no longer overwrites it with `Instant.now()`.
+- **`updated_at` is owned by Spring Data JPA auditing** (`@EntityListeners(AuditingEntityListener)`
+  + `@LastModifiedDate`) instead of a hand-rolled `@PreUpdate` callback.
+- **`JpaAuditingConfig`** registers `@EnableJpaAuditing` and a `DateTimeProvider` that
+  delegates to the same `Clock` bean `UrlShorterApplication` already provides, so production
+  and tests stamp timestamps through one clock.
+- The persistence-only **`@DataJpaTest` slice** (`LinkJpaRepositoryTest`) imports
+  `JpaAuditingTestConfiguration` and enables auditing, so it exercises the real
+  audit path (clock → `DateTimeProvider` → `@LastModifiedDate`) rather than any fallback.
+
+Verified: `./gradlew compileJava` clean (no new warnings); `./gradlew test` green —
+256/256.
+
 ### Transaction boundaries moved to the use-case (service) layer
 Previously the only `@Transactional` annotations lived on two `LinkJpaRepository`
 methods — Spring Data's `deleteByCode` and `batchIncrementClickCounts`. That

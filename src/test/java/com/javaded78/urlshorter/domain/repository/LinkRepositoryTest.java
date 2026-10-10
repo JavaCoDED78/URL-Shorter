@@ -3,12 +3,14 @@ package com.javaded78.urlshorter.infra.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.javaded78.urlshorter.domain.repository.JpaAuditingTestConfiguration;
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.dao.DataIntegrityViolationException;
 
 /**
@@ -20,15 +22,18 @@ import org.springframework.dao.DataIntegrityViolationException;
  * constraint, the atomic bulk updates, case-insensitive lookup and {@code null} expiration.
  */
 @DataJpaTest
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, JpaAuditingTestConfiguration.class})
+@EnableJpaAuditing
 class LinkJpaRepositoryTest {
 
   @Autowired LinkJpaRepository repository;
 
+  private static final Instant CREATED_AT = Instant.parse("2025-06-01T00:00:00Z");
+
   @Test
   void savesAndFindsLinkByCode() {
     LinkEntity saved =
-        repository.saveAndFlush(new LinkEntity("abc1234", "https://example.com", null));
+        repository.saveAndFlush(new LinkEntity("abc1234", "https://example.com", null, CREATED_AT));
 
     assertThat(saved.getCode()).isEqualTo("abc1234");
     assertThat(repository.findByCode("abc1234"))
@@ -43,7 +48,7 @@ class LinkJpaRepositoryTest {
 
   @Test
   void incrementsClickCountViaBatchUpdate() {
-    repository.saveAndFlush(new LinkEntity("counter1", "https://example.com", null));
+    repository.saveAndFlush(new LinkEntity("counter1", "https://example.com", null, CREATED_AT));
 
     int updated = repository.batchIncrementClickCounts(new String[] {"counter1"}, new Long[] {5L});
 
@@ -54,7 +59,7 @@ class LinkJpaRepositoryTest {
 
   @Test
   void deletesLinkByCode() {
-    repository.saveAndFlush(new LinkEntity("todelete", "https://example.com", null));
+    repository.saveAndFlush(new LinkEntity("todelete", "https://example.com", null, CREATED_AT));
 
     int deleted = repository.deleteByCode("todelete");
 
@@ -65,16 +70,16 @@ class LinkJpaRepositoryTest {
 
   @Test
   void rejectsDuplicateCode() {
-    repository.saveAndFlush(new LinkEntity("dupe", "https://example.com", null));
+    repository.saveAndFlush(new LinkEntity("dupe", "https://example.com", null, CREATED_AT));
 
     assertThatThrownBy(
-            () -> repository.saveAndFlush(new LinkEntity("dupe", "https://other.com", null)))
+            () -> repository.saveAndFlush(new LinkEntity("dupe", "https://other.com", null, CREATED_AT)))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void persistsNullExpiresAt() {
-    repository.saveAndFlush(new LinkEntity("noexp", "https://example.com", null));
+    repository.saveAndFlush(new LinkEntity("noexp", "https://example.com", null, CREATED_AT));
 
     assertThat(repository.findByCode("noexp"))
         .hasValueSatisfying(link -> assertThat(link.getExpiresAt()).isNull());
@@ -84,7 +89,7 @@ class LinkJpaRepositoryTest {
   void persistsExpiresAt() {
     Instant expiresAt = Instant.parse("2030-01-01T00:00:00Z");
 
-    repository.saveAndFlush(new LinkEntity("withexp", "https://example.com", expiresAt));
+    repository.saveAndFlush(new LinkEntity("withexp", "https://example.com", expiresAt, CREATED_AT));
 
     assertThat(repository.findByCode("withexp"))
         .hasValueSatisfying(link -> assertThat(link.getExpiresAt()).isEqualTo(expiresAt));
