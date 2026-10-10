@@ -6,6 +6,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Flushes drained click counters to PostgreSQL (Tasks 8.4-8.6).
@@ -39,6 +40,7 @@ public class CounterFlushService {
    * @throws IllegalStateException when the database write fails; drained values are restored to
    *     Redis first, so no click is lost silently
    */
+  @Transactional
   public int flush() {
     Map<String, Long> drained;
     try {

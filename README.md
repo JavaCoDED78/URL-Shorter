@@ -403,7 +403,9 @@ The service layer talks to Redis only through the `domain/cache` and
 `domain/repository` port is a pure domain interface (no Spring Data, JPA, or
 `LinkEntity`); the JPA boundary lives in `infra.persistence` as
 `JpaLinkRepository` (a thin adapter) over the Spring Data
-`LinkJpaRepository`, where `LinkEntity`, JPQL and `@Transactional` all belong.
+`LinkJpaRepository`, where `LinkEntity`, JPQL and `@Modifying` all belong.
+`@Transactional` boundaries live on the service layer (`WriteLinkService`,
+`CounterFlushService`), not on the repository.
 
 ## 🚀 Quick Start
 

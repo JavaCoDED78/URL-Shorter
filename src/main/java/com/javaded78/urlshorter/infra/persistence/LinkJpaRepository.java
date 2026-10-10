@@ -5,15 +5,21 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Spring Data JPA slice for {@link LinkEntity} (formerly the {@code LinkRepository} JPA interface).
  *
  * <p>This is the persistence-only port of the JPA layer: {@code LinkEntity}, the JPQL/ native
- * statements and the {@code @Transactional} boundaries all live here in {@code infra.persistence}.
- * The domain {@code LinkRepository} is a pure interface; {@link JpaLinkRepository} adapts this
- * slice to the domain model.
+ * statements, and the {@code @Modifying(clearAutomatically, flushAutomatically)} context behaviour
+ * all live here in {@code infra.persistence}. The domain {@code LinkRepository} is a pure
+ * interface; {@link JpaLinkRepository} adapts this slice to the domain model.
+ *
+ * <p><b>No {@code @Transactional} lives here.</b> Spring Data method annotations control how the
+ * persistence context behaves (flush before the next write, clear after the statement) but do not
+ * open a transaction. Transaction boundaries live on the use-case (service) layer — {@code
+ * WriteLinkService#create}/{@code delete} wrap the whole use-case (the delete's find→evict→
+ * discard→delete sequence, the create's collision-retry loop); {@code CounterFlushService#flush}
+ * wraps the drain→update→recovery round-trip — so they span more than a single isolated statement.
  *
  * <p>Operation split:
  *
@@ -24,6 +30,15 @@ import org.springframework.transaction.annotation.Transactional;
  *       the persistence context. Click increments are the hot write path (flush), so
  *       load-modify-save would be wasted work and a lost-update risk.
  * </ul>
+ *
+ * <p><b>Transaction boundaries live on the use-case (service) layer, not here.</b> The Spring Data
+ * method annotations carry {@code @Modifying(clearAutomatically, flushAutomatically)} — those
+ * control how the persistence context behaves (clear after the statement, flush before the next
+ * write) but do <b>not</b> start a transaction. The transaction itself is opened by
+ * {@code @Transactional} on the {@link com.javaded78.urlshorter.domain.service.WriteLinkService}
+ * and {@code CounterFlushService} methods, so it spans the whole use-case (e.g. the delete's
+ * find→evict→discard→delete sequence) instead of a single isolated statement. See {@code
+ * WriteLinkService}.
  */
 public interface LinkJpaRepository extends JpaRepository<LinkEntity, String> {
 
@@ -40,17 +55,16 @@ public interface LinkJpaRepository extends JpaRepository<LinkEntity, String> {
 
   long count();
 
-  @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("DELETE FROM LinkEntity l WHERE l.code = :code")
   int deleteByCode(@Param("code") String code);
 
   /**
-   * Batch click-count update for the flush (Task 8.5): one statement for all drained counters via
+   * Batch click-count update for the flush (Task 8.5): one statement for the whole drain batch via
    * {@code unnest}, not one UPDATE per code. The statement is atomic — on failure nothing is
-   * applied, which the flush recovery relies on.
+   * applied, which the flush recovery relies on. The {@code @Transactional} that wraps this in a
+   * transaction lives on {@code CounterFlushService#flush}.
    */
-  @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
       value =

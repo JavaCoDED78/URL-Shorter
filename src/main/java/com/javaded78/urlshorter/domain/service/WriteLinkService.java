@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Write path for short links (CQRS-lite split from {@link ReadLinkService}).
@@ -100,6 +101,7 @@ public class WriteLinkService {
    * @throws RateLimitExceededException if the create-endpoint rate limit is exceeded (429)
    * @throws IllegalStateException if generated codes keep colliding
    */
+  @Transactional
   public Link create(String originalUrl, String alias, Instant expiresAt) {
     // Enforce the create-endpoint rate limit before any other work. A denied
     // probe returns immediately as 429 and never consumes a DB/Redis round-trip;
@@ -140,6 +142,7 @@ public class WriteLinkService {
    *
    * @throws LinkNotFoundException if no such link exists
    */
+  @Transactional
   public void delete(String code) {
     Link link = repository.findByCodeIgnoreCase(code).orElseThrow(() -> notFound(code));
     linkCache.evict(link.code());

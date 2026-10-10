@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased
+
+### Transaction boundaries moved to the use-case (service) layer
+Previously the only `@Transactional` annotations lived on two `LinkJpaRepository`
+methods — Spring Data's `deleteByCode` and `batchIncrementClickCounts`. That
+opened a transaction around a single statement and let the rest of the write
+path run outside one: `WriteLinkService.delete`'s `findByCodeIgnoreCase → evict
+→ deleteByCode` sequence and `create`'s collision-retry loop were not a single
+use-case transaction, so a concurrent create with the same (reused) code/alias
+or an in-flight redirect could wedge between the find and the delete. The rule
+is now enforced: transaction boundaries live on the service layer, and the
+Spring Data repository is a persistence-only port that carries no
+`@Transactional`.
+
+- **`WriteLinkService.create` / `delete`** are now annotated
+  `@Transactional` — the whole use-case is one transaction (create's
+  collision-retry loop; delete's find→evict→discard→delete sequence).
+- **`CounterFlushService.flush`** is now `@Transactional` — the
+  drain→update→restore round-trip is atomic.
+- **`LinkJpaRepository`** lost both `@Transactional` annotations. The methods
+  still carry `@Modifying(clearAutomatically, flushAutomatically)`, which
+  controls persistence-context behaviour (flush before the next write, clear
+  after the statement) but does **not** open a transaction. This removes the
+  confusing dual `@Transactional` (interface + service) that made it unclear
+  where a transaction actually begins.
+- Docs updated to reflect that `LinkEntity`, JPQL, `@Modifying` and the port
+  boundary live in `infra.persistence`, while `@Transactional` lives on the
+  service layer.
+
+Verified: `WriteLinkServiceTest`, `ReadLinkServiceTest`,
+`CounterFlushServiceTest`, `PostgresFailureIT` (incl. transaction-begin 503),
+and `ConcurrencyIT` (10 k parallel redirects, concurrent creates, alias race,
+delete-vs-redirect convergence) pass; `./gradlew compileJava` clean.
+
 ## 1.2.0 — Pure domain repository port and infrastructure separation (2026-10-08)
 
 Clean-architecture reorganization that removes the JPA/Spring Data layer from
