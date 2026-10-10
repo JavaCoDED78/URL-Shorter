@@ -20,15 +20,18 @@ import org.springframework.test.context.TestPropertySource;
  * invocation, so the lock is acquired whether the call comes from the real {@code @Scheduled}
  * scheduler or a manual test hook.
  *
- * <p>Scheduler stays out of the way: {@code shortener.flush.interval} is a long duration so the
- * real {@code @Scheduled} never fires during the test, and the lock provider runs against real
- * PostgreSQL. Each test starts from a clean {@code shedlock} row. The assertions are on {@link
+ * <p>The scheduled flush is disabled for the whole context ({@code shortener.flush.enabled=false})
+ * so no {@code @Scheduled} job fires during the test, and the assertions are not racing a real
+ * drain. The lock provider runs against real PostgreSQL. Each test starts from a clean {@code
+ * shedlock} row. The assertions are on {@link
  * net.javacrumbs.shedlock.core.LockProvider#lock(net.javacrumbs.shedlock.core.LockConfiguration)}
  * directly — that is the exact seam {@code PROXY_METHOD} proxies: non-empty Optional = the guarded
  * flush runs, empty Optional = another instance holds the lock and this instance sheds the cycle.
  */
 @SpringBootTest
-@TestPropertySource(properties = "shortener.flush.interval=PT1H")
+@TestPropertySource(properties = {
+    "shortener.flush.enabled=false",
+    "logging.level.net.javacrumbs.shedlock=DEBUG"})
 @Import(TestcontainersConfiguration.class)
 class SchedulerLockIT {
 

@@ -24,7 +24,7 @@ domain-supplied instant.
   audit path (clock → `DateTimeProvider` → `@LastModifiedDate`) rather than any fallback.
 
 Verified: `./gradlew compileJava` clean (no new warnings); `./gradlew test` green —
-256/256.
+258/258.
 
 ### Distributed click flush (ShedLock)
 
