@@ -59,16 +59,31 @@ shortener:
   # compose stack enables it explicitly.
   benchmark:
     enabled: ${SHORTENER_BENCHMARK_ENABLED:false}
-  # Create-endpoint rate limiter (Task 20.4): key-scoped, fixed-window,
+  # Create-endpoint rate limiter (Task 20.4): client-scoped, fixed-window,
   # Redis-backed. Disabled by default so the existing suites (which fire
   # hundreds of concurrent creates) are unaffected; enable it in production
   # or a staging stack to protect the create endpoint from abuse. When
   # enabled, `RedisRateLimiter` protects `/api/v1/links`; a denied probe
-  # answers 429. A Redis outage fails open (the request is allowed through).
+  # answers 429.
+  #
+  # Scoping is per client, not per service: the counter key is the caller's
+  # IP (see CreateIpRateLimitSource), so an abuser can only ever hit their own
+  # ceiling — a single global counter would let one client block everyone.
+  # `trusted-proxies` is an explicit allowlist (host or CIDR, e.g.
+  # 10.0.0.0/8,172.16.0.5) of the proxies in front of the app. When the peer
+  # is one of them, `X-Forwarded-For`'s first hop is the client; otherwise
+  # the header is attacker-controlled and the remote address is used, so a
+  # forged XFF can only masquerade as the local proxy.
+  #
+  # `fail-open` (default true): on a Redis outage the create path rides
+  # through (availability-wins, like the redirect path). Set false to treat a
+  # broken limiter as a refusal instead of an open door.
   rate-limiter:
     enabled: ${SHORTENER_RATE_LIMITER_ENABLED:false}
     window: ${SHORTENER_RATE_LIMITER_WINDOW:PT1M}
     max-requests: ${SHORTENER_RATE_LIMITER_MAX:100}
+    fail-open: ${SHORTENER_RATE_LIMITER_FAIL_OPEN:true}
+    trusted-proxies: ${SHORTENER_RATE_LIMITER_TRUSTED_PROXIES:}
 
 management:
   endpoints:

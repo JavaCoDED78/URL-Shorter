@@ -152,7 +152,7 @@ A real, Redis-backed, key-scoped fixed-window rate limiter for
 - New `RateLimiter` beans bound by `RateLimitConfig`: `RedisRateLimiter`
   (when enabled) and `NoOpRateLimiter` (the disabled-by-default admit-
   everything default). Exactly one is registered per process.
-- `LinkService.create` probes the limiter first (`RateLimiter.tryAcquire`);
+- `WriteLinkService.create` probes the limiter first (`RateLimiter.tryAcquire`);
   a denied probe short-circuits before any validation or DB work.
 - New `RateLimitExceededException` → `429 Too Many Requests` with
   `retryAfter: 1` (`RateLimiter` / `ErrorType.RATE_LIMITED`), handled by

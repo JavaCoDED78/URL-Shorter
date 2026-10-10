@@ -727,6 +727,8 @@ The following environment variables are used by the application.
 | `SHORTENER_RATE_LIMITER_ENABLED` | `false` | Enables the Redis-backed create-endpoint rate limiter (`shortener.rate-limiter.enabled`) |
 | `SHORTENER_RATE_LIMITER_WINDOW` | `PT1M` | Fixed-window length (see `SHORTENER_RATE_LIMITER_ENABLED`) |
 | `SHORTENER_RATE_LIMITER_MAX` | `100` | Max create probes admitted per key per window (see `SHORTENER_RATE_LIMITER_ENABLED`) |
+| `SHORTENER_RATE_LIMITER_FAIL_OPEN` | `true` | On a Redis outage, admit creates (fail-open) rather than refuse all clients |
+| `SHORTENER_RATE_LIMITER_TRUSTED_PROXIES` | — | Allowlist (host/CIDR) of proxies whose `X-Forwarded-For` first hop is used as the per-client limiter key |
 
 All values also follow Spring relaxed binding — e.g. `SPRING_DATASOURCE_URL`
 maps to `spring.datasource.url`. Postgres credentials are passed to the

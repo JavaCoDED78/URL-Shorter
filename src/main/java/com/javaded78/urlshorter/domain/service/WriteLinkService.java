@@ -65,6 +65,7 @@ public class WriteLinkService {
   private final ClickCounter clickCounter;
   private final MetricsRecorder metrics;
   private final RateLimiter rateLimiter;
+  private final CreateRateLimitSource rateLimitSource;
 
   public WriteLinkService(
       Clock clock,
@@ -76,7 +77,8 @@ public class WriteLinkService {
       LinkCache linkCache,
       ClickCounter clickCounter,
       MetricsRecorder metrics,
-      RateLimiter rateLimiter) {
+      RateLimiter rateLimiter,
+      CreateRateLimitSource rateLimitSource) {
     this.clock = clock;
     this.repository = repository;
     this.codeGenerator = codeGenerator;
@@ -87,6 +89,7 @@ public class WriteLinkService {
     this.clickCounter = clickCounter;
     this.metrics = metrics;
     this.rateLimiter = rateLimiter;
+    this.rateLimitSource = rateLimitSource;
   }
 
   /**
@@ -104,9 +107,13 @@ public class WriteLinkService {
   @Transactional
   public Link create(String originalUrl, String alias, Instant expiresAt) {
     // Enforce the create-endpoint rate limit before any other work. A denied
-    // probe returns immediately as 429 and never consumes a DB/Redis round-trip;
-    // the key-scoped probe (RateLimiter) must not itself be rate limited.
-    if (!rateLimiter.tryAcquire("create")) {
+    // probe returns immediately as 429 and never consumes a DB/Redis round-trip.
+    // The limiter is scoped per client: the key is the caller's IP (via
+    // rateLimitSource), so an abuser can only ever hit their own ceiling — a
+    // single global counter would let one client block everyone. The probe
+    // itself must not be rate limited.
+    if (!rateLimiter.tryAcquire(
+        new RateLimitScope("create", rateLimitSource.resolveClientKey()))) {
       throw new RateLimitExceededException();
     }
     urlValidator.validate(originalUrl);

@@ -1,6 +1,7 @@
 package com.javaded78.urlshorter.api.error;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
@@ -41,7 +42,7 @@ class RateLimitIT {
 
   @Test
   void rateLimitExceededProduces429ProblemDetail() {
-    when(rateLimiter.tryAcquire("create")).thenReturn(false);
+    when(rateLimiter.tryAcquire(any())).thenReturn(false);
 
     ResponseEntity<Map> response = post(Map.of("originalUrl", "https://example.com"));
 

@@ -1584,6 +1584,41 @@ RateLimitConfig ── enabled=true  → RedisRateLimiter (INCR + EXPIRE per win
 
 ---
 
+- [x] **Task 20.5 — Client-scoped create rate limiter (Task 20.4 hardening)**
+
+  The 20.4 limiter was keyed by a single static scope (`"create"`), so one
+  abuser exhausted the shared counter for every client (or made the ceiling
+  meaningless). Hardened to per-client scoping:
+
+```text
+RateLimiter (port, tryAcquire(RateLimitScope))
+   ↓
+WriteLinkService.create → rateLimiter.tryAcquire(new RateLimitScope("create", rateLimitSource.resolveClientKey())) → denied → 429
+
+RateLimitConfig:
+   createRateLimitSource() → CreateRateLimitSource  (unconditional @Bean)
+   enabled=true → RedisRateLimiter (client IP key, fail-open/closed configurable)
+   enabled=false → NoOpRateLimiter
+```
+
+- New `RateLimitScope(kind, clientKey)` value type — the per-client key lives
+  behind the port, never in call sites.
+- New port `CreateRateLimitSource` + infra bean `CreateIpRateLimitSource`:
+  resolves the key from the first hop of `X-Forwarded-For` when the peer is a
+  trusted proxy, else `remoteAddr`. Forged XFF can only masquerade as the local
+  proxy.
+- `CreateIpRateLimitSource` unit-tested (trusted proxy, untrusted peer, CIDR,
+  blank header); `CidrMatcher` unit-tested (IPv4/IPv6 partial masks, invalid
+  entries fail closed).
+- `RedisRateLimiter` now takes a `RateLimitScope` and a configurable `failOpen`
+  (`shortener.rate-limiter.fail-open`, default `true`) instead of hardcoded
+  fail-open. `RedisRateLimiterIT` verifies per-client counters are independent.
+- New config: `shortener.rate-limiter.trusted-proxies` (allowlist) and
+  `shortener.rate-limiter.fail-open`.
+- ADR-009 updated to record the security property (never key on a constant).
+
+---
+
 # Sprint 21 — Docker image приложения
 
 ## Цель

@@ -8,8 +8,11 @@ package com.javaded78.urlshorter.domain.service;
  * <p>Contract for future implementations:
  *
  * <ul>
- *   <li>key-scoped — e.g. {@code "create"} for the create endpoint or {@code "redirect:" + code}
- *       for redirects;
+ *   <li>client-scoped — the {@link RateLimitScope} carries both the limiter <em>kind</em> (e.g.
+ *       {@code "create"}) and the per-client key the limiter honours; a single global key that
+ *       scopes every caller behind one counter is a bug (an abuser would then block everyone).
+ *       The per-client key is resolved per request by a {@link CreateRateLimitSource} and lives
+ *       behind the port, never in domain call sites.
  *   <li>probing must not throw and must not consume budget: a denied request can be retried later,
  *       a caller asking twice must get a consistent answer for the same window;
  *   <li>implementation detail (token bucket, fixed window, ...) stays behind this interface —
@@ -19,8 +22,9 @@ package com.javaded78.urlshorter.domain.service;
 public interface RateLimiter {
 
   /**
-   * @return {@code true} if a unit of budget for {@code key} is available (and is atomically
+   * @param scope the limiter kind and the per-client key to scope by
+   * @return {@code true} if a unit of budget for {@code scope} is available (and is atomically
    *     consumed), {@code false} otherwise
    */
-  boolean tryAcquire(String key);
+  boolean tryAcquire(RateLimitScope scope);
 }

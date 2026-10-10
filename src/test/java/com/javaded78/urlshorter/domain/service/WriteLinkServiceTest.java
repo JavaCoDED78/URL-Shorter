@@ -3,7 +3,6 @@ package com.javaded78.urlshorter.domain.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -56,6 +55,7 @@ class WriteLinkServiceTest {
   private final com.javaded78.urlshorter.domain.counter.ClickCounter clickCounter =
       mock(com.javaded78.urlshorter.domain.counter.ClickCounter.class);
   private final RateLimiter rateLimiter = mock(RateLimiter.class);
+  private final CreateRateLimitSource rateLimitSource = mock(CreateRateLimitSource.class);
   private final UrlValidator urlValidator = spy(new UrlValidator(properties));
   private final AliasValidator aliasValidator = spy(new AliasValidator(properties));
   private final Clock clock = Clock.fixed(Instant.parse("2025-06-01T00:00:00Z"), ZoneOffset.UTC);
@@ -71,7 +71,8 @@ class WriteLinkServiceTest {
           linkCache,
           clickCounter,
           metricsStub(),
-          rateLimiter);
+          rateLimiter,
+          rateLimitSource);
 
   /** The metrics facade must pass calls through (timers wrap suppliers). */
   private static MetricsRecorder metricsStub() {
@@ -89,8 +90,10 @@ class WriteLinkServiceTest {
   }
 
   public WriteLinkServiceTest() {
-    // default: rate limit admits everything (a denied probe is tested separately)
-    when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+    // default: rate limit admits everything, and the source reports a client key
+    // (a denied probe is tested separately)
+    when(rateLimiter.tryAcquire(any())).thenReturn(true);
+    when(rateLimitSource.resolveClientKey()).thenReturn("203.0.113.9");
   }
 
   /** The fixed reference instant all tests run against (see {@link #clock}). */
@@ -151,7 +154,7 @@ class WriteLinkServiceTest {
 
   @Test
   void createIsDeniedWhenRateLimiterRejectsProbe() {
-    when(rateLimiter.tryAcquire("create")).thenReturn(false);
+    when(rateLimiter.tryAcquire(any())).thenReturn(false);
 
     assertThatThrownBy(() -> service.create("https://example.com", null, null))
         .isInstanceOf(RateLimitExceededException.class);
@@ -162,7 +165,7 @@ class WriteLinkServiceTest {
 
   @Test
   void rateLimiterIsProbedBeforeValidation() {
-    when(rateLimiter.tryAcquire("create")).thenReturn(false);
+    when(rateLimiter.tryAcquire(any())).thenReturn(false);
 
     assertThatThrownBy(() -> service.create("not-a-url", null, null))
         .isInstanceOf(RateLimitExceededException.class);
@@ -171,7 +174,7 @@ class WriteLinkServiceTest {
 
   @Test
   void createIsDeniedForAliasPathToo() {
-    when(rateLimiter.tryAcquire("create")).thenReturn(false);
+    when(rateLimiter.tryAcquire(any())).thenReturn(false);
 
     assertThatThrownBy(() -> service.create("https://example.com", "my-alias", null))
         .isInstanceOf(RateLimitExceededException.class);

@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.infra.redis.limiter;
 
+import com.javaded78.urlshorter.domain.service.RateLimitScope;
 import com.javaded78.urlshorter.domain.service.RateLimiter;
 
 /**
@@ -11,7 +12,7 @@ import com.javaded78.urlshorter.domain.service.RateLimiter;
 public class NoOpRateLimiter implements RateLimiter {
 
   @Override
-  public boolean tryAcquire(String key) {
+  public boolean tryAcquire(RateLimitScope scope) {
     return true;
   }
 }
