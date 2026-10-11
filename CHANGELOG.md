@@ -63,10 +63,23 @@ is now enforced: transaction boundaries live on the service layer, and the
 Spring Data repository is a persistence-only port that carries no
 `@Transactional`.
 
-- **`WriteLinkService.create` / `delete`** are now annotated
-  `@Transactional` — the whole use-case is one transaction (create's
-  collision-retry loop; delete's find→evict→discard→delete sequence).
-- **`CounterFlushService.flush`** is now `@Transactional` — the
+- **`WriteLinkService.delete`** is annotated `@Transactional` — the
+  find→evict→discard→delete sequence is one transaction. It is a normal
+  (non-self) call from `LinkController`, so the Spring proxy still intercepts
+  it and the transaction is real.
+- **`WriteLinkService.create` has no transaction** — validation + rate-limit
+  run *outside* any transaction on purpose. `create` delegates the short-lived
+  DB insert to the separate **`doCreate`**, which also has no `@Transactional`.
+  Each `LinkRepository.save` uses `saveAndFlush`, so the unique index is
+  enforced per attempt and a collision surfaces as `DataIntegrityViolationException`
+  inside a bounded collision-retry loop — not at an unpredictable commit point.
+  `doCreate` is `public` so tests can drive the write path directly. The split
+  exists because URL validation does a **blocking DNS lookup**; holding a
+  pooled PostgreSQL connection during that lookup starved the pool under the
+  300-way `ConcurrencyIT` (only ~10 of 300 concurrent creates survived before
+  the 5 s connection timeout). Keeping the blocking lookup and the fast insert
+  on different code paths — no connection held between them — is what fixes it.
+- **`CounterFlushService.flush`** remains `@Transactional` — the
   drain→update→restore round-trip is atomic.
 - **`LinkJpaRepository`** lost both `@Transactional` annotations. The methods
   still carry `@Modifying(clearAutomatically, flushAutomatically)`, which
@@ -75,13 +88,14 @@ Spring Data repository is a persistence-only port that carries no
   confusing dual `@Transactional` (interface + service) that made it unclear
   where a transaction actually begins.
 - Docs updated to reflect that `LinkEntity`, JPQL, `@Modifying` and the port
-  boundary live in `infra.persistence`, while `@Transactional` lives on the
-  service layer.
+  boundary live in `infra.persistence`, while `@Transactional` lives only on
+  the write/delete path — never on the blocking-create code path.
 
 Verified: `WriteLinkServiceTest`, `ReadLinkServiceTest`,
 `CounterFlushServiceTest`, `PostgresFailureIT` (incl. transaction-begin 503),
-and `ConcurrencyIT` (10 k parallel redirects, concurrent creates, alias race,
-delete-vs-redirect convergence) pass; `./gradlew compileJava` clean.
+and `ConcurrencyIT` (10 k parallel redirects, 300 concurrent creates with all
+surviving, alias race, delete-vs-redirect convergence) pass; `./gradlew
+compileJava` clean.
 
 ## 1.2.0 — Pure domain repository port and infrastructure separation (2026-10-08)
 

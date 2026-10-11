@@ -104,7 +104,6 @@ public class WriteLinkService {
    * @throws RateLimitExceededException if the create-endpoint rate limit is exceeded (429)
    * @throws IllegalStateException if generated codes keep colliding
    */
-  @Transactional
   public Link create(String originalUrl, String alias, Instant expiresAt) {
     // Enforce the create-endpoint rate limit before any other work. A denied
     // probe returns immediately as 429 and never consumes a DB/Redis round-trip.
@@ -116,10 +115,29 @@ public class WriteLinkService {
         new RateLimitScope("create", rateLimitSource.resolveClientKey()))) {
       throw new RateLimitExceededException();
     }
+    // URL/alias validation runs OUTSIDE any transaction on purpose: the URL
+    // validation does a blocking DNS lookup, and holding a pooled PostgreSQL
+    // connection during that lookup is exactly what starved the connection
+    // pool under the 300-way ConcurrencyIT (only 10 creates survived before
+    // the 5s connection-timeout kicked in). Validate first, then delegate the
+    // short-lived DB insert to doCreate, which never holds a transaction.
     urlValidator.validate(originalUrl);
     if (expiresAt != null && !expiresAt.isAfter(clock.instant())) {
       throw new IllegalArgumentException("expiresAt must be in the future, got: " + expiresAt);
     }
+    return doCreate(originalUrl, alias, expiresAt);
+  }
+
+  /**
+   * Core of {@link #create}: inserts the link, retrying a bounded number of times on a generated-code
+   * collision. No {@code @Transactional} boundary is intended here — each {@link LinkRepository#save}
+   * flushes immediately, so the database unique index is enforced per attempt and a collision is
+   * caught by {@link DataIntegrityViolationException} and retried (the retry depends on that
+   * immediate flush, not on a transaction). {@code @Transactional} is deliberately absent, because a
+   * transaction here would hold a pooled connection; the whole write path is split so that the
+   * blocking DNS lookup in {@link #create} never shares a connection with the fast DB insert.
+   */
+  public Link doCreate(String originalUrl, String alias, Instant expiresAt) {
     if (alias == null || alias.isBlank()) {
       Link link = createWithGeneratedCode(originalUrl, expiresAt);
       metrics.linkCreated();

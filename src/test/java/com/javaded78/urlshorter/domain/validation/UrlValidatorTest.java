@@ -31,9 +31,38 @@ class UrlValidatorTest {
         "https://example.com/path/to/page?query=1&other=2#fragment",
         "https://user:pass@example.com:8080/p",
         "https://[2001:db8::1]:443/ipv6",
+        // Internal-address rejection is a no-op when DNS cannot resolve (UnknownHostException
+        // fails open), so the unit tests cover the address classification with IP literals.
+        "https://1.2.3.4/path",
+        "http://[2001:db8::1]",
       })
   void acceptsValidUrls(String url) {
     assertThatCode(() -> validator.validate(url)).doesNotThrowAnyException();
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "http://127.0.0.1/",
+        "http://127.0.0.1:8080/actuator",
+        "http://[::1]/",
+        "http://[::1]:8080/actuator",
+        "https://user:pass@[::1]:443/",
+        "http://169.254.169.254/latest/meta-data/",
+        "http://10.0.0.5/",
+        "http://192.168.1.1/",
+        "http://172.16.0.1/",
+        "http://172.31.255.255/",
+        "http://0.0.0.0/",
+        "http://0.0.0.0:8080/",
+        "http://[::]/",
+        "http://2130706433/",
+        "http://255.255.255.255/",
+      })
+  void rejectsUrlsPointingAtInternalAddresses(String url) {
+    assertThatThrownBy(() -> validator.validate(url))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("internal");
   }
 
   @Test
