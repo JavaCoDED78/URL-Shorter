@@ -37,7 +37,7 @@ class ShortenerPropertiesValidationTest {
             new ShortenerProperties.Url(2048, List.of("https")),
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(5),
-            new ShortenerProperties.Cache(java.time.Duration.ofMinutes(1)),
+            new ShortenerProperties.Cache(java.time.Duration.ofMinutes(1), java.time.Duration.ofMinutes(1), 1_000_000L, 0.0001),
             new ShortenerProperties.Code(7),
             DataSize.ofMegabytes(1),
             1024);
@@ -52,7 +52,7 @@ class ShortenerPropertiesValidationTest {
             new ShortenerProperties.Url(2048, List.of("https")),
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(5),
-            new ShortenerProperties.Cache(java.time.Duration.ofMinutes(1)),
+            new ShortenerProperties.Cache(java.time.Duration.ofMinutes(1), java.time.Duration.ofMinutes(1), 1_000_000L, 0.0001),
             new ShortenerProperties.Code(999),
             DataSize.ofMegabytes(1),
             1024);
@@ -67,7 +67,7 @@ class ShortenerPropertiesValidationTest {
             new ShortenerProperties.Url(-1, List.of("https")),
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(5),
-            new ShortenerProperties.Cache(java.time.Duration.ofMinutes(1)),
+            new ShortenerProperties.Cache(java.time.Duration.ofMinutes(1), java.time.Duration.ofMinutes(1), 1_000_000L, 0.0001),
             new ShortenerProperties.Code(7),
             DataSize.ofMegabytes(1),
             1024);
@@ -82,7 +82,7 @@ class ShortenerPropertiesValidationTest {
             new ShortenerProperties.Url(2048, List.of("https")),
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(5),
-            new ShortenerProperties.Cache(java.time.Duration.ofMinutes(-5)),
+            new ShortenerProperties.Cache(java.time.Duration.ofMinutes(-5), java.time.Duration.ofMinutes(1), 1_000_000L, 0.0001),
             new ShortenerProperties.Code(7),
             DataSize.ofMegabytes(1),
             1024);
@@ -97,7 +97,7 @@ class ShortenerPropertiesValidationTest {
             new ShortenerProperties.Url(2048, List.of()),
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(5),
-            new ShortenerProperties.Cache(java.time.Duration.ofMinutes(1)),
+            new ShortenerProperties.Cache(java.time.Duration.ofMinutes(1), java.time.Duration.ofMinutes(1), 1_000_000L, 0.0001),
             new ShortenerProperties.Code(7),
             DataSize.ofMegabytes(1),
             1024);

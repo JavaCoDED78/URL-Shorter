@@ -720,6 +720,9 @@ The following environment variables are used by the application.
 | `SHORTENER_ALIAS_MAX_LENGTH` | `64` | Maximum custom alias length |
 | `SHORTENER_MAX_COLLISION_RETRIES` | `5` | Bounded retries on generated-code collision |
 | `SHORTENER_CACHE_TTL` | `1h` | Redis TTL for cached links |
+| `SHORTENER_CACHE_NEGATIVE_TTL` | `30s` | TTL for the short-lived negative marker on a code that did not exist (Task 21.2) |
+| `SHORTENER_BLOOM_EXPECTED_CODES` | `1000000` | Number of codes the Bloom filter is sized for before reaching the target false-positive rate (Task 21.2) |
+| `SHORTENER_BLOOM_FALSE_POSITIVE_RATE` | `0.001` | Target false-positive rate of the Bloom filter, in (0, 1) (Task 21.2) |
 | `SHORTENER_FLUSH_INTERVAL` | `PT5S` | Click counter flush interval |
 | `SHORTENER_MAX_PAYLOAD_SIZE` | `16KB` | Raw request body ceiling |
 | `SHORTENER_BENCHMARK_ENABLED` | `false` | Enables `GET /bench-hit` for k6 load tests |

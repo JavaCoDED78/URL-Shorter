@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>Counters: {@code urlshorter.linksCreated}, {@code urlshorter.linksRedirected}, {@code
  * urlshorter.linksNotFound}, {@code urlshorter.linksExpired}, {@code urlshorter.linksDeleted},
- * {@code urlshorter.cacheHit}, {@code urlshorter.cacheMiss}, {@code urlshorter.clicksIncremented},
+ * {@code urlshorter.cacheHit}, {@code urlshorter.cacheMiss}, {@code urlshorter.cacheNegativeHit}, {@code urlshorter.clicksIncremented},
  * {@code urlshorter.clicksFlushed}, {@code urlshorter.clicksFlushFailed}, {@code
  * urlshorter.clicksIncrementFailed}, {@code urlshorter.rateLimiterDenied}.
  *
@@ -33,6 +33,7 @@ public class MetricsRecorder {
   private final Counter linksDeleted;
   private final Counter cacheHit;
   private final Counter cacheMiss;
+  private final Counter cacheNegativeHit;
   private final Counter clicksIncremented;
   private final Counter clicksIncrementFailed;
   private final Counter clicksFlushed;
@@ -51,6 +52,7 @@ public class MetricsRecorder {
     linksDeleted = registry.counter("urlshorter.linksDeleted");
     cacheHit = registry.counter("urlshorter.cacheHit");
     cacheMiss = registry.counter("urlshorter.cacheMiss");
+    cacheNegativeHit = registry.counter("urlshorter.cacheNegativeHit");
     clicksIncremented = registry.counter("urlshorter.clicksIncremented");
     clicksIncrementFailed = registry.counter("urlshorter.clicksIncrementFailed");
     clicksFlushed = registry.counter("urlshorter.clicksFlushed");
@@ -88,6 +90,14 @@ public class MetricsRecorder {
 
   public void cacheMiss() {
     cacheMiss.increment();
+  }
+
+  /**
+   * A redirect short-circuited on a known-absent code — the Bloom filter or the short-TTL negative
+   * marker (Task 21.2) — so PostgreSQL was never touched.
+   */
+  public void cacheNegativeHit() {
+    cacheNegativeHit.increment();
   }
 
   public void clickIncremented() {

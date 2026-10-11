@@ -675,22 +675,26 @@ min(configuredCacheTTL, remainingLinkLifetime)
 
 - [x] **Task 6.6 — Cache stampede policy**
 
-Зафиксировать базовую стратегию.
+Bases: singleflight via `putIfAbsent` (never `computeIfAbsent` — its Javadoc
+allows the mapping to run more than once under contention, spawning several
+owners and several DB queries, which is the stampede itself).
 
-На первом этапе допускается:
+`RedisLinkCache#coalesce` runs a `do { get(inFlight) → putIfAbsent(bare future) }
+while (!owner)` loop; whoever installs the future is the sole owner and runs the
+`miss` supplier once, everyone else joins it. The owner writes the positive cache
+*before* completing the shared future and removing the slot, so a caller that
+arrives after the remove reads the value back instead of becoming a second owner.
+Negative caching (Task 21.2, Bloom filter per-replica + short-TTL marker)
+short-circuits absent codes before the lookup loop.
 
-```text
-несколько concurrent misses
-→ несколько одинаковых DB queries
-```
+- [x] several concurrent misses of the same code → one DB query (proven by
+      `RedisLinkCacheTest#coalesceCoalescesConcurrentMissesIntoSingleLookup` under
+      50 concurrent callers);
+- [x] absent code → no DB query, negative marker returned.
 
-После основного MVP при необходимости добавить:
-
-- [x] distributed lock;
-- [x] request coalescing;
-- [x] short local cache.
-
-Не добавлять сложность раньше подтверждённой потребности.
+Не добавлять сложность раньше подтвердённой потребности: stampede protection и
+negative caching уже собраны вместе в `coalesce`, отдельный distributed lock
+не нужен.
 
 ---
 

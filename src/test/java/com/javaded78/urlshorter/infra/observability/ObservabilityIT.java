@@ -92,6 +92,7 @@ class ObservabilityIT {
     assertThat(metric("urlshorter.linksNotFound")).isGreaterThanOrEqualTo(1);
     assertThat(metric("urlshorter.cacheMiss")).isGreaterThanOrEqualTo(1);
     assertThat(metric("urlshorter.cacheHit")).isGreaterThanOrEqualTo(1);
+    assertThat(metric("urlshorter.cacheNegativeHit")).isGreaterThanOrEqualTo(1);
     assertThat(metric("urlshorter.clicksIncremented")).isGreaterThanOrEqualTo(2);
     assertThat(metric("urlshorter.redirectDuration")).isGreaterThanOrEqualTo(2);
     assertThat(metric("urlshorter.redisLookupDuration")).isGreaterThanOrEqualTo(1);

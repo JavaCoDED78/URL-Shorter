@@ -44,6 +44,17 @@ shortener:
     max-collision-retries: ${SHORTENER_MAX_COLLISION_RETRIES:5}
   cache:
     ttl: ${SHORTENER_CACHE_TTL:1h}
+    # Negative cache (Task 21.2): a short-lived marker on a code that did not exist,
+    # so a scan of nonexistent codes stops hammering PostgreSQL. Short by design —
+    # the trade-off is between shielding the database and missing a link created
+    # during the gap (30–60s).
+    negative-ttl: ${SHORTENER_CACHE_NEGATIVE_TTL:30s}
+    # Bloom filter (Task 21.2): in-memory per replica, maintained on create.
+    # Sized for `expected-codes` codes before reaching the target false-positive
+    # rate. A distinct random code that was never created is absent from every
+    # replica's filter, so the scan short-circuits locally without reaching the DB.
+    expected-codes: ${SHORTENER_BLOOM_EXPECTED_CODES:1000000}
+    bloom-false-positive-rate: ${SHORTENER_BLOOM_FALSE_POSITIVE_RATE:0.001}
   flush:
     interval: ${SHORTENER_FLUSH_INTERVAL:PT5S}
   # Raw JSON body ceiling (Task 20.1) — far above the largest legitimate

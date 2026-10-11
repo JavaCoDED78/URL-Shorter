@@ -37,9 +37,19 @@ throughput difference and were rejected for breaking this contract.
 
 - Hot redirects cost ~2 Redis ops (GET + INCR), no PostgreSQL query —
   measured ~5 090 rps for hits vs ~3 210 rps for misses (Sprint 23).
-- Stampede risk on a cold cache: concurrent misses may issue duplicate DB
-  queries. Accepted — no distributed locks or request coalescing until a
-  proven need.
+- Stampede protection (Task 21.1): `RedisLinkCache#coalesce` coalesces concurrent misses for the
+  same code behind a single in-flight lookup using a `putIfAbsent` loop over a `ConcurrentMap` of
+  `CompletableFuture` slots — the sole installer becomes the only owner, everyone else joins it.
+  `computeIfAbsent` is deliberately avoided: its Javadoc allows the mapping to run more than once
+  under contention, which would spawn several owners and several DB queries (the very stampede).
+  An owner writes the result to the positive cache *before* completing the shared future and
+  removing the slot, so a caller that arrives after the remove reads the value back instead of
+  becoming a second owner.
+- Negative caching (Task 21.2): a Bloom-present, non-marked code that PostgreSQL reports as absent
+  records a short-TTL negative marker; a later scan of the same absent code short-circuits against
+  Redis (and the in-memory Bloom filter, which is per-replica) without reaching PostgreSQL. A
+  fresh random code is absent from every replica's filter, so the cheap shield also covers cold
+  code scans.
 - Cache misses add a write to the read path; acceptable at this scale.
 
 ## Alternatives considered

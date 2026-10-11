@@ -26,6 +26,35 @@ domain-supplied instant.
 Verified: `./gradlew compileJava` clean (no new warnings); `./gradlew test` green —
 258/258.
 
+### Singleflight negative caching on the redirect path (Tasks 21.1/21.2)
+
+The redirect was a plain cache-aside with no stampede protection and no negative
+caching: an evicted hot key let `N` concurrent misses hit PostgreSQL, and a scan
+of nonexistent codes re-read the database on every request.
+
+- **Singleflight.** `RedisLinkCache#coalesce` now coalesces concurrent misses for
+  the same code behind one in-flight lookup using a `do { get → putIfAbsent }
+  while (!owner)` loop over a `ConcurrentMap` of bare `CompletableFuture`s —
+  whoever installs the future is the sole owner and runs the `miss` supplier
+  once, everyone else joins it. `computeIfAbsent` is deliberately avoided: its
+  Javadoc permits the mapping to run more than once under contention, which would
+  spawn several owners and several DB queries (the very stampede). The owner
+  writes the positive cache *before* completing the shared future and removing
+  the slot, so a caller that arrives after the remove reads the value back
+  instead of becoming a second owner.
+- **Negative caching.** `coalesce` short-circuits Bloom-absent codes and codes
+  with a short-TTL negative marker before reaching PostgreSQL, so a cold scan of
+  nonexistent codes never touches the database. The Bloom filter (`CodeBloom-
+  Filter`) is maintained incrementally per replica via `markExists(code)` on the
+  create path (`WriteLinkService`), and a delete drops the stale marker via
+  `evict`.
+- **Config.** New `shortener.cache` properties drive the policy
+  (`shortener.cache.ttl`, `negative-ttl`, `expected-codes`,
+  `bloom-false-positive-rate`); the negative marker TTL is 30 s by default.
+- **Verification.** `RedisLinkCacheTest#coalesceCoalescesConcurrentMissesInto-
+  SingleLookup` asserts one DB query under 50 concurrent callers; the full suite
+  is green (305 tests, 0 failures).
+
 ### Distributed click flush (ShedLock)
 
 The `@Scheduled` click flush (`ClickFlushJob#flushClicks`) previously ran on a

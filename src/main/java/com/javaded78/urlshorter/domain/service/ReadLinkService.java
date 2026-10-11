@@ -113,32 +113,46 @@ public class ReadLinkService {
    * @throws LinkExpiredException if the link's {@code expiresAt} has passed (410)
    */
   public ResolvedLink resolve(String code) {
-    Optional<CachedLink> cached = metrics.timeRedisLookup(() -> linkCache.get(code));
-    if (cached.isPresent()) {
-      metrics.cacheHit();
-      CachedLink hit = cached.get();
-      if (ExpirationPolicy.isExpired(hit.expiresAt(), clock.instant())) {
+    // Singleflight + negative caching (Tasks 21.1/21.2): the cache coalesces concurrent cold
+    // misses for this code into one PostgreSQL lookup, and short-circuits Bloom-absent and recently
+    // absent codes before any DB hit. The miss supplier below performs the actual lookup and, on
+    // absence, records the short-TTL negative marker via the cache.
+    Optional<CachedLink> resolved =
+        metrics.timeRedisLookup(() -> linkCache.coalesce(code, () -> lookupByCode(code)));
+    if (resolved.isPresent()) {
+      CachedLink link = resolved.get();
+      if (ExpirationPolicy.isExpired(link.expiresAt(), clock.instant())) {
         metrics.linkExpired();
         throw new LinkExpiredException(code);
       }
-      // Click counts only after the redirect target is validated (Task 7.3).
+      // Click counts once per redirect — whether the target came from a cache hit or a cold
+      // PostgreSQL lookup (the double-count was the bug this fixes). The coalesce supplier must
+      // NOT count too, hence lookupByCode never increments.
       recordIncrement(code);
       metrics.linkRedirected();
-      return new ResolvedLink(hit.code(), hit.originalUrl());
+      return new ResolvedLink(link.code(), link.originalUrl());
     }
-    metrics.cacheMiss();
-    Link link =
-        metrics.timePostgresLookup(
-            () -> repository.findByCodeIgnoreCase(code).orElseThrow(() -> notFound(code)));
-    if (ExpirationPolicy.isExpired(link.expiresAt(), clock.instant())) {
-      // Expired links are never cached (Task 6.4) and never counted.
-      metrics.linkExpired();
-      throw new LinkExpiredException(code);
-    }
-    linkCache.put(new CachedLink(link.code(), link.originalUrl(), link.expiresAt()));
-    recordIncrement(code);
-    metrics.linkRedirected();
-    return new ResolvedLink(link.code(), link.originalUrl());
+    // Absent: the negative cache marker has been written inside coalesce — do not re-lookup.
+    metrics.linkNotFound();
+    throw new LinkNotFoundException(code);
+  }
+
+  /** PostgreSQL lookup used as the {@link LinkCache#coalesce} miss supplier (Tasks 5.1, 5.2, 5.4). */
+  private Optional<CachedLink> lookupByCode(String code) {
+    return metrics.timePostgresLookup(
+        () ->
+            repository
+                .findByCodeIgnoreCase(code)
+                .map(
+                    link -> {
+                      if (ExpirationPolicy.isExpired(link.expiresAt(), clock.instant())) {
+                        // Expired links are never cached (Task 6.4) and never counted.
+                        metrics.linkExpired();
+                        throw new LinkExpiredException(code);
+                      }
+                      metrics.linkRedirected();
+                      return new CachedLink(link.code(), link.originalUrl(), link.expiresAt());
+                    }));
   }
 
   /**

@@ -57,8 +57,19 @@ public record ShortenerProperties(
   /**
    * @param ttl Redis TTL for cached links ({@code link:{code}}); for links with {@code expiresAt}
    *     the effective TTL is the minimum of this value and the remaining lifetime
+   * @param negativeTtl TTL for the negative cache (a short-lived marker on a code that did not
+   *     exist), so a scan of nonexistent codes stops hammering PostgreSQL (Task 21.2). The value
+   *     must be short — 30–60s is the trade-off window between shielding the database and missing
+   *     a link that was created during the gap.
+   * @param expectedCodes the Bloom filter (Task 21.2) is sized for this many codes before it
+   *     reaches the configured false-positive rate
+   * @param bloomFalsePositiveRate target false-positive rate of the Bloom filter, in (0, 1)
    */
-  public record Cache(@PositiveDuration java.time.Duration ttl) {}
+  public record Cache(
+      @PositiveDuration java.time.Duration ttl,
+      @PositiveDuration java.time.Duration negativeTtl,
+      @Positive long expectedCodes,
+      double bloomFalsePositiveRate) {}
 
   /**
    * @param length number of characters in generated Base62 codes; bounded by {@code [1, 10]} — the

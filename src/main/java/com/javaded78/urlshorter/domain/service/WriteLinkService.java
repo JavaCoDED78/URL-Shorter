@@ -141,10 +141,12 @@ public class WriteLinkService {
     if (alias == null || alias.isBlank()) {
       Link link = createWithGeneratedCode(originalUrl, expiresAt);
       metrics.linkCreated();
+      linkCache.markExists(link.code());
       return link;
     }
     Link link = createWithAlias(originalUrl, alias, expiresAt);
     metrics.linkCreated();
+    linkCache.markExists(link.code());
     return link;
   }
 

@@ -42,7 +42,7 @@ class WriteLinkServiceTest {
           new ShortenerProperties.Url(2048, List.of("http", "https")),
           new ShortenerProperties.Alias(64, Set.of("api")),
           new ShortenerProperties.Create(3),
-          new ShortenerProperties.Cache(java.time.Duration.ofHours(1)),
+          new ShortenerProperties.Cache(java.time.Duration.ofHours(1), java.time.Duration.ofSeconds(45), 1_000_000L, 0.0001),
           new ShortenerProperties.Code(7),
           org.springframework.util.unit.DataSize.ofKilobytes(16),
           1024);
