@@ -1,6 +1,7 @@
 package com.javaded78.urlshorter.domain.model;
 
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Domain representation of a short link — business data only, no persistence or cache annotations
@@ -13,7 +14,11 @@ import java.time.Instant;
  * @param createdAt creation instant in UTC
  */
 public record Link(
-    String code, String originalUrl, Instant expiresAt, long clickCount, Instant createdAt) {
+    String code,
+    String originalUrl,
+    @Nullable Instant expiresAt,
+    long clickCount,
+    Instant createdAt) {
 
   public Link {
     if (code == null || code.isBlank()) {
@@ -36,7 +41,7 @@ public record Link(
    * {@link Clock} in tests.
    */
   public static Link created(
-      String code, String originalUrl, Instant expiresAt, Instant createdAt) {
+      String code, String originalUrl, @Nullable Instant expiresAt, Instant createdAt) {
     return new Link(code, originalUrl, expiresAt, 0, createdAt);
   }
 }

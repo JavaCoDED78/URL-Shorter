@@ -2,6 +2,7 @@ package com.javaded78.urlshorter.domain.cache;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Redis value stored under {@code link:{code}} (Task 6.1). Only the fields the redirect path needs
@@ -17,7 +18,7 @@ import java.time.Instant;
  * a structurally unreadable entry is evicted and the redirect falls back to PostgreSQL (Task 6.5).
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record CachedLink(String code, String originalUrl, Instant expiresAt) {
+public record CachedLink(String code, String originalUrl, @Nullable Instant expiresAt) {
 
   public CachedLink {
     if (code == null || code.isBlank()) {

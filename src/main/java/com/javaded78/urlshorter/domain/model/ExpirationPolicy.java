@@ -1,6 +1,7 @@
 package com.javaded78.urlshorter.domain.model;
 
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Expiration policy (Task 5.2): {@code null} never expires; {@code expiresAt > now} is active;
@@ -15,7 +16,7 @@ public final class ExpirationPolicy {
   private ExpirationPolicy() {}
 
   /** {@code expiresAt == null} never expires; {@code expiresAt <= now} is expired. */
-  public static boolean isExpired(Instant expiresAt, Instant now) {
+  public static boolean isExpired(@Nullable Instant expiresAt, Instant now) {
     return expiresAt != null && !expiresAt.isAfter(now);
   }
 }

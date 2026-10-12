@@ -4,4 +4,5 @@
  * created; they stay in the domain layer (no infrastructure dependencies) even though they are not
  * repository or service ports.
  */
+@org.jspecify.annotations.NullMarked
 package com.javaded78.urlshorter.domain.validation;

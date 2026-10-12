@@ -56,6 +56,10 @@ dependencies {
     implementation("net.javacrumbs.shedlock:shedlock-spring:7.10.1")
     implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:7.10.1")
 
+    // --- Nullability: JSpecify type-level annotations (@NullMarked/@Nullable) ---
+    // Maven group is org.jspecify; the annotation *package* is net.jspecify.annotations.
+    implementation("org.jspecify:jspecify:0.3.0")
+
     // --- Code generation: Lombok + config metadata ---
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

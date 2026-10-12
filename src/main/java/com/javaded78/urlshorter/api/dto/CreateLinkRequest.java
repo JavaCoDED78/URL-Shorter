@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Request body for {@code POST /api/v1/links} (Task 4.1).
@@ -38,7 +39,7 @@ public record CreateLinkRequest(
             regexp = "^[a-zA-Z0-9_-]+$",
             message = "alias may only contain letters, digits, '-' and '_'")
         @Size(max = 64, message = "alias exceeds the maximum length")
-        String alias,
+        @Nullable String alias,
     @Schema(
             description =
                 "Optional expiration instant (ISO-8601, UTC); must be in the "
@@ -47,4 +48,4 @@ public record CreateLinkRequest(
             type = "string",
             format = "date-time",
             requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-        Instant expiresAt) {}
+        @Nullable Instant expiresAt) {}

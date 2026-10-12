@@ -13,6 +13,7 @@ import com.javaded78.urlshorter.domain.validation.AliasValidator;
 import com.javaded78.urlshorter.domain.validation.UrlValidator;
 import java.time.Clock;
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -104,15 +105,14 @@ public class WriteLinkService {
    * @throws RateLimitExceededException if the create-endpoint rate limit is exceeded (429)
    * @throws IllegalStateException if generated codes keep colliding
    */
-  public Link create(String originalUrl, String alias, Instant expiresAt) {
+  public Link create(String originalUrl, @Nullable String alias, @Nullable Instant expiresAt) {
     // Enforce the create-endpoint rate limit before any other work. A denied
     // probe returns immediately as 429 and never consumes a DB/Redis round-trip.
     // The limiter is scoped per client: the key is the caller's IP (via
     // rateLimitSource), so an abuser can only ever hit their own ceiling — a
     // single global counter would let one client block everyone. The probe
     // itself must not be rate limited.
-    if (!rateLimiter.tryAcquire(
-        new RateLimitScope("create", rateLimitSource.resolveClientKey()))) {
+    if (!rateLimiter.tryAcquire(new RateLimitScope("create", rateLimitSource.resolveClientKey()))) {
       throw new RateLimitExceededException();
     }
     // URL/alias validation runs OUTSIDE any transaction on purpose: the URL
@@ -129,15 +129,16 @@ public class WriteLinkService {
   }
 
   /**
-   * Core of {@link #create}: inserts the link, retrying a bounded number of times on a generated-code
-   * collision. No {@code @Transactional} boundary is intended here — each {@link LinkRepository#save}
-   * flushes immediately, so the database unique index is enforced per attempt and a collision is
-   * caught by {@link DuplicateCodeException} and retried (the retry depends on that
-   * immediate flush, not on a transaction). {@code @Transactional} is deliberately absent, because a
-   * transaction here would hold a pooled connection; the whole write path is split so that the
-   * blocking DNS lookup in {@link #create} never shares a connection with the fast DB insert.
+   * Core of {@link #create}: inserts the link, retrying a bounded number of times on a
+   * generated-code collision. No {@code @Transactional} boundary is intended here — each {@link
+   * LinkRepository#save} flushes immediately, so the database unique index is enforced per attempt
+   * and a collision is caught by {@link DuplicateCodeException} and retried (the retry depends on
+   * that immediate flush, not on a transaction). {@code @Transactional} is deliberately absent,
+   * because a transaction here would hold a pooled connection; the whole write path is split so
+   * that the blocking DNS lookup in {@link #create} never shares a connection with the fast DB
+   * insert.
    */
-  public Link doCreate(String originalUrl, String alias, Instant expiresAt) {
+  public Link doCreate(String originalUrl, @Nullable String alias, @Nullable Instant expiresAt) {
     if (alias == null || alias.isBlank()) {
       Link link = createWithGeneratedCode(originalUrl, expiresAt);
       metrics.linkCreated();
@@ -179,7 +180,8 @@ public class WriteLinkService {
     linkCache.evict(link.code());
   }
 
-  private Link createWithAlias(String originalUrl, String alias, Instant expiresAt) {
+  private Link createWithAlias(
+      String originalUrl, @Nullable String alias, @Nullable Instant expiresAt) {
     String code = aliasValidator.validateAndNormalize(alias);
     if (repository.existsByCode(code)) {
       throw new AliasAlreadyExistsException(code);
@@ -195,7 +197,7 @@ public class WriteLinkService {
     }
   }
 
-  private Link createWithGeneratedCode(String originalUrl, Instant expiresAt) {
+  private Link createWithGeneratedCode(String originalUrl, @Nullable Instant expiresAt) {
     for (int attempt = 1; attempt <= maxCollisionRetries; attempt++) {
       String code = codeGenerator.generate();
       try {
