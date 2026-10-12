@@ -1,6 +1,6 @@
 package com.javaded78.urlshorter.domain.validation;
 
-import com.javaded78.urlshorter.config.ShortenerProperties;
+import com.javaded78.urlshorter.domain.config.AliasConfig;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -28,10 +28,10 @@ public class AliasValidator {
   private final int maxLength;
   private final Set<String> reserved;
 
-  public AliasValidator(ShortenerProperties properties) {
-    this.maxLength = properties.alias().maxLength();
+  public AliasValidator(AliasConfig config) {
+    this.maxLength = config.maxLength();
     this.reserved =
-        properties.alias().reserved().stream()
+        config.reserved().stream()
             .map(word -> word.toLowerCase(Locale.ROOT))
             .collect(Collectors.toSet());
   }

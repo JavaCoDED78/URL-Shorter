@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
+import com.javaded78.urlshorter.domain.config.UrlConfig;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -21,7 +22,8 @@ class UrlValidatorTest {
           org.springframework.util.unit.DataSize.ofKilobytes(16),
           1024);
 
-  private final UrlValidator validator = new UrlValidator(properties);
+  private final UrlValidator validator =
+      new UrlValidator(new UrlConfig(properties.url().maxLength(), properties.url().allowedSchemes()));
 
   @ParameterizedTest
   @ValueSource(

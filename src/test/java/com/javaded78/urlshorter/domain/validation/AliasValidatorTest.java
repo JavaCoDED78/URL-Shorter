@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
+import com.javaded78.urlshorter.domain.config.AliasConfig;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,8 @@ class AliasValidatorTest {
           org.springframework.util.unit.DataSize.ofKilobytes(16),
           1024);
 
-  private final AliasValidator validator = new AliasValidator(properties);
+  private final AliasValidator validator =
+      new AliasValidator(new AliasConfig(properties.alias().maxLength(), properties.alias().reserved()));
 
   @ParameterizedTest
   @ValueSource(

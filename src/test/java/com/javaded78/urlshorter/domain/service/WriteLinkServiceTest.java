@@ -14,7 +14,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
+import com.javaded78.urlshorter.domain.config.AliasConfig;
+import com.javaded78.urlshorter.domain.config.UrlConfig;
+import com.javaded78.urlshorter.domain.config.WriteServiceConfig;
 import com.javaded78.urlshorter.domain.exception.AliasAlreadyExistsException;
+import com.javaded78.urlshorter.domain.exception.DuplicateCodeException;
 import com.javaded78.urlshorter.domain.exception.LinkNotFoundException;
 import com.javaded78.urlshorter.domain.exception.RateLimitExceededException;
 import com.javaded78.urlshorter.domain.model.Link;
@@ -56,8 +60,10 @@ class WriteLinkServiceTest {
       mock(com.javaded78.urlshorter.domain.counter.ClickCounter.class);
   private final RateLimiter rateLimiter = mock(RateLimiter.class);
   private final CreateRateLimitSource rateLimitSource = mock(CreateRateLimitSource.class);
-  private final UrlValidator urlValidator = spy(new UrlValidator(properties));
-  private final AliasValidator aliasValidator = spy(new AliasValidator(properties));
+  private final UrlValidator urlValidator =
+      spy(new UrlValidator(new UrlConfig(properties.url().maxLength(), properties.url().allowedSchemes())));
+  private final AliasValidator aliasValidator =
+      spy(new AliasValidator(new AliasConfig(properties.alias().maxLength(), properties.alias().reserved())));
   private final Clock clock = Clock.fixed(Instant.parse("2025-06-01T00:00:00Z"), ZoneOffset.UTC);
 
   private final WriteLinkService service =
@@ -67,7 +73,7 @@ class WriteLinkServiceTest {
           codeGenerator,
           urlValidator,
           aliasValidator,
-          properties,
+          new WriteServiceConfig(properties.create().maxCollisionRetries()),
           linkCache,
           clickCounter,
           metricsStub(),
@@ -126,7 +132,7 @@ class WriteLinkServiceTest {
     doAnswer(
             invocation -> {
               if (saveCalls.getAndIncrement() == 0) {
-                throw new DataIntegrityViolationException("duplicate key");
+                throw new DuplicateCodeException("duplicate key");
               }
               return null;
             })
@@ -142,7 +148,7 @@ class WriteLinkServiceTest {
   @Test
   void failsWhenCollisionRetriesAreExhausted() {
     when(codeGenerator.generate()).thenReturn("taken1");
-    doThrow(new DataIntegrityViolationException("duplicate key"))
+    doThrow(new DuplicateCodeException("duplicate key"))
         .when(repository)
         .save(any(Link.class));
 
@@ -203,7 +209,7 @@ class WriteLinkServiceTest {
   @Test
   void rejectsAliasThatWinsTheRaceBetweenCheckAndInsert() {
     when(repository.existsByCode("racer1")).thenReturn(false);
-    doThrow(new DataIntegrityViolationException("duplicate key"))
+    doThrow(new DuplicateCodeException("duplicate key"))
         .when(repository)
         .save(any(Link.class));
 

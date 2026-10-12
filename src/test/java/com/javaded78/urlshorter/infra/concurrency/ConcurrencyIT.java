@@ -33,7 +33,7 @@ import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRe
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
-import org.springframework.dao.DataIntegrityViolationException;
+import com.javaded78.urlshorter.domain.exception.DuplicateCodeException;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -172,7 +172,7 @@ class ConcurrencyIT {
 
   @Test
   void collisionRetriesAreBounded() {
-    doThrow(new DataIntegrityViolationException("duplicate key"))
+    doThrow(new DuplicateCodeException("duplicate key"))
         .when(spiedRepository)
         .save(any(com.javaded78.urlshorter.domain.model.Link.class));
 

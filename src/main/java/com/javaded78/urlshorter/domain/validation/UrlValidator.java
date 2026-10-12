@@ -1,6 +1,6 @@
 package com.javaded78.urlshorter.domain.validation;
 
-import com.javaded78.urlshorter.config.ShortenerProperties;
+import com.javaded78.urlshorter.domain.config.UrlConfig;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -45,10 +45,10 @@ public class UrlValidator {
   private final int maxLength;
   private final Set<String> allowedSchemes;
 
-  public UrlValidator(ShortenerProperties properties) {
-    this.maxLength = properties.url().maxLength();
+  public UrlValidator(UrlConfig config) {
+    this.maxLength = config.maxLength();
     this.allowedSchemes =
-        properties.url().allowedSchemes().stream()
+        config.allowedSchemes().stream()
             .map(scheme -> scheme.toLowerCase(Locale.ROOT))
             .collect(Collectors.toSet());
   }

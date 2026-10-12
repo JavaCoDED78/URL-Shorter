@@ -1,9 +1,11 @@
 package com.javaded78.urlshorter.infra.persistence;
 
+import com.javaded78.urlshorter.domain.exception.DuplicateCodeException;
 import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -45,7 +47,14 @@ public class JpaLinkRepository implements LinkRepository {
   @Override
   public void save(Link link) {
     LinkEntity entity = toEntity(link);
-    jpaRepository.saveAndFlush(entity);
+    try {
+      jpaRepository.saveAndFlush(entity);
+    } catch (DataIntegrityViolationException ex) {
+      // The database unique index is the final authority on code uniqueness. Translate the
+      // framework violation into a domain collision signal at the adapter boundary: the write
+      // service only ever sees {@link DuplicateCodeException}, never a Spring type.
+      throw new DuplicateCodeException(link.code());
+    }
   }
 
   @Override

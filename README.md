@@ -367,6 +367,7 @@ src/main/java/com/javaded78/urlshorter/
 │   ├── cache/            # cache port: CachedLink (stable wire format) + LinkCache
 │   ├── counter/          # counter port: ClickCounter (no Redis types in signatures)
 │   ├── repository/       # pure persistence port (domain interface; no Spring Data/JPA)
+│   ├── config/           # pure domain config records (bridged from ShortenerProperties)
 │   ├── service/          # application/domain services
 │   ├── exception/        # @ControllerAdvice-driven errors (sealed hierarchy)
 │   └── validation/       # input validators (AliasValidator, UrlValidator)

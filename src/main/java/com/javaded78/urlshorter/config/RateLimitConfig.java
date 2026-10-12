@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.config;
 
+import com.javaded78.urlshorter.domain.config.WriteServiceConfig;
 import com.javaded78.urlshorter.domain.service.CreateRateLimitSource;
 import com.javaded78.urlshorter.domain.service.MetricsRecorder;
 import com.javaded78.urlshorter.domain.service.RateLimiter;
@@ -65,5 +66,17 @@ public class RateLimitConfig {
   @Bean
   public CreateRateLimitSource createRateLimitSource(RateLimitProperties properties) {
     return new CreateIpRateLimitSource(properties.trustedProxies());
+  }
+
+  /**
+   * Bridges the bound {@code shortener.*} properties into the write path's pure config record, so
+   * {@link com.javaded78.urlshorter.domain.service.WriteLinkService} depends on a domain record
+   * ({@link WriteServiceConfig}) rather than Spring's {@code @ConfigurationProperties} type —
+   * keeping the domain boundary intact. The value is still validated by {@code
+   * ShortenerProperties.Create}'s constraints at startup.
+   */
+  @Bean
+  WriteServiceConfig writeServiceConfig(ShortenerProperties properties) {
+    return new WriteServiceConfig(properties.create().maxCollisionRetries());
   }
 }

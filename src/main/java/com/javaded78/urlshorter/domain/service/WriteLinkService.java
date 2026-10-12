@@ -1,9 +1,10 @@
 package com.javaded78.urlshorter.domain.service;
 
-import com.javaded78.urlshorter.config.ShortenerProperties;
 import com.javaded78.urlshorter.domain.cache.LinkCache;
+import com.javaded78.urlshorter.domain.config.WriteServiceConfig;
 import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import com.javaded78.urlshorter.domain.exception.AliasAlreadyExistsException;
+import com.javaded78.urlshorter.domain.exception.DuplicateCodeException;
 import com.javaded78.urlshorter.domain.exception.LinkNotFoundException;
 import com.javaded78.urlshorter.domain.exception.RateLimitExceededException;
 import com.javaded78.urlshorter.domain.model.Link;
@@ -14,7 +15,6 @@ import java.time.Clock;
 import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -73,7 +73,7 @@ public class WriteLinkService {
       CodeGenerator codeGenerator,
       UrlValidator urlValidator,
       AliasValidator aliasValidator,
-      ShortenerProperties properties,
+      WriteServiceConfig config,
       LinkCache linkCache,
       ClickCounter clickCounter,
       MetricsRecorder metrics,
@@ -84,7 +84,7 @@ public class WriteLinkService {
     this.codeGenerator = codeGenerator;
     this.urlValidator = urlValidator;
     this.aliasValidator = aliasValidator;
-    this.maxCollisionRetries = properties.create().maxCollisionRetries();
+    this.maxCollisionRetries = config.maxCollisionRetries();
     this.linkCache = linkCache;
     this.clickCounter = clickCounter;
     this.metrics = metrics;
@@ -132,7 +132,7 @@ public class WriteLinkService {
    * Core of {@link #create}: inserts the link, retrying a bounded number of times on a generated-code
    * collision. No {@code @Transactional} boundary is intended here — each {@link LinkRepository#save}
    * flushes immediately, so the database unique index is enforced per attempt and a collision is
-   * caught by {@link DataIntegrityViolationException} and retried (the retry depends on that
+   * caught by {@link DuplicateCodeException} and retried (the retry depends on that
    * immediate flush, not on a transaction). {@code @Transactional} is deliberately absent, because a
    * transaction here would hold a pooled connection; the whole write path is split so that the
    * blocking DNS lookup in {@link #create} never shares a connection with the fast DB insert.
@@ -188,7 +188,7 @@ public class WriteLinkService {
       Link link = Link.created(code, originalUrl, expiresAt, clock.instant());
       repository.save(link);
       return link;
-    } catch (DataIntegrityViolationException ex) {
+    } catch (DuplicateCodeException ex) {
       // Lost the race between existsByCode and insert — the database
       // unique index is the final authority.
       throw new AliasAlreadyExistsException(code);
@@ -202,7 +202,7 @@ public class WriteLinkService {
         Link link = Link.created(code, originalUrl, expiresAt, clock.instant());
         repository.save(link);
         return link;
-      } catch (DataIntegrityViolationException ex) {
+      } catch (DuplicateCodeException ex) {
         log.debug(
             "generated code collision on attempt {}/{}: {}", attempt, maxCollisionRetries, code);
       }
