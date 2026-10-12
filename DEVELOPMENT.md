@@ -125,7 +125,8 @@ TTL  link:abc1234        # min(configured TTL, remaining lifetime)
 # click counters
 GET clicks:abc1234       # pending clicks not yet flushed; missing = nothing pending
 
-# run the flush script by hand (single key, atomic)
+# flush a single counter by hand (atomic GET+DEL — the production drain does
+# exactly this for a batch of keys in one Lua call; see ADR-004)
 EVAL "local v = redis.call('GET', KEYS[1]); if v == false then return nil end; redis.call('DEL', KEYS[1]); return tonumber(v)" 1 clicks:abc1234
 
 # never use KEYS in production; SCAN is fine

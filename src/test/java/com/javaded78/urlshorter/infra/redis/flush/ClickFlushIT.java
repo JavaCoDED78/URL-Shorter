@@ -140,6 +140,25 @@ class ClickFlushIT {
     assertThat(redis.hasKey("clicks:flush07")).isFalse();
   }
 
+  @Test
+  void manyCountersDrainInOneBatchScriptReply() {
+    int n = 20;
+    for (int i = 0; i < n; i++) {
+      create("https://example.com/batch" + i, "batch" + i);
+      click("batch" + i, i + 1);
+    }
+
+    // One batch script drains every counter in a single round-trip; the real Redis reply is a flat
+    // [key, value, key, value, ...] array that must decode to every counter here. The Redis
+    // container is shared across the class, so assert my own keys rather than a global count.
+    Map<String, Long> drained = clickCounter.drainAll();
+
+    for (int i = 0; i < n; i++) {
+      assertThat(drained.get("batch" + i)).as("batch " + i).isEqualTo((long) (i + 1));
+      assertThat(redis.hasKey("clicks:batch" + i)).as("batch " + i + " removed").isFalse();
+    }
+  }
+
   private int detailsClickCount(String code) {
     ResponseEntity<Map> response = restTemplate.getForEntity("/api/v1/links/" + code, Map.class);
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);

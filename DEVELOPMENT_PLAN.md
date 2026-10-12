@@ -1895,6 +1895,21 @@ clicks:{code}
 - [x] number of keys;
 - [x] script error handling.
 
+- [x] **Task 25.5 — Batch counter drain (O(batches), not O(counters))**
+
+Drain раньше использовал `SCAN` + один `GET`+`DEL` Lua на каждый ключ =
+O(N) round-trips в Redis. При росте числа горячих ссылок это узкое место.
+
+Решение: один batch-скрипт атомарно читает и сбрасывает батч ключей за
+один Lua-вызов; drain = O(ceil(N / BATCH_SIZE)) round-trips
+(`BATCH_SIZE` = 1000). Batches фиксированного размера — один script не
+растёт вместе с числом ключей.
+
+- [x] unit: `RedisClickCounterTest` — draining в батчах, per-batch fail-open, пропуск 0/missing;
+- [x] integration: `ClickFlushIT.manyCountersDrainInOneBatchScriptReply` — 20 счётчиков за один round-trip (реальный Redis);
+- [x] ADR-004 обновлён.
+- [ ] масштабируемость: >1000 горячих ссылок → несколько батчей → все дропнуты (follow-up perf-проверка).
+
 ---
 
 # Sprint 26 — Refactoring и архитектурная чистка
