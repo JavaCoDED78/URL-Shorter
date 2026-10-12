@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.api.controller;
 
+import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
@@ -18,6 +19,7 @@ import org.springframework.http.ResponseEntity;
  * (default {@code false}): it must be absent from the default API surface and answer {@code 302}
  * only when the flag is explicitly enabled.
  */
+@Tag("integration")
 class BenchmarkEndpointIT {
 
   @Nested

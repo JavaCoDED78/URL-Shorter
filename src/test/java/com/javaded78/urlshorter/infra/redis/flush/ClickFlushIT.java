@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;
@@ -37,6 +38,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 @AutoConfigureTestRestTemplate
 @Import(TestcontainersConfiguration.class)
 @TestPropertySource(properties = "shortener.flush.enabled=false")
+@Tag("integration")
 class ClickFlushIT {
 
   @Autowired TestRestTemplate restTemplate;

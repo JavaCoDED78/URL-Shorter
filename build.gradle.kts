@@ -102,11 +102,7 @@ tasks.register<Test>("unitTest") {
     testClassesDirs = sourceSets["test"].output.classesDirs
     classpath = sourceSets["test"].runtimeClasspath
     useJUnitPlatform {
-        filter {
-            includeTestsMatching("*Test")
-            excludeTestsMatching("UrlShorterApplicationTests")
-            excludeTestsMatching("LinkRepositoryTest")
-        }
+        excludeTags("integration")
     }
 }
 

@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.api.security;
 
+import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
@@ -33,6 +34,7 @@ import org.springframework.http.ResponseEntity;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @Import(TestcontainersConfiguration.class)
+@Tag("integration")
 class RequestSizeLimitIT {
 
   private static final int MAX_PAYLOAD = 16 * 1024;

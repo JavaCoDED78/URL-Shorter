@@ -25,6 +25,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;
@@ -62,6 +63,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
     })
 @AutoConfigureTestRestTemplate
 @Import(TestcontainersConfiguration.class)
+@Tag("integration")
 class ConcurrencyIT {
 
   private static final int MASSIVE_CLICKS = 10_000;

@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.api.docs;
 
+import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -25,6 +26,7 @@ import org.springframework.http.ResponseEntity;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @Import(TestcontainersConfiguration.class)
+@Tag("integration")
 class OpenApiContractIT {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();

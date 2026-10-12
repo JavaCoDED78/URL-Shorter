@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;
@@ -50,6 +51,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
     properties = "shortener.flush.enabled=false")
 @AutoConfigureTestRestTemplate
 @Import(TestcontainersConfiguration.class)
+@Tag("integration")
 class PostgresFailureIT {
 
   @LocalServerPort private int port;

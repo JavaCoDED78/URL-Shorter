@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.api.controller;
 
+import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.javaded78.urlshorter.api.dto.LinkResponse;
@@ -21,6 +22,7 @@ import org.springframework.core.ParameterizedTypeReference;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @Import(TestcontainersConfiguration.class)
+@Tag("integration")
 class LinkCreateFlowIT {
 
   private static final String API = "/api/v1/links";

@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;
@@ -43,6 +44,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
     properties = "shortener.flush.enabled=false")
 @AutoConfigureTestRestTemplate
 @Import(TestcontainersConfiguration.class)
+@Tag("integration")
 class ObservabilityIT {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();

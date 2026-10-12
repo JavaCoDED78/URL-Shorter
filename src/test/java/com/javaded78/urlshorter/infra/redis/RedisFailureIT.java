@@ -13,6 +13,7 @@ import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;
@@ -53,6 +54,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
     properties = "shortener.flush.interval=PT1S")
 @AutoConfigureTestRestTemplate
 @Import(TestcontainersConfiguration.class)
+@Tag("integration")
 class RedisFailureIT {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();

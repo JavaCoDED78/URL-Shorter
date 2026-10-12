@@ -9,6 +9,7 @@ import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;
@@ -45,6 +46,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @Import(TestcontainersConfiguration.class)
+@Tag("integration")
 class CacheConsistencyIT {
 
   private static final String KEY_PREFIX = "link:";

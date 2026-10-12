@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.api.controller;
 
+import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
@@ -31,6 +32,7 @@ import org.springframework.http.ResponseEntity;
     properties = "shortener.flush.enabled=false")
 @AutoConfigureTestRestTemplate
 @Import(TestcontainersConfiguration.class)
+@Tag("integration")
 class DeleteFlowIT {
 
   @LocalServerPort private int port;

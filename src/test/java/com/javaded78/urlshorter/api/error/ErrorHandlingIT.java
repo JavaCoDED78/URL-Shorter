@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.api.error;
 
+import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -35,6 +36,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @Import({TestcontainersConfiguration.class, SteppingClockConfig.class})
+@Tag("integration")
 class ErrorHandlingIT {
 
   @LocalServerPort private int port;

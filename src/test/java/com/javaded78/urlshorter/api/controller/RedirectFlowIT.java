@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.api.controller;
 
+import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.javaded78.urlshorter.api.SteppingClock;
@@ -29,6 +30,7 @@ import org.springframework.http.ResponseEntity;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @Import({TestcontainersConfiguration.class, SteppingClockConfig.class})
+@Tag("integration")
 class RedirectFlowIT {
 
   @Autowired TestRestTemplate restTemplate;

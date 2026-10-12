@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.infra.persistence;
 
+import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -24,6 +25,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 @DataJpaTest
 @Import({TestcontainersConfiguration.class, JpaAuditingTestConfiguration.class})
 @EnableJpaAuditing
+@Tag("integration")
 class LinkJpaRepositoryTest {
 
   @Autowired LinkJpaRepository repository;

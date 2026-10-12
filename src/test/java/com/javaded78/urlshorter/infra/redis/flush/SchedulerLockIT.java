@@ -6,6 +6,7 @@ import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.domain.service.CounterFlushService;
 import net.javacrumbs.shedlock.core.LockProvider;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,6 +34,7 @@ import org.springframework.test.context.TestPropertySource;
     "shortener.flush.enabled=false",
     "logging.level.net.javacrumbs.shedlock=DEBUG"})
 @Import(TestcontainersConfiguration.class)
+@Tag("integration")
 class SchedulerLockIT {
 
   @Autowired CounterFlushService flushService;
