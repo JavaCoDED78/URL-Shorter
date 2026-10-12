@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### `existsByCode` pre-check is now case-insensitive (decoupled from the alias validator)
+
+The read path (`findByCodeIgnoreCase`) already compared `lower(l.code) = lower(:code)` — served by
+the V2 `lower(code)` functional unique index — but the create-path pre-check `existsByCode` was a
+case-sensitive derived query (`WHERE code = ?`). The two were only kept in sync by
+`AliasValidator.validateAndNormalize` lowercasing the alias before the check: an implicit,
+untested contract. Change or remove that normalization and mixed-case aliases (`AbC` vs `abc`)
+would pass the pre-check and surface only as a unique-violation on insert.
+
+- **Fix.** `LinkJpaRepository#existsByCode` is now an explicit
+  `@Query("SELECT COUNT(l) > 0 ... WHERE lower(l.code) = lower(:code)")`, mirroring
+  `findByCodeIgnoreCase` so it is served by the same `lower(code)` index and is case-insensitive
+  regardless of the caller's casing. The port Javadoc now documents that the pre-check does not
+  depend on the caller lowercasing first.
+- **Verification.** New `LinkJpaRepositoryTest#existsByCodeIsCaseInsensitive` stores a mixed-case
+  code and asserts `existsByCode` matches under any case. It was verified RED on the old derived
+  query (`AssertionFailedError at LinkRepositoryTest.java:80`) and GREEN after the fix.
+  `LinkCreateFlowIT`, `WriteLinkServiceTest`, `AliasValidatorTest` remain green.
+
 ### Delete now evicts the cache **after** the transaction commits (closes the stale-entry race)
 
 `WriteLinkService.delete` issued its second cache evict *inside* the `@Transactional` method body —

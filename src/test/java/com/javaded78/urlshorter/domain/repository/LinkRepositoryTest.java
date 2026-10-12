@@ -71,6 +71,18 @@ class LinkJpaRepositoryTest {
   }
 
   @Test
+  void existsByCodeIsCaseInsensitive() {
+    // Regression guard: the create-path pre-check must be case-insensitive like the read path
+    // (findByCodeIgnoreCase / lower(code) index), not coupled to the alias validator's lowercase
+    // normalization. A stored mixed-case code must be found under any case.
+    repository.saveAndFlush(new LinkEntity("AbC1234", "https://example.com", null, CREATED_AT));
+
+    assertThat(repository.existsByCode("abc1234")).isTrue();
+    assertThat(repository.existsByCode("ABC1234")).isTrue();
+    assertThat(repository.existsByCode("nope")).isFalse();
+  }
+
+  @Test
   void rejectsDuplicateCode() {
     repository.saveAndFlush(new LinkEntity("dupe", "https://example.com", null, CREATED_AT));
 

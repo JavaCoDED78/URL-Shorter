@@ -15,9 +15,12 @@ import java.util.Optional;
  * <p>Operation split:
  *
  * <ul>
+ *   <li>{@link #existsByCode(String)} — case-insensitive alias pre-check optimization (matches the
+ *       {@code lower(code)} unique index, same case semantics as {@link #findByCodeIgnoreCase});
+ *       this deliberately does not depend on the caller lowercasing first, so it is decoupled
+ *       from the alias validator's normalization policy.
  *   <li>Point lookups by {@code code} — {@link #findByCodeIgnoreCase(String)} (case-insensitive,
- *       matching the {@code lower(code)} unique index) and {@link #existsByCode(String)} (alias
- *       pre-check optimization).
+ *       matching the {@code lower(code)} unique index).
  *   <li>{@link #save(Link)} — insert with an immediate flush, so a unique-constraint collision
  *       surfaces inside {@link com.javaded78.urlshorter.domain.service.WriteLinkService}'s retry
  *       loop (the database unique index is the real concurrency guarantee).

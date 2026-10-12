@@ -51,7 +51,16 @@ public interface LinkJpaRepository extends JpaRepository<LinkEntity, String> {
   @Query("SELECT l FROM LinkEntity l WHERE lower(l.code) = lower(:code)")
   Optional<LinkEntity> findByCodeIgnoreCase(@Param("code") String code);
 
-  boolean existsByCode(String code);
+  /**
+   * Case-insensitive alias pre-check (create path). Mirrors {@link #findByCodeIgnoreCase} —
+   * compares {@code lower(l.code) = lower(:code)} so it is served by the {@code lower(code)}
+   * functional unique index and stays case-insensitive regardless of the caller's casing. This
+   * keeps the pre-check aligned with the read path: even if the alias validator ever stops
+   * normalizing to lowercase, a mixed-case alias such as {@code AbC} is still rejected here against
+   * a stored {@code abc} instead of surfacing only as a unique-violation on insert.
+   */
+  @Query("SELECT COUNT(l) > 0 FROM LinkEntity l WHERE lower(l.code) = lower(:code)")
+  boolean existsByCode(@Param("code") String code);
 
   long count();
 
