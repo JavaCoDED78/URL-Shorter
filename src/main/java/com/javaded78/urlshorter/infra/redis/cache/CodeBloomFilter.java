@@ -47,7 +47,11 @@ public class CodeBloomFilter {
    */
   public void markExists(String code) {
     if (code != null && !code.isBlank()) {
-      filter.add(code);
+      // Case-insensitive membership: the code column is unique case-insensitively (V2),
+      // findByCodeIgnoreCase resolves any case on redirect, and contains() lowercases before
+      // querying. markExists must normalize to the same canonical form, or the mixed-case
+      // generated Base62 codes (e.g. eqAYMsH) would be wrongly treated as absent -> 404.
+      filter.add(code.toLowerCase(Locale.ROOT));
     }
   }
 

@@ -73,6 +73,25 @@ class RedirectFlowIT {
   }
 
   @Test
+  void redirectsActiveLinkWithGeneratedMixedCaseCode() {
+    // Regression: generated Base62 codes are mixed-case (e.g. eqAYMsH); without the markExists
+    // lowercase normalization the generated code is wrongly treated as absent -> 404 on redirect.
+    ResponseEntity<Map> created = post(Map.of("originalUrl", "https://example.com/generated"));
+
+    Object codeObj = created.getBody().get("code");
+    String code = (String) codeObj;
+
+    assertThat(code)
+        .as("generated code is mixed-case and must resolve on the /{code} redirect")
+        .isNotEmpty()
+        .isNotEqualTo(code.toLowerCase());
+
+    ResponseEntity<String> response = rest.getForEntity("/" + code, String.class);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
+  }
+
+  @Test
   void redirectsNeverExpiringLink() {
     post(Map.of("originalUrl", "https://example.com/forever", "alias", "noexpire"));
 
