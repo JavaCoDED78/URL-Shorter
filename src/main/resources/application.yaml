@@ -1,4 +1,8 @@
 spring:
+  lifecycle:
+    # Bounds how long graceful shutdown (server.shutdown above) waits for
+    # in-flight requests to finish before the JVM exits.
+    timeout-per-shutdown-phase: 10s
   application:
     name: URL-Shorter
   threads:
@@ -30,6 +34,10 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  # Graceful shutdown (Spring Boot 3.3+/6.1): on SIGTERM the server stops
+  # accepting new requests and waits (bounded below) for in-flight requests
+  # to finish before the JVM exits - no dropped redirects on redeploy.
+  shutdown: graceful
 
 shortener:
   code:
