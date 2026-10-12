@@ -20,7 +20,7 @@ Cache-aside with Redis:
 - Lookup: Redis first; on miss read PostgreSQL, re-check expiration,
   write-through to Redis, then answer.
 - Expiration is re-checked from the payload on **every** hit (ADR-006).
-- Delete evicts the entry explicitly; no background invalidation jobs.
+- Delete evicts the entry explicitly; no background invalidation jobs. The eviction runs in an `afterCommit` hook so the Redis delete fires only after the DB row is globally gone — closing the window where a racing redirect could re-populate the cache between evict and commit (see CHANGELOG, `ConcurrencyIT#deleteVersusRedirectRaceConverges`).
 - The cache port (`LinkCache`) lives in the domain; the Redis
   implementation (`RedisLinkCache`) is infrastructure and is allowed to
   degrade to pass-through when Redis is unavailable.

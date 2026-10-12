@@ -1514,7 +1514,7 @@ DELETE DB
 EVICT cache
 ```
 
-зафиксировать допустимую race semantics.
+Закрытие race: EVICT теперь выполняется в `afterCommit` (`TransactionSynchronization`), поэтому конкурентный redirect не может переполнить кэш между evict и коммитом (см. CHANGELOG).
 
 - [x] **Task 19.4 — Cache serialization compatibility**
 
@@ -3418,7 +3418,7 @@ Final guarantee должна предоставляться PostgreSQL unique co
 
 Virtual threads позволяют обслуживать большое количество concurrent requests, но PostgreSQL connection pool остаётся ограничением.
 
-- [x] **Risk 6 — Stale cache after delete** — закрыт: delete сразу evict-ит Redis entry (Tasks 10.1–10.4)
+- [x] **Risk 6 — Stale cache after delete** — закрыт: второй evict перенесён в `afterCommit` `TransactionSynchronization` (`WriteLinkService#delete`), поэтому он срабатывает только после глобального удаления строки — после write-back конкурентного читателя. Ранний (внутри транзакции) evict оставлял окно `[evict → commit]` открытым. (Unit `WriteLinkServiceTest#deleteEvictsCacheAfterCommitNotBefore`, `ConcurrencyIT#deleteVersusRedirectRaceConverges`)
 
 Удаление должно учитывать PostgreSQL и Redis.
 

@@ -188,7 +188,7 @@ Errors use Spring's `ProblemDetail` (RFC 9457): `type`, `title`, `status`, `deta
 3. **Cache serving an expired link** — always re-check `expiresAt` on cache hit, don't trust Redis TTL alone.
 4. **Code collisions** — the DB unique constraint is the real guarantee, not the app-level existence check.
 5. **Connection pool exhaustion** — virtual threads increase concurrency, but the PostgreSQL pool size is still the limit.
-6. **Stale cache after delete** — both PostgreSQL and Redis must be updated together.
+6. **Stale cache after delete** — both PostgreSQL and Redis must be updated together. Closed: the second cache evict now runs in an `afterCommit` `TransactionSynchronization` (registered via `TransactionSynchronizationManager` in `WriteLinkService#delete`), so it fires only after the row is globally gone — ordered after any racing reader's write-back. A plain in-transaction evict leaves the `[evict → commit]` window open.
 7. **Stats lag** — PostgreSQL-only stats can undercount due to pending Redis clicks; the API semantics for this need to be explicit and documented.
 
 ## 11. Testing expectations

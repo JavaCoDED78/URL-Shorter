@@ -18,6 +18,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Write path for short links (CQRS-lite split from {@link ReadLinkService}).
@@ -152,16 +154,24 @@ public class WriteLinkService {
   }
 
   /**
-   * Deletes a link (Tasks 10.1–10.3). Order of operations (Task 10.2):
+   * Deletes a link (Tasks 10.1–10.3). Order of operations:
    *
    * <pre>
-   * evict cache → discard pending counter → delete DB row → evict cache again
+   * evict cache → discard pending counter → delete DB row → evict cache again (after commit)
    * </pre>
    *
    * <p>Evicting BEFORE the DB delete is the safe failure mode: if the delete fails, the row is
    * still alive and the cache repopulates on the next read (self-healing) — a stale cached link is
-   * never served after a successful delete. The second evict closes the narrow race where a
-   * concurrent redirect re-populated the cache between the first evict and the delete.
+   * never served after a successful delete.
+   *
+   * <p>The second evict runs <b>after the transaction commits</b> — via a {@link
+   * TransactionSynchronization} {@code afterCommit} hook — not inside the transaction body. Until
+   * the commit the row is still visible to concurrent readers, so a redirect racing the delete can
+   * read the still-committed row and re-populate the cache between the first evict and this commit;
+   * a second evict issued inside the transaction would fire <i>before</i> that re-population and
+   * let the stale entry survive. Evicting in {@code afterCommit} orders the eviction after the
+   * deletion becomes globally visible, closing that window (see {@link
+   * ConcurrencyIT#deleteVersusRedirectRaceConverges}).
    *
    * <p>Counter policy (Task 10.3): discard — pending clicks belong to the link row; once the row is
    * gone there is no owner for them, and flushing before delete would persist counts just to remove
@@ -177,7 +187,16 @@ public class WriteLinkService {
     clickCounter.delete(link.code());
     repository.deleteByCode(link.code());
     metrics.linkDeleted();
-    linkCache.evict(link.code());
+    // Second evict AFTER commit: any concurrent redirect that read the still-committed row
+    // (between the pre-delete evict and this commit) and re-populated the cache is evicted once
+    // the deletion is globally visible — so a stale entry can never outlive the row.
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            linkCache.evict(link.code());
+          }
+        });
   }
 
   private Link createWithAlias(

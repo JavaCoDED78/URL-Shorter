@@ -9,9 +9,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
+import com.javaded78.urlshorter.domain.exception.DuplicateCodeException;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
-import com.javaded78.urlshorter.infra.redis.flush.CounterFlushService;
 import com.javaded78.urlshorter.domain.service.WriteLinkService;
+import com.javaded78.urlshorter.infra.redis.flush.CounterFlushService;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -34,7 +35,6 @@ import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRe
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
-import com.javaded78.urlshorter.domain.exception.DuplicateCodeException;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -47,10 +47,14 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
  *
  * <p>Acceptable delete-vs-redirect semantics (Task 16.5): a redirect racing a delete may
  * legitimately observe the link (302) or not (404) — the API does not promise linearizability for
- * the pair. The invariants are: no 5xx, and once the delete completes, a cache entry repopulated by
- * a racing reader is evicted by the second (post-commit) evict. Residual window: a reader whose
- * PostgreSQL read straddles the delete commit can leave a stale cache entry that self-heals within
- * one cache TTL (accepted per sprint spec).
+ * the pair. The invariants are: no 5xx, and once the delete completes the link is gone everywhere.
+ *
+ * <p>The stale-entry race is closed by the post-commit evict in the write service's {@code delete}:
+ * the second evict runs in an {@code afterCommit} transaction hook, so a cache entry a racing
+ * reader re-populated from the still-committed row is evicted once the deletion is globally visible
+ * and cannot outlive the row. The deterministic ordering is asserted by {@code
+ * WriteLinkServiceTest#deleteEvictsCacheAfterCommitNotBefore}; this IT asserts the end-to-end
+ * convergence.
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,

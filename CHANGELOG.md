@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Delete now evicts the cache **after** the transaction commits (closes the stale-entry race)
+
+`WriteLinkService.delete` issued its second cache evict *inside* the `@Transactional` method body —
+i.e. before the transaction committed. Until the commit the deleted row is still visible to
+concurrent readers, so a redirect racing the delete could read the still-committed row and
+re-populate the cache *between* that second evict and the real commit; the stale entry then
+outlived the row until the next cache read.
+
+- **Fix.** The second evict now runs in an `afterCommit` `TransactionSynchronization` registered
+  through `TransactionSynchronizationManager.registerSynchronization(...)` in `WriteLinkService#delete`,
+  so it fires only after the row is globally gone — ordered after any racing reader's write-back. A
+  plain in-transaction evict cannot close the `[evict → commit]` window, because the Redis delete is
+  outside the DB transaction; `afterCommit` is the only ordering that guarantees the eviction is
+  visible after the deletion.
+- **Verification.** `WriteLinkServiceTest#deleteEvictsCacheAfterCommitNotBefore` statically mocks
+  `TransactionSynchronizationManager`, asserts the second evict does **not** fire synchronously before
+  commit, captures the registered hook, and asserts the evict fires only when the commit callback
+  runs — a deterministic distinguisher that fails `TooManyActualInvocations` on the old code.
+  `ConcurrencyIT#deleteVersusRedirectRaceConverges` still asserts end-to-end convergence.
+
 ### Persistence timestamps now driven by the injected `Clock` (single source of truth)
 The `LinkEntity` previously stamped `created_at` and `updated_at` from `Instant.now()`
 inside `@PrePersist`/`@PreUpdate`. That broke the project's `Clock` discipline — every

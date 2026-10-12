@@ -7,6 +7,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -32,7 +33,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Unit tests for {@link WriteLinkService}: the request-side path — URL/alias validation, rate
@@ -46,7 +51,8 @@ class WriteLinkServiceTest {
           new ShortenerProperties.Url(2048, List.of("http", "https")),
           new ShortenerProperties.Alias(64, Set.of("api")),
           new ShortenerProperties.Create(3),
-          new ShortenerProperties.Cache(java.time.Duration.ofHours(1), java.time.Duration.ofSeconds(45), 1_000_000L, 0.0001),
+          new ShortenerProperties.Cache(
+              java.time.Duration.ofHours(1), java.time.Duration.ofSeconds(45), 1_000_000L, 0.0001),
           new ShortenerProperties.Code(7),
           org.springframework.util.unit.DataSize.ofKilobytes(16),
           1024);
@@ -61,9 +67,13 @@ class WriteLinkServiceTest {
   private final RateLimiter rateLimiter = mock(RateLimiter.class);
   private final CreateRateLimitSource rateLimitSource = mock(CreateRateLimitSource.class);
   private final UrlValidator urlValidator =
-      spy(new UrlValidator(new UrlConfig(properties.url().maxLength(), properties.url().allowedSchemes())));
+      spy(
+          new UrlValidator(
+              new UrlConfig(properties.url().maxLength(), properties.url().allowedSchemes())));
   private final AliasValidator aliasValidator =
-      spy(new AliasValidator(new AliasConfig(properties.alias().maxLength(), properties.alias().reserved())));
+      spy(
+          new AliasValidator(
+              new AliasConfig(properties.alias().maxLength(), properties.alias().reserved())));
   private final Clock clock = Clock.fixed(Instant.parse("2025-06-01T00:00:00Z"), ZoneOffset.UTC);
 
   private final WriteLinkService service =
@@ -148,9 +158,7 @@ class WriteLinkServiceTest {
   @Test
   void failsWhenCollisionRetriesAreExhausted() {
     when(codeGenerator.generate()).thenReturn("taken1");
-    doThrow(new DuplicateCodeException("duplicate key"))
-        .when(repository)
-        .save(any(Link.class));
+    doThrow(new DuplicateCodeException("duplicate key")).when(repository).save(any(Link.class));
 
     assertThatThrownBy(() -> service.create("https://example.com", null, null))
         .isInstanceOf(IllegalStateException.class)
@@ -209,9 +217,7 @@ class WriteLinkServiceTest {
   @Test
   void rejectsAliasThatWinsTheRaceBetweenCheckAndInsert() {
     when(repository.existsByCode("racer1")).thenReturn(false);
-    doThrow(new DuplicateCodeException("duplicate key"))
-        .when(repository)
-        .save(any(Link.class));
+    doThrow(new DuplicateCodeException("duplicate key")).when(repository).save(any(Link.class));
 
     assertThatThrownBy(() -> service.create("https://example.com", "racer1", null))
         .isInstanceOf(AliasAlreadyExistsException.class);
@@ -246,32 +252,47 @@ class WriteLinkServiceTest {
   // --- delete: cache eviction + counter cleanup (Tasks 10.1-10.3) ---
 
   @Test
-  void deleteEvictsCacheAroundTheDatabaseDelete() {
+  void deleteEvictsCacheAfterCommitNotBefore() {
     Link link = new Link("abc1234", "https://example.com", null, 0, NOW);
     when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(Optional.of(link));
 
-    service.delete("abc1234");
+    try (MockedStatic<TransactionSynchronizationManager> tx =
+        mockStatic(TransactionSynchronizationManager.class)) {
+      service.delete("abc1234");
 
-    // Evict BEFORE the DB delete (a failed delete leaves the row alive and
-    // the cache repopulates on the next read — self-healing), then evict
-    // AGAIN after it to close the repopulation race window.
-    org.mockito.InOrder order = org.mockito.Mockito.inOrder(linkCache, clickCounter, repository);
-    order.verify(linkCache).evict("abc1234");
-    order.verify(clickCounter).delete("abc1234");
-    order.verify(repository).deleteByCode("abc1234");
-    order.verify(linkCache).evict("abc1234");
+      // The pre-delete evict happened once. Crucially the second evict must NOT have fired yet:
+      // it is deferred to afterCommit, so a racing redirect that read the still-committed row
+      // between this evict and the commit cannot leave a stale entry behind.
+      verify(linkCache, times(1)).evict("abc1234");
+
+      ArgumentCaptor<TransactionSynchronization> captor =
+          ArgumentCaptor.forClass(TransactionSynchronization.class);
+      tx.verify(() -> TransactionSynchronizationManager.registerSynchronization(captor.capture()));
+
+      // Firing the commit callback is what actually evicts the repopulated cache entry.
+      captor.getValue().afterCommit();
+      verify(linkCache, times(2)).evict("abc1234");
+    }
   }
 
   @Test
-  void deleteUsesStoredLowercaseCode() {
+  void deleteUsesStoredLowercaseCode_evictAfterCommit() {
     Link link = new Link("abc1234", "https://example.com", null, 0, NOW);
     when(repository.findByCodeIgnoreCase("ABC1234")).thenReturn(Optional.of(link));
 
-    service.delete("ABC1234");
+    try (MockedStatic<TransactionSynchronizationManager> tx =
+        mockStatic(TransactionSynchronizationManager.class)) {
+      service.delete("ABC1234");
 
-    verify(repository).deleteByCode("abc1234");
-    verify(linkCache, org.mockito.Mockito.times(2)).evict("abc1234");
-    verify(clickCounter).delete("abc1234");
+      verify(repository).deleteByCode("abc1234");
+      verify(linkCache, times(1)).evict("abc1234");
+
+      ArgumentCaptor<TransactionSynchronization> captor =
+          ArgumentCaptor.forClass(TransactionSynchronization.class);
+      tx.verify(() -> TransactionSynchronizationManager.registerSynchronization(captor.capture()));
+      captor.getValue().afterCommit();
+      verify(linkCache, times(2)).evict("abc1234");
+    }
   }
 
   @Test
