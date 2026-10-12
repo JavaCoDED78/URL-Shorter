@@ -7,7 +7,7 @@ import static org.mockito.Mockito.doThrow;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
-import com.javaded78.urlshorter.domain.service.CounterFlushService;
+import com.javaded78.urlshorter.infra.redis.flush.CounterFlushService;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;

@@ -1,4 +1,4 @@
-package com.javaded78.urlshorter.domain.service;
+package com.javaded78.urlshorter.infra.redis.flush;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
+import com.javaded78.urlshorter.domain.service.MetricsRecorder;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -18,7 +19,7 @@ import org.springframework.dao.DataAccessException;
 /**
  * CounterFlushService (Tasks 8.4-8.6): drains all Redis counters atomically, applies one batch
  * UPDATE, and restores drained values to Redis when the database write fails — never losing clicks
- * silently.
+ * silently. Infra orchestrator (see {@code infra.redis.flush}).
  */
 class CounterFlushServiceTest {
 

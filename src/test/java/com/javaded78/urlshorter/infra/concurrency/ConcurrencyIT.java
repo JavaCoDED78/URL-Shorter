@@ -10,7 +10,7 @@ import static org.mockito.Mockito.verify;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
-import com.javaded78.urlshorter.domain.service.CounterFlushService;
+import com.javaded78.urlshorter.infra.redis.flush.CounterFlushService;
 import com.javaded78.urlshorter.domain.service.WriteLinkService;
 import java.net.URI;
 import java.net.http.HttpClient;

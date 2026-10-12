@@ -1,15 +1,23 @@
-package com.javaded78.urlshorter.domain.service;
+package com.javaded78.urlshorter.infra.redis.flush;
 
 import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
+import com.javaded78.urlshorter.domain.service.MetricsRecorder;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Flushes drained click counters to PostgreSQL (Tasks 8.4-8.6).
+ * Infra orchestrator for the click flush (Tasks 8.4-8.6): drains every Redis counter, applies one
+ * batch UPDATE to PostgreSQL, and restores drained values to Redis when that write fails — never
+ * losing clicks silently.
+ *
+ * <p>Lives in {@code infra.redis.flush} alongside {@link ClickFlushJob} because it orchestrates
+ * infrastructure concerns (Redis drain, DB transaction) rather than domain behaviour — the Redis
+ * drain and the DB write are both behind domain ports ({@link ClickCounter}, {@link
+ * LinkRepository}), so this class is an adapter-level orchestrator, not a domain service.
  *
  * <p>Recovery strategy (Task 8.6 — explicitly chosen for the MVP): <b>return drained values to
  * Redis</b> ({@code INCRBY}) when the database write fails. The batch UPDATE is a single SQL
@@ -17,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
  * amount to Redis is safe. Restored values are re-drained by the next flush round. Alternatives
  * (durable outbox, pending buffer) are deferred until a proven need.
  */
-@Service
+@Component
 public class CounterFlushService {
 
   private static final Logger log = LoggerFactory.getLogger(CounterFlushService.class);

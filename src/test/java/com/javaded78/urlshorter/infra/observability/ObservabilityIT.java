@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
-import com.javaded78.urlshorter.domain.service.CounterFlushService;
+import com.javaded78.urlshorter.infra.redis.flush.CounterFlushService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;

@@ -73,7 +73,7 @@ src/main/java/com/javaded78/urlshorter/
 │       ├── cache/        # Redis cache implementation (LinkCache: get/put/evict)
 │       ├── counter/      # click counters
 │       ├── script/       # Lua scripts
-│       ├── flush/        # scheduled flush job
+│       ├── flush/        # ClickFlushJob (scheduler) + CounterFlushService (flush orchestrator)
 │       └── limiter/      # rate limiter (Redis-backed fixed window)
 └── config/               # properties, filters, OpenAPI, startup diagnostics
 

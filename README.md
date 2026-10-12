@@ -382,7 +382,7 @@ src/main/java/com/javaded78/urlshorter/
 │       ├── cache/        # Redis cache implementation (RedisLinkCache)
 │       ├── counter/      # Redis click counters (RedisClickCounter)
 │       ├── script/       # Lua scripts
-│       └── flush/        # scheduled flush job
+│       └── flush/        # ClickFlushJob (scheduler) + CounterFlushService (flush orchestrator)
 │
 ├── config/               # properties, filters, OpenAPI, startup diagnostics
 └── (application classes end here)
@@ -409,8 +409,9 @@ The service layer talks to Redis only through the `domain/cache` and
 `LinkEntity`); the JPA boundary lives in `infra.persistence` as
 `JpaLinkRepository` (a thin adapter) over the Spring Data
 `LinkJpaRepository`, where `LinkEntity`, JPQL and `@Modifying` all belong.
-`@Transactional` boundaries live on the service layer (`WriteLinkService`,
-`CounterFlushService`), not on the repository.
+`@Transactional` boundaries live on the use-case owners — `WriteLinkService`
+(domain) and the `CounterFlushService` flush orchestrator (infra) — not on the
+repository.
 
 ## 🚀 Quick Start
 

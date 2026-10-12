@@ -1,6 +1,5 @@
 package com.javaded78.urlshorter.infra.redis.flush;
 
-import com.javaded78.urlshorter.domain.service.CounterFlushService;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,6 +1,6 @@
 /**
  * Application services in the domain layer: {@link WriteLinkService} (write path), {@link
- * ReadLinkService} (read path), {@link CounterFlushService} and {@link MetricsRecorder}.
+ * ReadLinkService} (read path) and {@link MetricsRecorder}.
  *
  * <p>These beans carry the application logic — URL/alias validation, rate limiting, collision
  * retries, transactional writes — and depend on domain ports only ({@code domain.cache}, {@code
