@@ -1,6 +1,6 @@
 package com.javaded78.urlshorter.config;
 
-import static org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE;
+import static org.springframework.http.HttpStatus.CONTENT_TOO_LARGE;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
@@ -94,11 +94,11 @@ public class RequestSizeLimitFilter implements Filter {
 
   private void write413(ServletResponse response) throws IOException {
     HttpServletResponse http = (HttpServletResponse) response;
-    http.setStatus(PAYLOAD_TOO_LARGE.value());
+    http.setStatus(CONTENT_TOO_LARGE.value());
     http.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(
-            PAYLOAD_TOO_LARGE, "request body exceeds the maximum of " + maxPayloadBytes + " bytes");
+            CONTENT_TOO_LARGE, "request body exceeds the maximum of " + maxPayloadBytes + " bytes");
     problem.setTitle("Payload too large");
     // this filter runs before MVC, so the body is written from the shared
     // ProblemDetailWriter (no web ObjectMapper in scope here)

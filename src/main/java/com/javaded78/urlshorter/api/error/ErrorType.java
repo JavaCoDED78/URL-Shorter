@@ -26,7 +26,7 @@ public enum ErrorType {
   DATABASE_UNAVAILABLE(
       "database-unavailable", HttpStatus.SERVICE_UNAVAILABLE, "Service unavailable"),
   RATE_LIMITED("rate-limited", HttpStatus.TOO_MANY_REQUESTS, "Too many requests"),
-  PAYLOAD_TOO_LARGE("payload-too-large", HttpStatus.PAYLOAD_TOO_LARGE, "Payload too large"),
+  PAYLOAD_TOO_LARGE("payload-too-large", HttpStatus.CONTENT_TOO_LARGE, "Payload too large"),
   RESOURCE_NOT_FOUND("resource-not-found", HttpStatus.NOT_FOUND, "Not found"),
   INTERNAL_ERROR("internal-error", HttpStatus.INTERNAL_SERVER_ERROR, "Internal error");
 

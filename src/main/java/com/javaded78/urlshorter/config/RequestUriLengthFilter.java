@@ -52,11 +52,11 @@ public class RequestUriLengthFilter implements Filter {
 
   private void write413(ServletResponse response) throws IOException {
     HttpServletResponse http = (HttpServletResponse) response;
-    http.setStatus(org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE.value());
+    http.setStatus(org.springframework.http.HttpStatus.CONTENT_TOO_LARGE.value());
     http.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(
-            org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE,
+            org.springframework.http.HttpStatus.CONTENT_TOO_LARGE,
             "request URI exceeds the maximum of " + maxUriLength + " characters");
     problem.setTitle("Request URI too long");
     ProblemDetailWriter.write(http, problem);

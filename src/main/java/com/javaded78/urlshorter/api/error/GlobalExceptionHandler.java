@@ -158,7 +158,7 @@ public class GlobalExceptionHandler {
   }
 
   private static ProblemDetail payloadTooLarge(String detail) {
-    ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE, detail);
+    ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONTENT_TOO_LARGE, detail);
     problem.setType(ErrorType.PAYLOAD_TOO_LARGE.uri());
     problem.setTitle(ErrorType.PAYLOAD_TOO_LARGE.title());
     return problem;
