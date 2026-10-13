@@ -52,6 +52,12 @@ shortener:
     max-collision-retries: ${SHORTENER_MAX_COLLISION_RETRIES:5}
   cache:
     ttl: ${SHORTENER_CACHE_TTL:1h}
+    # Symmetric TTL jitter (±jitter, default ±15%) about the base cache TTL (min(configured TTL,
+    # remaining lifetime)). Spreads out the expiry of a mass of links created together (imports,
+    # campaigns) so they do not all expire in the same second and stampede PostgreSQL.
+    # Singleflight smooths that stampede but does not remove it — jitter keeps the expiries from
+    # lining up in the first place. 0 disables jitter; [0, 0.5].
+    jitter: ${SHORTENER_CACHE_JITTER:0.15}
     # Negative cache (Task 21.2): a short-lived marker on a code that did not exist,
     # so a scan of nonexistent codes stops hammering PostgreSQL. Short by design —
     # the trade-off is between shielding the database and missing a link created

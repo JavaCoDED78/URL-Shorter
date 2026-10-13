@@ -16,14 +16,12 @@ import com.javaded78.urlshorter.domain.exception.LinkNotFoundException;
 import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.model.LinkStats;
 import com.javaded78.urlshorter.domain.model.ResolvedLink;
-import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -38,7 +36,12 @@ class ReadLinkServiceTest {
           new ShortenerProperties.Url(2048, List.of("http", "https")),
           new ShortenerProperties.Alias(64, Set.of("api")),
           new ShortenerProperties.Create(3),
-          new ShortenerProperties.Cache(java.time.Duration.ofHours(1), java.time.Duration.ofSeconds(45), 1_000_000L, 0.0001),
+          new ShortenerProperties.Cache(
+              java.time.Duration.ofHours(1),
+              java.time.Duration.ofSeconds(45),
+              1_000_000L,
+              0.0001,
+              0.15),
           new ShortenerProperties.Code(7),
           org.springframework.util.unit.DataSize.ofKilobytes(16),
           1024);
@@ -225,17 +228,18 @@ class ReadLinkServiceTest {
 }
 
 /**
- * In-memory {@link com.javaded78.urlshorter.domain.cache.LinkCache} for {@link ReadLinkServiceTest}:
- * a single code-slot cache that mirrors the real cache-aside shape — {@link #store} populates the
- * slot, {@link #coalesce} serves from it on a hit and otherwise runs the miss supplier exactly once
- * (coalescing concurrent misses behind one in-flight lookup), so stampede singleflight is exercised
- * at the unit level.
+ * In-memory {@link com.javaded78.urlshorter.domain.cache.LinkCache} for {@link
+ * ReadLinkServiceTest}: a single code-slot cache that mirrors the real cache-aside shape — {@link
+ * #store} populates the slot, {@link #coalesce} serves from it on a hit and otherwise runs the miss
+ * supplier exactly once (coalescing concurrent misses behind one in-flight lookup), so stampede
+ * singleflight is exercised at the unit level.
  */
 class FakeLinkCache implements com.javaded78.urlshorter.domain.cache.LinkCache {
   private final java.util.concurrent.ConcurrentMap<String, java.util.Optional<CachedLink>> store =
       new java.util.concurrent.ConcurrentHashMap<>();
-  private final java.util.concurrent.ConcurrentMap<String, java.util.concurrent.CompletableFuture<java.util.Optional<CachedLink>>> inFlight =
-      new java.util.concurrent.ConcurrentHashMap<>();
+  private final java.util.concurrent.ConcurrentMap<
+          String, java.util.concurrent.CompletableFuture<java.util.Optional<CachedLink>>>
+      inFlight = new java.util.concurrent.ConcurrentHashMap<>();
 
   @Override
   public java.util.Optional<CachedLink> get(String code) {
@@ -275,7 +279,8 @@ class FakeLinkCache implements com.javaded78.urlshorter.domain.cache.LinkCache {
 
   @Override
   public void put(CachedLink link) {
-    store.put(com.javaded78.urlshorter.infra.redis.cache.RedisLinkCache.key(link.code()),
+    store.put(
+        com.javaded78.urlshorter.infra.redis.cache.RedisLinkCache.key(link.code()),
         java.util.Optional.of(link));
   }
 

@@ -1,10 +1,12 @@
 package com.javaded78.urlshorter.config;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.Set;
@@ -59,17 +61,21 @@ public record ShortenerProperties(
    *     the effective TTL is the minimum of this value and the remaining lifetime
    * @param negativeTtl TTL for the negative cache (a short-lived marker on a code that did not
    *     exist), so a scan of nonexistent codes stops hammering PostgreSQL (Task 21.2). The value
-   *     must be short — 30–60s is the trade-off window between shielding the database and missing
-   *     a link that was created during the gap.
+   *     must be short — 30–60s is the trade-off window between shielding the database and missing a
+   *     link that was created during the gap.
    * @param expectedCodes the Bloom filter (Task 21.2) is sized for this many codes before it
    *     reaches the configured false-positive rate
    * @param bloomFalsePositiveRate target false-positive rate of the Bloom filter, in (0, 1)
+   * @param jitter symmetric TTL jitter about the base cache TTL, in [0, 0.5] (default 0.15, i.e.
+   *     ±15%). Spreads out the expiry of a mass of links created together (imports, campaigns) so
+   *     they do not all expire in the same second and stampede PostgreSQL; 0 disables jitter
    */
   public record Cache(
       @PositiveDuration java.time.Duration ttl,
       @PositiveDuration java.time.Duration negativeTtl,
       @Positive long expectedCodes,
-      double bloomFalsePositiveRate) {}
+      double bloomFalsePositiveRate,
+      @PositiveOrZero @DecimalMax("0.5") double jitter) {}
 
   /**
    * @param length number of characters in generated Base62 codes; bounded by {@code [1, 10]} — the

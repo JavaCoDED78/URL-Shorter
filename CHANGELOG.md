@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+### Cache TTL now carries symmetric jitter (staggered expiry, stampede avoidance)
+
+The cache TTL was `min(configured TTL, remaining lifetime)` with a single fixed
+`shortener.cache.ttl` (1 h by default). A mass of links created together (an import, a campaign)
+therefore shared one base TTL and expired in the same second — a periodic DB stampede. The
+singleflight coalescer (`RedisLinkCache#coalesce`, ADR-011) smooths that stampede but does not remove
+it: a burst of expiries still lands inside a narrow window.
+
+- **Change.** `CacheTtlPolicy` is now an instance holding a `jitterFraction`; it applies a symmetric
+  `±jitterFraction` about the base TTL (`base * (1 + u)`, `u ~ Uniform(-jitterFraction, jitterFraction)`)
+  via `ThreadLocalRandom`. The base computation (`min`, remaining lifetime, already-expired → not
+  cached) is unchanged; only the written TTL is spread. Jitter is a new `shortener.cache.jitter`
+  property (`SHORTENER_CACHE_JITTER`, default `0.15`, i.e. ±15%), validated `@PositiveOrZero
+  @DecimalMax("0.5")`. The `Cache` record is a canonical 5-arg record; it has **no** secondary
+  4-arg constructor — a secondary constructor breaks Spring's
+  {@code @ConfigurationProperties} canonical-constructor bind, which would null the earlier
+  components and NPE at startup.
+- **Consequences.** Distinct links now expire across a ±15 % window instead of in lockstep, so the
+  per-interval stampede drops from N concurrent misses to a smooth trickle. Cost: a never-expiring
+  link can live up to 15 % longer (and a short-lived one up to 15 % shorter than its remaining life) —
+  well inside the stale-while-correct window, since expiry is re-checked from the payload on every hit.
+- **Verification.** `CacheTtlPolicyTest` (jitter bounds over 10 k draws, clamp to ±50 %, jitter on the
+  remaining lifetime), `ShortenerPropertiesValidationTest` (negative / over-0.5 jitter flagged), and
+  `RedisLinkCacheTest` (jitter disabled, exact configured-TTL assertions) are green.
+
 ### `existsByCode` pre-check is now case-insensitive (decoupled from the alias validator)
 
 The read path (`findByCodeIgnoreCase`) already compared `lower(l.code) = lower(:code)` — served by

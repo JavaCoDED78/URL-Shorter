@@ -47,20 +47,17 @@ class RedisLinkCacheTest {
           new ShortenerProperties.Url(2048, List.of("http", "https")),
           new ShortenerProperties.Alias(64, Set.of("api")),
           new ShortenerProperties.Create(5),
-          new ShortenerProperties.Cache(Duration.ofHours(1), Duration.ofSeconds(45), 1_000_000L, 0.0001),
+          // Jitter disabled here so the configured-TTL assertions below stay deterministic —
+          // jitter itself is covered by CacheTtlPolicyTest.
+          new ShortenerProperties.Cache(
+              Duration.ofHours(1), Duration.ofSeconds(45), 1_000_000L, 0.0001, 0d),
           new ShortenerProperties.Code(7),
           org.springframework.util.unit.DataSize.ofKilobytes(16),
           1024);
 
   private final RedisLinkCache cache =
       new RedisLinkCache(
-          redis,
-          objectMapper,
-          properties,
-          Clock.systemUTC(),
-          bloom,
-          negativeCache,
-          metrics);
+          redis, objectMapper, properties, Clock.systemUTC(), bloom, negativeCache, metrics);
 
   RedisLinkCacheTest() {
     when(redis.opsForValue()).thenReturn(ops);
@@ -206,10 +203,11 @@ class RedisLinkCacheTest {
     // owner put into the cache (a bare when(...).thenReturn(null) never would).
     Map<String, String> backing = new ConcurrentHashMap<>();
     when(ops.get(anyString())).thenAnswer(inv -> backing.get(inv.getArgument(0)));
-    doAnswer(inv -> {
-          backing.put(inv.getArgument(0), inv.getArgument(1));
-          return null;
-        })
+    doAnswer(
+            inv -> {
+              backing.put(inv.getArgument(0), inv.getArgument(1));
+              return null;
+            })
         .when(ops)
         .set(anyString(), anyString(), any(Duration.class));
     when(bloom.contains("abc1234")).thenReturn(true);

@@ -36,9 +36,9 @@ import org.springframework.stereotype.Component;
  * code behind a single in-flight PostgreSQL lookup, so an evicted/expired hot key can no longer fan
  * {@code N} concurrent reads into one.
  *
- * <p>Negative caching (Task 21.2): {@link #coalesce} short-circuits the database for codes the Bloom
- * filter has declared absent and for codes with a recent negative marker, so a scan of nonexistent
- * codes never reaches PostgreSQL.
+ * <p>Negative caching (Task 21.2): {@link #coalesce} short-circuits the database for codes the
+ * Bloom filter has declared absent and for codes with a recent negative marker, so a scan of
+ * nonexistent codes never reaches PostgreSQL.
  *
  * <p>Redis unavailability degrades the cache to a pass-through (Task 17.1): reads miss, writes are
  * skipped, evictions are skipped — every access then flows through PostgreSQL, which remains the
@@ -62,6 +62,7 @@ public class RedisLinkCache implements LinkCache {
   private final StringRedisTemplate redis;
   private final ObjectMapper objectMapper;
   private final Duration configuredTtl;
+  private final CacheTtlPolicy ttlPolicy;
   private final Clock clock;
   private final CodeBloomFilter bloom;
   private final RedisNegativeCache negativeCache;
@@ -90,6 +91,7 @@ public class RedisLinkCache implements LinkCache {
     this.redis = redis;
     this.objectMapper = objectMapper;
     this.configuredTtl = properties.cache().ttl();
+    this.ttlPolicy = new CacheTtlPolicy(properties.cache().jitter());
     this.clock = clock;
     this.bloom = bloom;
     this.negativeCache = negativeCache;
@@ -235,7 +237,8 @@ public class RedisLinkCache implements LinkCache {
 
   @Override
   public void put(CachedLink link) {
-    CacheTtlPolicy.ttlFor(link.expiresAt(), clock.instant(), configuredTtl)
+    ttlPolicy
+        .ttlFor(link.expiresAt(), clock.instant(), configuredTtl)
         .ifPresent(
             ttl -> {
               try {

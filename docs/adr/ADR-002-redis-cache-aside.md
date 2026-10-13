@@ -51,6 +51,7 @@ throughput difference and were rejected for breaking this contract.
   fresh random code is absent from every replica's filter, so the cheap shield also covers cold
   code scans.
 - Cache misses add a write to the read path; acceptable at this scale.
+- **Staggered expiry (stampede avoidance).** A mass of links created together (an import, a campaign) would share one base TTL and expire in the same second. `CacheTtlPolicy` applies a symmetric `±jitterFraction` (default ±15 %, `shortener.cache.jitter`, validated `@PositiveOrZero @DecimalMax("0.5")`) about the base TTL so expiries spread across a window; the singleflight coalescer above smooths the stampede but does not remove it — jitter keeps the expiries from lining up in the first place. `0` disables jitter.
 
 ## Alternatives considered
 

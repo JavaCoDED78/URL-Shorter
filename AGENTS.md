@@ -147,6 +147,7 @@ The full sprint-by-sprint breakdown, with every task as a checkbox, lives in `DE
 | `SHORTENER_ALIAS_MAX_LENGTH` | `64` | Maximum custom alias length |
 | `SHORTENER_MAX_COLLISION_RETRIES` | `5` | Bounded retries on generated-code collision |
 | `SHORTENER_CACHE_TTL` | `1h` | Redis TTL for cached links |
+| `SHORTENER_CACHE_JITTER` | `0.15` | Symmetric TTL jitter (±) about the base cache TTL, in `[0, 0.5]` (default ±15%). Spreads out the expiry of a mass of links created together (imports, campaigns) so they do not all expire in the same second and stampede PostgreSQL; `0` disables it |
 | `SHORTENER_FLUSH_INTERVAL` | `PT5S` | Click counter flush interval |
 | `SHORTENER_MAX_PAYLOAD_SIZE` | `16KB` | Raw request body ceiling |
 | `SHORTENER_BENCHMARK_ENABLED` | `false` (`true` in the dev compose stack) | Enables the benchmark-only `GET /bench-hit` redirect used by the k6 harness |
