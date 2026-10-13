@@ -13,5 +13,7 @@ import java.util.List;
  *
  * @param maxLength maximum accepted original URL length
  * @param allowedSchemes schemes accepted for original URLs
+ * @param dnsSemaphorePermits ceiling on concurrent {@link java.net.InetAddress#getByName} lookups
+ *     while validating, so the JVM DNS resolver cannot saturate
  */
-public record UrlConfig(int maxLength, List<String> allowedSchemes) {}
+public record UrlConfig(int maxLength, List<String> allowedSchemes, int dnsSemaphorePermits) {}

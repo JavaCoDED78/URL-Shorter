@@ -73,7 +73,7 @@ class WriteLinkServiceTest {
   private final UrlValidator urlValidator =
       spy(
           new UrlValidator(
-              new UrlConfig(properties.url().maxLength(), properties.url().allowedSchemes())));
+              new UrlConfig(properties.url().maxLength(), properties.url().allowedSchemes(), 8)));
   private final AliasValidator aliasValidator =
       spy(
           new AliasValidator(

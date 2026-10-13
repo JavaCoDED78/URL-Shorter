@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### DNS semaphore in `UrlValidator` is now instance-scoped, the ceiling lives in `UrlConfig`
+
+The concurrent-lookup guard was `private static final Semaphore dnsPermits = new Semaphore(8)`
+held as a class constant in {@link com.javaded78.urlshorter.domain.validation.UrlValidator}. A
+static semaphore is shared across the whole classloader, so integration suites that spin up
+multiple Spring contexts (or run with parallel forks) share one ceiling — the per-context limits
+mix, and the value is not configurable.
+
+- **Change.** The semaphore is now an instance field (`private final Semaphore dnsPermits`), built
+  from `UrlConfig#dnsSemaphorePermits` in the constructor. {@code UrlConfig} gains that component,
+  bridged from {@code ValidationConfig#DEFAULT_DNS_SEMAPHORE_PERMITS} (8) — the same pattern as
+  {@code maxLength}/{@code allowedSchemes}, so the domain record carries the value instead of the
+  validator hard-coding it.
+- **Consequences.** Each context gets its own semaphore, so parallel/multi-context suites no longer
+  share a limit. The default (8) is unchanged; it deliberately sits below the Hikari max pool size
+  (10). The default is defined in the Spring config layer ({@code ValidationConfig}) rather than as
+  a new bound {@code shortener.*} property, so no external config is invented — it is an
+  instance-configurable record field, not an operator-tunable property.
+- **Verification.** {@code UrlValidatorTest}, {@code WriteLinkServiceTest} updated for the new
+  {@code UrlConfig} arity; {@code unitTest} green, {@code spotlessCheck} green.
+
 ### Spotless: normalize Java formatting (Google Java Format 1.22.0) across the codebase
 
 The `com.diffplug.spotless` gate (`googleJavaFormat` + `importOrder` + `removeUnusedImports` +

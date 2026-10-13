@@ -37,11 +37,11 @@ public class UrlValidator {
    * Empirically the JDK resolver deadlocks when many {@code getByName} calls fire at once (the
    * 300-way {@code ConcurrencyIT} previously stalled), and a hard ceiling around 8 concurrent
    * lookups keeps resolution fast. The count is deliberately below the Hikari maximum pool size
-   * (10) so at most 8 connections are ever held during validation.
+   * (10) so at most 8 connections are ever held during validation. The ceiling is supplied through
+   * {@link UrlConfig#dnsSemaphorePermits}, so it is an instance value — never a static shared
+   * across classloaders.
    */
-  private static final int DNS_SEMAPHORE_PERMITS = 8;
-
-  private static final Semaphore dnsPermits = new Semaphore(DNS_SEMAPHORE_PERMITS);
+  private final Semaphore dnsPermits;
 
   private final int maxLength;
   private final Set<String> allowedSchemes;
@@ -52,6 +52,7 @@ public class UrlValidator {
         config.allowedSchemes().stream()
             .map(scheme -> scheme.toLowerCase(Locale.ROOT))
             .collect(Collectors.toSet());
+    this.dnsPermits = new Semaphore(config.dnsSemaphorePermits());
   }
 
   /**

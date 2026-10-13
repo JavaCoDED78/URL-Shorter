@@ -18,9 +18,21 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class ValidationConfig {
 
+  /**
+   * Default ceiling on concurrent DNS lookups during URL validation (see {@link
+   * com.javaded78.urlshorter.domain.validation.UrlValidator}). Lives here — in the Spring config
+   * layer — rather than in the pure {@link com.javaded78.urlshorter.domain.config.UrlConfig}
+   * record, so the domain record stays a plain data holder; the value is supplied to the validator
+   * through {@link com.javaded78.urlshorter.domain.config.UrlConfig#dnsSemaphorePermits}.
+   */
+  static final int DEFAULT_DNS_SEMAPHORE_PERMITS = 8;
+
   @Bean
   UrlConfig urlConfig(ShortenerProperties properties) {
-    return new UrlConfig(properties.url().maxLength(), properties.url().allowedSchemes());
+    return new UrlConfig(
+        properties.url().maxLength(),
+        properties.url().allowedSchemes(),
+        DEFAULT_DNS_SEMAPHORE_PERMITS);
   }
 
   @Bean

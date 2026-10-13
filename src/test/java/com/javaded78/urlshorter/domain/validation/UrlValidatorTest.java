@@ -29,7 +29,7 @@ class UrlValidatorTest {
 
   private final UrlValidator validator =
       new UrlValidator(
-          new UrlConfig(properties.url().maxLength(), properties.url().allowedSchemes()));
+          new UrlConfig(properties.url().maxLength(), properties.url().allowedSchemes(), 8));
 
   @ParameterizedTest
   @ValueSource(
