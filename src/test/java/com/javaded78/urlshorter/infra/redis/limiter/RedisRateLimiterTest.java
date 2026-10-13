@@ -8,8 +8,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.javaded78.urlshorter.domain.service.RateLimitScope;
 import com.javaded78.urlshorter.domain.service.MetricsRecorder;
+import com.javaded78.urlshorter.domain.service.RateLimitScope;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;

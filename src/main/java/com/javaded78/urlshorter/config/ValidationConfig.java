@@ -9,8 +9,8 @@ import org.springframework.context.annotation.Configuration;
  * Bridges the bound {@code shortener.*} properties into the pure config records consumed by the
  * domain validation ports.
  *
- * <p>{@link UrlValidator} and {@link com.javaded78.urlshorter.domain.validation.AliasValidator} take
- * {@link UrlConfig} / {@link AliasConfig} respectively instead of Spring's {@link
+ * <p>{@link UrlValidator} and {@link com.javaded78.urlshorter.domain.validation.AliasValidator}
+ * take {@link UrlConfig} / {@link AliasConfig} respectively instead of Spring's {@link
  * ShortenerProperties} (a {@code @ConfigurationProperties} type), so the domain layer never imports
  * a Spring config type. The values are still validated by the constraints on {@link
  * ShortenerProperties} at startup, so an out-of-range value fails fast on context init.

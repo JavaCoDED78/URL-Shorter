@@ -3,7 +3,6 @@ package com.javaded78.urlshorter.infra.redis.cache;
 import com.javaded78.urlshorter.config.ShortenerProperties;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -13,8 +12,8 @@ import org.springframework.stereotype.Component;
 /**
  * Short-TTL negative cache for the redirect path (Task 21.2).
  *
- * <p>Records that a code was looked up and <em>did not exist<em> (a created-then-deleted link, or
- * a link that expired) under a {@code neg:{code}} key with a short TTL, so a repeated miss of the
+ * <p>Records that a code was looked up and <em>did not exist<em> (a created-then-deleted link, or a
+ * link that expired) under a {@code neg:{code}} key with a short TTL, so a repeated miss of the
  * same code — the common abuse pattern for a URL-shortener — short-circuits against Redis instead
  * of hammering PostgreSQL on every request.
  *

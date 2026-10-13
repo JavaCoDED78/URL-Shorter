@@ -14,10 +14,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * PostgreSQL {@code shedlock} table (migration V3), so a multi-pod deployment drains Redis exactly
  * once per cycle instead of once per replica. {@code @EnableSchedulerLock} (default {@code
  * PROXY_METHOD}) is on the entry point so the lock is acquired via AOP on every call to {@code
- * ClickFlushJob#flushClicks()}, whether that call comes from the real {@code @Scheduled} scheduler or
- * a test hook; {@code @SchedulerLock(name = "clickFlush")} wraps that method. A {@code
- * lockAtMostFor} is set on {@code @EnableSchedulerLock} so a crash that holds the lock cannot pin it
- * forever.
+ * ClickFlushJob#flushClicks()}, whether that call comes from the real {@code @Scheduled} scheduler
+ * or a test hook; {@code @SchedulerLock(name = "clickFlush")} wraps that method. A {@code
+ * lockAtMostFor} is set on {@code @EnableSchedulerLock} so a crash that holds the lock cannot pin
+ * it forever.
  */
 @Configuration
 public class ShedLockConfig {

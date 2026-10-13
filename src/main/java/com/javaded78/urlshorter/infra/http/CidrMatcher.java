@@ -5,10 +5,10 @@ import java.math.BigInteger;
 /**
  * IPv4/IPv6 CIDR membership test for a trusted-proxy allowlist (Task 20.4 hardening).
  *
- * <p>Handles the shapes the configuration accepts: a bare host ({@code 10.0.0.5}, {@code
- * fe80::1}), an IPv4 {@code a.b.c.d/n} block, and an IPv6 {@code prefix/plen} block. Anything else
- * fails closed (the entry never matches) — an unparseable trusted proxy must not silently accept
- * every peer.
+ * <p>Handles the shapes the configuration accepts: a bare host ({@code 10.0.0.5}, {@code fe80::1}),
+ * an IPv4 {@code a.b.c.d/n} block, and an IPv6 {@code prefix/plen} block. Anything else fails
+ * closed (the entry never matches) — an unparseable trusted proxy must not silently accept every
+ * peer.
  *
  * <p>Membership is a full-width prefix comparison: both addresses are treated as big integers and
  * the leading {@code bits} bits are masked, so a partial final octet is handled uniformly.
@@ -17,7 +17,9 @@ final class CidrMatcher {
 
   private CidrMatcher() {}
 
-  /** @return {@code true} if {@code address} falls inside the {@code cidr} block. */
+  /**
+   * @return {@code true} if {@code address} falls inside the {@code cidr} block.
+   */
   static boolean match(String cidr, String address) {
     int slash = cidr.indexOf('/');
     if (slash < 0) {

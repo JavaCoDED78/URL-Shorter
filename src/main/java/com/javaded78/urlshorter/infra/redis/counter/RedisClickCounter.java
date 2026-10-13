@@ -128,8 +128,8 @@ public class RedisClickCounter implements ClickCounter {
   }
 
   /**
-   * Fills {@code drained} from a batch script reply, which is a flat {@code [key, value, key, value,
-   * ...]} array of raw strings. Pairs them up and keeps only counters whose drained value is
+   * Fills {@code drained} from a batch script reply, which is a flat {@code [key, value, key,
+   * value, ...]} array of raw strings. Pairs them up and keeps only counters whose drained value is
    * positive. A trailing odd element (defensive — the script only ever emits pairs) is ignored.
    */
   private static void accumulate(Map<String, Long> drained, List<String> reply) {

@@ -1,6 +1,5 @@
 package com.javaded78.urlshorter.domain.service;
 
-import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atMost;
@@ -16,8 +15,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;
 import org.springframework.boot.resttestclient.TestRestTemplate;
@@ -105,7 +104,8 @@ class ReadLinkServiceNegativeIT {
   @Test
   void nonexistentCodeHitsNegativeCacheNotDb() {
     // A never-created code is absent from the Bloom filter, so coalesce short-circuits before any
-    // DB hit — the marker is only written for Bloom-present-but-absent codes (created-then-deleted).
+    // DB hit — the marker is only written for Bloom-present-but-absent codes
+    // (created-then-deleted).
     assertThat(redirect("/ghost1").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     assertThat(redirect("/ghost1").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 

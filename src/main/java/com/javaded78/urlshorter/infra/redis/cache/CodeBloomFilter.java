@@ -18,9 +18,10 @@ import org.springframework.stereotype.Component;
  *
  * <p>Maintained incrementally on the write path via {@link #markExists(String)} after every
  * successful create. The filter only grows — it never forgets — which is correct by design: a code
- * that was created but later deleted still reads as "present" and is redirected to PostgreSQL, where
- * the short-TTL negative marker ({@code RedisNegativeCache}) catches the miss before the DB is
- * reached. Nothing here is shared across replicas; a fresh process simply rebuilds its own filter.
+ * that was created but later deleted still reads as "present" and is redirected to PostgreSQL,
+ * where the short-TTL negative marker ({@code RedisNegativeCache}) catches the miss before the DB
+ * is reached. Nothing here is shared across replicas; a fresh process simply rebuilds its own
+ * filter.
  */
 @Component
 public class CodeBloomFilter {
@@ -40,8 +41,8 @@ public class CodeBloomFilter {
   }
 
   /**
-   * Records that {@code code} exists (Task 21.2). Called by the write path after a successful create
-   * so the filter no longer short-circuits a redirect for it. Idempotent per key.
+   * Records that {@code code} exists (Task 21.2). Called by the write path after a successful
+   * create so the filter no longer short-circuits a redirect for it. Idempotent per key.
    *
    * @param code the (case-insensitive) link code
    */

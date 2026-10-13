@@ -36,8 +36,8 @@ public interface LinkCache {
    *                                      (singleflight) and cache whatever it returns
    * </pre>
    *
-   * <p>{@code miss} performs the PostgreSQL lookup and must return {@link Optional#empty()} when the
-   * code does not exist (the implementation then records the miss so subsequent lookups short-
+   * <p>{@code miss} performs the PostgreSQL lookup and must return {@link Optional#empty()} when
+   * the code does not exist (the implementation then records the miss so subsequent lookups short-
    * circuit) or throw {@code LinkNotFoundException}/{@code LinkExpiredException} when the link is
    * gone. The supplier is coalesced: concurrent callers for the same code share a single run.
    *
@@ -58,8 +58,8 @@ public interface LinkCache {
   void evict(String code);
 
   /**
-   * Records that {@code code} now exists (Task 21.2), so the Bloom filter no longer short-circuits a
-   * redirect for it. Called by the write path after a successful create; also evicts any stale
+   * Records that {@code code} now exists (Task 21.2), so the Bloom filter no longer short-circuits
+   * a redirect for it. Called by the write path after a successful create; also evicts any stale
    * negative marker for the code so the freshly created link resolves against PostgreSQL.
    *
    * @param code the (case-insensitive) link code

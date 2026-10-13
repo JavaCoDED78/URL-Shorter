@@ -89,7 +89,8 @@ class RedisClickCounterTest {
 
   @Test
   void restoreOnRedisOutageIsIgnored() {
-    when(ops.increment("clicks:abc1234", 5L)).thenThrow(new RedisConnectionFailureException("down"));
+    when(ops.increment("clicks:abc1234", 5L))
+        .thenThrow(new RedisConnectionFailureException("down"));
 
     assertDoesNotThrow(() -> counter.restore("abc1234", 5L));
   }
@@ -125,8 +126,7 @@ class RedisClickCounterTest {
     RedisClickCounter small = new RedisClickCounter(redis, drainScript, 2);
     when(redis.scan(any(ScanOptions.class))).thenReturn(cursor);
     when(cursor.hasNext()).thenReturn(true, true, true, true, true, false);
-    when(cursor.next())
-        .thenReturn("clicks:a", "clicks:b", "clicks:c", "clicks:d", "clicks:e");
+    when(cursor.next()).thenReturn("clicks:a", "clicks:b", "clicks:c", "clicks:d", "clicks:e");
 
     AtomicInteger calls = new AtomicInteger();
     // Each batch returns its first key with a positive count, so we can see the batch boundaries.
@@ -134,8 +134,7 @@ class RedisClickCounterTest {
         .thenAnswer(
             inv -> {
               calls.getAndIncrement();
-              return List.of(
-                  String.valueOf(((List<?>) inv.getArgument(1)).get(0)), "5");
+              return List.of(String.valueOf(((List<?>) inv.getArgument(1)).get(0)), "5");
             });
 
     Map<String, Long> drained = small.drainAll();

@@ -12,9 +12,10 @@ import org.springframework.stereotype.Component;
  *
  * <p>Counters: {@code urlshorter.linksCreated}, {@code urlshorter.linksRedirected}, {@code
  * urlshorter.linksNotFound}, {@code urlshorter.linksExpired}, {@code urlshorter.linksDeleted},
- * {@code urlshorter.cacheHit}, {@code urlshorter.cacheMiss}, {@code urlshorter.cacheNegativeHit}, {@code urlshorter.clicksIncremented},
- * {@code urlshorter.clicksFlushed}, {@code urlshorter.clicksFlushFailed}, {@code
- * urlshorter.clicksIncrementFailed}, {@code urlshorter.rateLimiterDenied}.
+ * {@code urlshorter.cacheHit}, {@code urlshorter.cacheMiss}, {@code urlshorter.cacheNegativeHit},
+ * {@code urlshorter.clicksIncremented}, {@code urlshorter.clicksFlushed}, {@code
+ * urlshorter.clicksFlushFailed}, {@code urlshorter.clicksIncrementFailed}, {@code
+ * urlshorter.rateLimiterDenied}.
  *
  * <p>Timers: {@code urlshorter.redirectDuration}, {@code urlshorter.postgresLookupDuration}, {@code
  * urlshorter.redisLookupDuration}.

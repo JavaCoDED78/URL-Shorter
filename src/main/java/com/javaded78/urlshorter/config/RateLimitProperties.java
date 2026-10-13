@@ -16,5 +16,8 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "shortener.rate-limiter")
 public record RateLimitProperties(
-    boolean enabled, @PositiveDuration Duration window, @Positive @Min(1) int maxRequests,
-    boolean failOpen, String[] trustedProxies) {}
+    boolean enabled,
+    @PositiveDuration Duration window,
+    @Positive @Min(1) int maxRequests,
+    boolean failOpen,
+    String[] trustedProxies) {}

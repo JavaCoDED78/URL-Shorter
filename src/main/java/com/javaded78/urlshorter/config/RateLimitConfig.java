@@ -35,10 +35,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 public class RateLimitConfig {
 
   @Bean
-  @ConditionalOnProperty(
-      prefix = "shortener.rate-limiter",
-      value = "enabled",
-      havingValue = "true")
+  @ConditionalOnProperty(prefix = "shortener.rate-limiter", value = "enabled", havingValue = "true")
   public RateLimiter redisRateLimiter(
       StringRedisTemplate redis,
       RateLimitProperties properties,

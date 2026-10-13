@@ -3,7 +3,6 @@ package com.javaded78.urlshorter.infra.redis.flush;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
-import com.javaded78.urlshorter.infra.redis.flush.CounterFlushService;
 import net.javacrumbs.shedlock.core.LockProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -30,9 +29,8 @@ import org.springframework.test.context.TestPropertySource;
  * flush runs, empty Optional = another instance holds the lock and this instance sheds the cycle.
  */
 @SpringBootTest
-@TestPropertySource(properties = {
-    "shortener.flush.enabled=false",
-    "logging.level.net.javacrumbs.shedlock=DEBUG"})
+@TestPropertySource(
+    properties = {"shortener.flush.enabled=false", "logging.level.net.javacrumbs.shedlock=DEBUG"})
 @Import(TestcontainersConfiguration.class)
 @Tag("integration")
 class SchedulerLockIT {

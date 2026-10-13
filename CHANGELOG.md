@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Spotless: normalize Java formatting (Google Java Format 1.22.0) across the codebase
+
+The `com.diffplug.spotless` gate (`googleJavaFormat` + `importOrder` + `removeUnusedImports` +
+whitespace) was red: 45 files had drifted from the configured format (import ordering, Javadoc
+reflow, multi-line annotation collapsing, `record` formatting). Ran `spotlessApply`, which touched
+only whitespace, import ordering and Javadoc reflow — no logic changed. `spotlessCheck` is green and
+`:compileJava` builds clean.
+
 ### Cache TTL now carries symmetric jitter (staggered expiry, stampede avoidance)
 
 The cache TTL was `min(configured TTL, remaining lifetime)` with a single fixed

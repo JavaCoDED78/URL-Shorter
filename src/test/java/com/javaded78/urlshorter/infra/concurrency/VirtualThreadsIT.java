@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doAnswer;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
-import com.javaded78.urlshorter.infra.redis.flush.CounterFlushService;
 import com.javaded78.urlshorter.domain.service.ReadLinkService;
+import com.javaded78.urlshorter.infra.redis.flush.CounterFlushService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

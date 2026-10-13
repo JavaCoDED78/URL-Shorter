@@ -33,13 +33,14 @@ import org.springframework.stereotype.Component;
 public class UrlValidator {
 
   /**
-   * Bounds concurrent {@link InetAddress} lookups so the JVM DNS resolver cannot saturate. Empirically
-   * the JDK resolver deadlocks when many {@code getByName} calls fire at once (the 300-way {@code
-   * ConcurrencyIT} previously stalled), and a hard ceiling around 8 concurrent lookups keeps resolution
-   * fast. The count is deliberately below the Hikari maximum pool size (10) so at most 8 connections
-   * are ever held during validation.
+   * Bounds concurrent {@link InetAddress} lookups so the JVM DNS resolver cannot saturate.
+   * Empirically the JDK resolver deadlocks when many {@code getByName} calls fire at once (the
+   * 300-way {@code ConcurrencyIT} previously stalled), and a hard ceiling around 8 concurrent
+   * lookups keeps resolution fast. The count is deliberately below the Hikari maximum pool size
+   * (10) so at most 8 connections are ever held during validation.
    */
   private static final int DNS_SEMAPHORE_PERMITS = 8;
+
   private static final Semaphore dnsPermits = new Semaphore(DNS_SEMAPHORE_PERMITS);
 
   private final int maxLength;
@@ -83,9 +84,9 @@ public class UrlValidator {
   }
 
   /**
-   * Resolves the host and rejects it when it is an internal address.
-   * defence: a {@link UnknownHostException} (unreachable or failing DNS) fails <em>open</em> — the
-   * URL is accepted — rather than blocking legitimate creation during a transient outage.
+   * Resolves the host and rejects it when it is an internal address. defence: a {@link
+   * UnknownHostException} (unreachable or failing DNS) fails <em>open</em> — the URL is accepted —
+   * rather than blocking legitimate creation during a transient outage.
    */
   private void rejectInternalHost(URI uri, String url) {
     InetAddress address;

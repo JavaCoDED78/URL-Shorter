@@ -5,9 +5,9 @@ package com.javaded78.urlshorter.domain.service;
  * hardening).
  *
  * <p>The shipped {@code CreateIpRateLimitSource} derives the key from the caller's IP — the first
- * hop of the (optionally trusted) {@code X-Forwarded-For} chain, falling back to
- * {@code HttpServletRequest#getRemoteAddr()} when the header is absent. Implementations live in
- * {@code infra}; the domain only depends on this port so it never touches {@code HttpServletRequest}
+ * hop of the (optionally trusted) {@code X-Forwarded-For} chain, falling back to {@code
+ * HttpServletRequest#getRemoteAddr()} when the header is absent. Implementations live in {@code
+ * infra}; the domain only depends on this port so it never touches {@code HttpServletRequest}
  * directly.
  */
 public interface CreateRateLimitSource {

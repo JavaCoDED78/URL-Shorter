@@ -28,10 +28,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  * reject it.
  *
  * <p>Timestamps come from a single source. {@code created_at} is mapped explicitly from the domain
- * (the {@link com.javaded78.urlshorter.domain.service.WriteLinkService} supplies
- * {@code clock.instant()}) — it is not stamped by the persistence layer, so tests that drive the
- * {@link Clock} see the deterministic instant round-trip. {@code updated_at} is owned by Spring Data
- * JPA auditing over the same {@link Clock} bean, so it always advances on update without the entity
+ * (the {@link com.javaded78.urlshorter.domain.service.WriteLinkService} supplies {@code
+ * clock.instant()}) — it is not stamped by the persistence layer, so tests that drive the {@link
+ * Clock} see the deterministic instant round-trip. {@code updated_at} is owned by Spring Data JPA
+ * auditing over the same {@link Clock} bean, so it always advances on update without the entity
  * ever calling {@code Instant.now()} itself.
  */
 @Getter

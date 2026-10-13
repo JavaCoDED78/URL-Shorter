@@ -17,8 +17,8 @@ import java.util.Optional;
  * <ul>
  *   <li>{@link #existsByCode(String)} — case-insensitive alias pre-check optimization (matches the
  *       {@code lower(code)} unique index, same case semantics as {@link #findByCodeIgnoreCase});
- *       this deliberately does not depend on the caller lowercasing first, so it is decoupled
- *       from the alias validator's normalization policy.
+ *       this deliberately does not depend on the caller lowercasing first, so it is decoupled from
+ *       the alias validator's normalization policy.
  *   <li>Point lookups by {@code code} — {@link #findByCodeIgnoreCase(String)} (case-insensitive,
  *       matching the {@code lower(code)} unique index).
  *   <li>{@link #save(Link)} — insert with an immediate flush, so a unique-constraint collision

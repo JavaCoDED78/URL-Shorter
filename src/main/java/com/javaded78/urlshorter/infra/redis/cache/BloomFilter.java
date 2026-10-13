@@ -43,9 +43,9 @@ public final class BloomFilter {
 
   /**
    * Creates a filter sized for {@code expectedInserts} keys at the given false-positive rate. The
-   * bit-array size {@code m} and probe count {@code k} follow the optimal formulas
-   * {@code m = ceil(-n * ln(p) / ln(2)^2)} and {@code k = round(m/n * ln(2))}, with a 1.44x
-   * padding factor so the rate stays low even as the filter fills.
+   * bit-array size {@code m} and probe count {@code k} follow the optimal formulas {@code m =
+   * ceil(-n * ln(p) / ln(2)^2)} and {@code k = round(m/n * ln(2))}, with a 1.44x padding factor so
+   * the rate stays low even as the filter fills.
    */
   public BloomFilter(long expectedInserts, double falsePositiveRate) {
     if (expectedInserts <= 0) {
@@ -115,9 +115,10 @@ public final class BloomFilter {
   }
 
   /**
-   * Restores a filter from {@link #toByteArray()}. Validates the header and that the caller-supplied
-   * {@code expectedInserts}/{@code falsePositiveRate} match the ones stored at write time — a mismatch
-   * indicates a node that was reconfigured mid-flight and would silently misread the bit array.
+   * Restores a filter from {@link #toByteArray()}. Validates the header and that the
+   * caller-supplied {@code expectedInserts}/{@code falsePositiveRate} match the ones stored at
+   * write time — a mismatch indicates a node that was reconfigured mid-flight and would silently
+   * misread the bit array.
    *
    * @param expectedInserts expected number of inserts (must match the serialized value)
    * @param falsePositiveRate expected false-positive rate (must match the serialized value)
@@ -125,10 +126,8 @@ public final class BloomFilter {
    * @return the restored filter
    * @throws IllegalArgumentException if the stream is malformed or the parameters disagree
    */
-  public static BloomFilter rehydrate(
-      long expectedInserts, double falsePositiveRate, byte[] data) {
-    try (DataInputStream in =
-        new DataInputStream(new ByteArrayInputStream(data))) {
+  public static BloomFilter rehydrate(long expectedInserts, double falsePositiveRate, byte[] data) {
+    try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(data))) {
       long magic = in.readLong();
       int version = in.readInt();
       long storedInserts = in.readLong();

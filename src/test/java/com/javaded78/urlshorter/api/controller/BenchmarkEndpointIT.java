@@ -1,10 +1,10 @@
 package com.javaded78.urlshorter.api.controller;
 
-import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;

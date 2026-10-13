@@ -1,11 +1,11 @@
 package com.javaded78.urlshorter.api.security;
 
-import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;
@@ -24,9 +24,9 @@ import org.springframework.http.ResponseEntity;
  * Abuse vectors (Tasks 20.2, 20.3) against the running application.
  *
  * <p>20.2 — SSRF posture: the redirect endpoint answers with a {@code 302 Location} only; it never
- * opens a connection to the stored destination. Internal destinations (loopback, link-local, private
- * ranges) are rejected at {@code create} with a 400; the redirect test uses an unreachable literal
- * to prove a stored link is never fetched server-side.
+ * opens a connection to the stored destination. Internal destinations (loopback, link-local,
+ * private ranges) are rejected at {@code create} with a 400; the redirect test uses an unreachable
+ * literal to prove a stored link is never fetched server-side.
  *
  * <p>20.3 — alias allowlist is the single defence line and must reject path-traversal strings,
  * reserved routes, whitespace, control characters and non-ASCII input with a plain 400.

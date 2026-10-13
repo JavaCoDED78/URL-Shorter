@@ -7,14 +7,15 @@ import org.junit.jupiter.api.Test;
 /**
  * Key resolution for the create rate limiter (Task 20.4 hardening): the key is the caller's IP,
  * taken from the first hop of {@code X-Forwarded-For} when the proxy is trusted, otherwise the
- * direct remote address. A trusted proxy must therefore <em>not</em> let a caller forge its key, and
- * an absent header must fall back to {@code remoteAddr} — never {@code "unknown"}.
+ * direct remote address. A trusted proxy must therefore <em>not</em> let a caller forge its key,
+ * and an absent header must fall back to {@code remoteAddr} — never {@code "unknown"}.
  */
 class CreateIpRateLimitSourceTest {
 
   private static final String TRUSTED = "10.0.0.5";
 
-  private final CreateIpRateLimitSource source = new CreateIpRateLimitSource(new String[]{TRUSTED});
+  private final CreateIpRateLimitSource source =
+      new CreateIpRateLimitSource(new String[] {TRUSTED});
 
   @Test
   void absentXffFallsBackToRemoteAddr() {
@@ -44,14 +45,14 @@ class CreateIpRateLimitSourceTest {
 
   @Test
   void emptyTrustedListForcesRemoteAddr() {
-    CreateIpRateLimitSource source = new CreateIpRateLimitSource(new String[]{});
+    CreateIpRateLimitSource source = new CreateIpRateLimitSource(new String[] {});
 
     assertThat(source.resolve("203.0.113.9", "10.0.0.5")).isEqualTo("10.0.0.5");
   }
 
   @Test
   void cidrBlockMatchesTrustedPeer() {
-    CreateIpRateLimitSource source = new CreateIpRateLimitSource(new String[]{"10.0.0.0/8"});
+    CreateIpRateLimitSource source = new CreateIpRateLimitSource(new String[] {"10.0.0.0/8"});
 
     assertThat(source.resolve("203.0.113.9", "10.1.2.3")).isEqualTo("203.0.113.9");
   }

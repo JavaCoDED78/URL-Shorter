@@ -1,16 +1,16 @@
 package com.javaded78.urlshorter.api.controller;
 
-import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.api.SteppingClock;
 import com.javaded78.urlshorter.api.SteppingClockConfig;
-import com.javaded78.urlshorter.TestcontainersConfiguration;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;

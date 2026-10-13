@@ -10,9 +10,9 @@ package com.javaded78.urlshorter.domain.service;
  * <ul>
  *   <li>client-scoped — the {@link RateLimitScope} carries both the limiter <em>kind</em> (e.g.
  *       {@code "create"}) and the per-client key the limiter honours; a single global key that
- *       scopes every caller behind one counter is a bug (an abuser would then block everyone).
- *       The per-client key is resolved per request by a {@link CreateRateLimitSource} and lives
- *       behind the port, never in domain call sites.
+ *       scopes every caller behind one counter is a bug (an abuser would then block everyone). The
+ *       per-client key is resolved per request by a {@link CreateRateLimitSource} and lives behind
+ *       the port, never in domain call sites.
  *   <li>probing must not throw and must not consume budget: a denied request can be retried later,
  *       a caller asking twice must get a consistent answer for the same window;
  *   <li>implementation detail (token bucket, fixed window, ...) stays behind this interface —

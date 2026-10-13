@@ -1,18 +1,17 @@
 package com.javaded78.urlshorter.api.error;
 
-import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
+import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.api.SteppingClock;
 import com.javaded78.urlshorter.api.SteppingClockConfig;
-import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.domain.service.ReadLinkService;
 import java.time.Duration;
-import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;

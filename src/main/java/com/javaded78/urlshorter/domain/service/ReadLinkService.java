@@ -137,7 +137,9 @@ public class ReadLinkService {
     throw new LinkNotFoundException(code);
   }
 
-  /** PostgreSQL lookup used as the {@link LinkCache#coalesce} miss supplier (Tasks 5.1, 5.2, 5.4). */
+  /**
+   * PostgreSQL lookup used as the {@link LinkCache#coalesce} miss supplier (Tasks 5.1, 5.2, 5.4).
+   */
   private Optional<CachedLink> lookupByCode(String code) {
     return metrics.timePostgresLookup(
         () ->

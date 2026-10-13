@@ -2,8 +2,6 @@ package com.javaded78.urlshorter.infra.redis.cache;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -36,8 +34,7 @@ class BloomFilterTest {
 
     Set<String> allKeys =
         IntStream.range(0, 20_000).mapToObj(i -> "missing-" + i).collect(Collectors.toSet());
-    long falsePositives =
-        allKeys.stream().filter(filter::contains).count();
+    long falsePositives = allKeys.stream().filter(filter::contains).count();
 
     // With m = n / ln(2 / (1 - p)) * 1.44 and k = ln(2) * m / n the theoretical FPR at the target
     // load is p = 1%. The 1.44 fudge factor above the ideal leaves room, so assert a generous

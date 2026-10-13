@@ -1,18 +1,18 @@
 package com.javaded78.urlshorter.infra.persistence;
 
-import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.javaded78.urlshorter.domain.repository.JpaAuditingTestConfiguration;
 import com.javaded78.urlshorter.TestcontainersConfiguration;
+import com.javaded78.urlshorter.domain.repository.JpaAuditingTestConfiguration;
 import java.time.Instant;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 /**
  * JPA slice for {@link LinkEntity} (the {@code infra.persistence} implementation of the {@code
@@ -87,7 +87,9 @@ class LinkJpaRepositoryTest {
     repository.saveAndFlush(new LinkEntity("dupe", "https://example.com", null, CREATED_AT));
 
     assertThatThrownBy(
-            () -> repository.saveAndFlush(new LinkEntity("dupe", "https://other.com", null, CREATED_AT)))
+            () ->
+                repository.saveAndFlush(
+                    new LinkEntity("dupe", "https://other.com", null, CREATED_AT)))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
@@ -103,7 +105,8 @@ class LinkJpaRepositoryTest {
   void persistsExpiresAt() {
     Instant expiresAt = Instant.parse("2030-01-01T00:00:00Z");
 
-    repository.saveAndFlush(new LinkEntity("withexp", "https://example.com", expiresAt, CREATED_AT));
+    repository.saveAndFlush(
+        new LinkEntity("withexp", "https://example.com", expiresAt, CREATED_AT));
 
     assertThat(repository.findByCode("withexp"))
         .hasValueSatisfying(link -> assertThat(link.getExpiresAt()).isEqualTo(expiresAt));

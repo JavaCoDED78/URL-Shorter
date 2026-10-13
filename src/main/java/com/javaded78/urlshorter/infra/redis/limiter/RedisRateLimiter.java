@@ -15,10 +15,10 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  *
  * <p>One Redis key per client scope ({@code ratelimit:{key}}) holds a plain integer bumped by
  * {@code INCR} on every probe. Redis self-manages the window: the first probe of a window (the
- * {@code INCR} result is {@code 1}) arms a {@link Duration} TTL on that key via {@code EXPIRE}; once
- * the window elapses Redis deletes it and the next probe naturally starts the window anew. This
- * keeps expiry in Redis (no clock arithmetic, no stale-window bookkeeping) and uses a single key —
- * there is nothing to drain or re-arm explicitly.
+ * {@code INCR} result is {@code 1}) arms a {@link Duration} TTL on that key via {@code EXPIRE};
+ * once the window elapses Redis deletes it and the next probe naturally starts the window anew.
+ * This keeps expiry in Redis (no clock arithmetic, no stale-window bookkeeping) and uses a single
+ * key — there is nothing to drain or re-arm explicitly.
  *
  * <p>{@code INCR} and {@code EXPIRE} run inside a single atomic Lua script (see {@link
  * RateLimitScript}) — there is no interleaving window between the increment and the TTL arm, so a
@@ -34,10 +34,10 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  *
  * <p>Failure policy: a Redis outage is {@code fail-open} or {@code fail-closed} as configured by
  * {@code shortener.rate-limiter.fail-open} (default {@code true}). A denied probe on a healthy
- * limiter returns {@code false} and is counted via {@code rateLimiterDenied}; on a Redis failure the
- * outcome is decided by the policy so a transient outage neither floods the endpoint (fail-open) nor
- * blocks every client (fail-closed). The limiter is a best-effort defense, not a correctness
- * guarantee.
+ * limiter returns {@code false} and is counted via {@code rateLimiterDenied}; on a Redis failure
+ * the outcome is decided by the policy so a transient outage neither floods the endpoint
+ * (fail-open) nor blocks every client (fail-closed). The limiter is a best-effort defense, not a
+ * correctness guarantee.
  *
  * <p>The {@code ratelimit:} namespace is namespaced so it never collides with the {@code link:} or
  * {@code clicks:} keys used elsewhere.
@@ -81,8 +81,7 @@ public class RedisRateLimiter implements RateLimiter {
       // window: the freshly-created key gets a TTL and Redis self-deletes it when the window
       // elapses, so the next probe INCRs from 1 again.
       final Long count =
-          redis.execute(
-              script.get(), List.of(counterKey), RateLimitScript.windowInSeconds(window));
+          redis.execute(script.get(), List.of(counterKey), RateLimitScript.windowInSeconds(window));
       boolean denied = count == null || count > maxRequests;
       if (denied) {
         metrics.rateLimiterDenied();

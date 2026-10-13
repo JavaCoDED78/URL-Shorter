@@ -20,8 +20,8 @@ public class SteppingClockConfig {
   public static final Instant REFERENCE = Instant.parse("2025-06-01T00:00:00Z");
 
   /**
-   * Deterministic clock injected over the production {@code Clock} bean declared in
-   * {@code UrlShorterApplication} (which would otherwise supply {@code systemUTC()}).
+   * Deterministic clock injected over the production {@code Clock} bean declared in {@code
+   * UrlShorterApplication} (which would otherwise supply {@code systemUTC()}).
    *
    * <p>The method name is intentionally <em>not</em> {@code clock}: the production bean is already
    * named {@code clock}, and two beans of the same name fail context startup. This bean is the only

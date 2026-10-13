@@ -1,23 +1,23 @@
 package com.javaded78.urlshorter.api.controller;
 
-import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.javaded78.urlshorter.api.dto.LinkResponse;
 import com.javaded78.urlshorter.TestcontainersConfiguration;
+import com.javaded78.urlshorter.api.dto.LinkResponse;
 import java.time.Instant;
 import java.util.Map;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.core.ParameterizedTypeReference;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
@@ -164,13 +164,14 @@ class LinkCreateFlowIT {
 
   private ResponseEntity<LinkResponse> post(Map<String, ?> body) {
     return restTemplate.exchange(
-        RequestEntity.post(API).contentType(MediaType.APPLICATION_JSON).body(body), LinkResponse.class);
+        RequestEntity.post(API).contentType(MediaType.APPLICATION_JSON).body(body),
+        LinkResponse.class);
   }
 
   /**
-   * Raw POST that deserializes into a {@link Map}: used where the response may be an error
-   * {@code problem+json} (e.g. the concurrent-duplicate-alias 409), which {@link LinkResponse}
-   * cannot be deserialized into.
+   * Raw POST that deserializes into a {@link Map}: used where the response may be an error {@code
+   * problem+json} (e.g. the concurrent-duplicate-alias 409), which {@link LinkResponse} cannot be
+   * deserialized into.
    */
   private ResponseEntity<Map<String, Object>> postRaw(Map<String, ?> body) {
     return restTemplate.exchange(
