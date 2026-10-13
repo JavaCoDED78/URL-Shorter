@@ -15,6 +15,8 @@
 | 007 | [ADR-007](ADR-007-prometheus-grafana-monitoring-stack.md) | Prometheus + Grafana monitoring stack | Accepted | 2026-10 | Sprint 29 | Observability |
 | 008 | [ADR-008](ADR-008-monitoring-configuration-as-code.md) | Monitoring configuration as code | Accepted | 2026-10 | Sprint 29 | Observability |
 | 009 | [ADR-009](ADR-009-create-rate-limiter.md) | Redis-backed fixed-window rate limiting on the create endpoint | Accepted | 2026-10 | Sprint 20.4 | Resilience |
+| 010 | [ADR-010](ADR-010-ssrf-defence-on-create.md) | SSRF defence on the create endpoint (best-effort) | Accepted | 2026-10 | Sprint 20.4 | Resilience |
+| 011 | [ADR-011](ADR-011-per-instance-singleflight-bloom.md) | Per-instance singleflight + Bloom filter on the redirect path | Accepted | 2026-10 | Sprint 21.2 | Performance |
 
 ## Records
 
@@ -71,3 +73,15 @@
 > The create endpoint is protected by a key-scoped, fixed-window Redis limiter (`ratelimit:{key}`, `INCR` per probe, `EXPIRE` on the first probe of a window). The bean is selected by `shortener.rate-limiter.enabled`: `RedisRateLimiter` when enabled, `NoOpRateLimiter` (admits everything) otherwise.
 
 **Why:** The unauthenticated, cheap `POST /api/v1/links` is the natural abuse target (alias squatting, enumeration, insert spam). A limiter behind the `RateLimiter` port is a drop-in bean swap — no call-site change — and fails open on a Redis outage so it can't take down link creation.
+
+### [ADR-010](ADR-010-ssrf-defence-on-create.md) — SSRF defence on the create endpoint is best-effort (single DNS-resolution at create time)
+
+> The create path rejects URLs whose host resolves to loopback, link-local, multicast, or private ranges (RFC 1918/ULA, IPv4 reserved/broadcast). A single `InetAddress.getByName` at create time is the only check.
+
+**Why:** The redirect endpoint never opens a connection to the stored destination, so impact is lower than an outbound fetcher — but a stored internal URL is still an integrity/abuse vector. The defence fails open on DNS failure on purpose: failing closed would deny legitimate hosts during outages and turn DNS availability into a denial-of-service vector.
+
+### [ADR-011](ADR-011-per-instance-singleflight-bloom.md) — Per-instance singleflight + Bloom filter on the redirect path
+
+> Singleflight (`ConcurrentMap` of `CompletableFuture` slots in `RedisLinkCache#coalesce`) and the in-memory `CodeBloomFilter` are kept per-replica — local to each JVM, not distributed.
+
+**Why:** Under horizontal scaling a cold miss of a hot key then fans out to N PostgreSQL lookups (one per replica), and a link created on replica A reads as "absent" in replica B's filter. Both effects are correct (PostgreSQL stays the authority), just not cluster-wide. Escape hatches (Redis `SET NX PX` lock for distributed singleflight, stale-while-revalidate, or a cluster-wide/Redis-backed Bloom) are adopted only when measured fan-out crosses an acceptable threshold.

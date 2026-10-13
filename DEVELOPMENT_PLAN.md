@@ -696,6 +696,11 @@ short-circuits absent codes before the lookup loop.
 negative caching уже собраны вместе в `coalesce`, отдельный distributed lock
 не нужен.
 
+> Много реплик: singleflight (мапа `inFlight`) и Bloom-фильтер — per-instance, не
+> cluster-wide. Холодный промах горячего ключа фан-аутится в N запросов в PostgreSQL,
+> а ссылка, созданная на другой реплике, локально «absent» (легитимный промах, не баг).
+> Решение зафиксировано в `docs/adr/ADR-011-per-instance-singleflight-bloom.md`.
+
 ---
 
 # Sprint 7 — Click counter в Redis

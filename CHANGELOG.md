@@ -93,6 +93,10 @@ of nonexistent codes re-read the database on every request.
 - **Verification.** `RedisLinkCacheTest#coalesceCoalescesConcurrentMissesInto-
   SingleLookup` asserts one DB query under 50 concurrent callers; the full suite
   is green (305 tests, 0 failures).
+- **Multi-replica scaling.** Per-instance singleflight + Bloom is the accepted default; the
+  N-replica fan-out (cold miss of a hot key → N PostgreSQL lookups) and cross-replica Bloom
+  absence are documented in
+  `docs/adr/ADR-011-per-instance-singleflight-bloom.md`.
 
 ### Distributed click flush (ShedLock)
 
