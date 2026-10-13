@@ -95,7 +95,11 @@ class CacheAsideIT {
 
     Long ttl = redis.getExpire("link:cache04", TimeUnit.SECONDS);
 
-    assertThat(ttl).isNotNull().isBetween(1L, 30L);
+    // The cached TTL is bounded by the link's remaining life (~30s), not the configured 1h.
+    // Symmetric ±15% jitter spreads it to roughly [0.85, 1.15] · ~30s ≈ [25, 35]s, so the bound
+    // needs jitter slack rather than the old hard `<= 30` (positive jitter legitimately writes
+    // the entry past 30s); anything near the configured 1h (3600s) would signal a real bug.
+    assertThat(ttl).isNotNull().isBetween(20L, 36L);
   }
 
   @Test
@@ -105,8 +109,11 @@ class CacheAsideIT {
 
     Long ttl = redis.getExpire("link:cache05", TimeUnit.SECONDS);
 
-    // configured cache TTL is 1h; allow slack for test execution time
-    assertThat(ttl).isNotNull().isGreaterThan(3500L);
+    // Never-expiring links are written with the configured 1h cache TTL, spread by the symmetric
+    // ±15% jitter into [0.85, 1.15] · 3600s ≈ [3060, 4140]s. A little slack sits below the floor
+    // for the few seconds between the redirect (the TTL write) and this assertion. A strict
+    // `> 3500` would be flaky: jitter legitimately drops the written TTL below 3500 (~40% of runs).
+    assertThat(ttl).isNotNull().isBetween(3000L, 4200L);
   }
 
   @Test

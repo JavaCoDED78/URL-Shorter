@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### CacheAsideIT TTL assertions made jitter-aware (removes flakiness)
+
+`CacheTtlPolicy` applies a symmetric `±15%` jitter to the written cache TTL (`base·(1+u)`,
+`u ~ Uniform(-0.15, 0.15)`), so the entry's live TTL is a range, not a fixed value. Two `CacheAsideIT`
+integration assertions still checked narrow bounds and became flaky:
+
+- `neverExpiringLinkGetsConfiguredTtl` asserted `> 3500s` for a never-expiring link. Base is the
+  configured 1h (3600s), so jitter lands it in `[3060, 4140]s`; values below 3500 (~40% of runs)
+  failed the assertion. Now `isBetween(3000L, 4200L)`.
+- `expiringLinkGetsBoundedTtl` asserted `isBetween(1L, 30L)` for a link with ~30s remaining. Base is
+  the remaining lifetime (~30s), so jitter spreads it to `[25.5, 34.5]s`; any positive jitter wrote
+  past 30s (~50% of runs). Now `isBetween(20L, 36L)`.
+
+Bounds keep the intent (configured-TTL applied / TTL bounded by remaining life) while absorbing the
+jitter window plus a little slack for test execution time. Verified: 12/12 stress runs green
+(previously each method failed ~40-50%).
+
 ### DNS semaphore in `UrlValidator` is now instance-scoped, the ceiling lives in `UrlConfig`
 
 The concurrent-lookup guard was `private static final Semaphore dnsPermits = new Semaphore(8)`
