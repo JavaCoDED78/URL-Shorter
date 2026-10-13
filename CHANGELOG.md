@@ -2,6 +2,51 @@
 
 ## Unreleased
 
+### Idempotent create via `Idempotency-Key` (safe retries)
+
+`POST /api/v1/links` now accepts an optional `Idempotency-Key` header. When present the entire create
+is wrapped in a new `IdempotencyStore` (`domain.idempotency` port + `RedisIdempotencyStore` in
+`infra.redis.idempotency`): the first request that carries a key owns it, runs the create once and
+stores the result in Redis under `idem:{sha256(key)}` with a ~24h TTL (`shortener.idempotency.ttl`,
+`SHORTENER_IDEMPOTENCY_TTL`); a retried request carrying the same key (after an HTTP timeout, a client
+retry, or an at-least-once broker delivery) replays that stored `201` with the original `code` instead
+of running the create again, so a timeout can no longer duplicate a link for the same URL.
+
+- **Change.** `WriteLinkService.create` takes a new `idempotencyKey` argument; when non-null and
+  non-blank it delegates to {@code IdempotencyStore#execute} (claim + result-store). The whole create —
+  the rate-limit probe, validation and insert — runs inside the store, so a replay consumes no rate
+  budget and performs no insert. A request whose key is owned by an in-flight request waits up to
+  {@code idempotency.wait-timeout} (`SHORTENER_IDEMPOTENCY_WAIT_TIMEOUT`, default 5 s) for the winner;
+  a stuck owner fails `500` rather than hanging. When the key is absent the create runs directly, so
+  the non-idempotent path is unchanged.
+- **Consequences.** The key is hashed (`sha256`) before storage, so it never appears in Redis keys,
+  logs or metrics — both `code` and `originalUrl` stay out of metric labels per the observability
+  contract. The claim is an atomic `SET NX PX` in a Lua script ({@code RedisIdempotencyStore#CLAIM_OR_DETECT})
+  carrying a bare `IDEMPOTENCY_PENDING` sentinel, so a `GET` can tell "in-flight" from "ready to
+  replay". A stale entry expires on its own after the TTL, so a lost claim (a crash between claim and
+  result) self-heals. On a Redis outage the store degrades to a plain, non-idempotent create
+  (availability-wins, like the cache-aside path).
+- **Verification.** New {@code IdempotencyIT} covers claim + create, same-key replay of the original
+  `201`, and stale-key expiry. {@code WriteLinkServiceTest}, {@code ShortenerPropertiesValidationTest}
+  updated for the new {@code ShortenerProperties.Idempotency} component and the new
+  {@code create(..., idempotencyKey)} arity. Full suite green.
+
+### Replace deprecated `HttpStatus.PAYLOAD_TOO_LARGE` with `CONTENT_TOO_LARGE`
+
+`HttpStatus.PAYLOAD_TOO_LARGE` is deprecated in Spring 7.x. It is replaced with
+`HttpStatus.CONTENT_TOO_LARGE` (both are `413`) across the four references
+({@code ErrorType}, {@code GlobalExceptionHandler}, {@code RequestSizeLimitFilter},
+{@code RequestUriLengthFilter}). The HTTP status, {@code ErrorType.PAYLOAD_TOO_LARGE} URI and the error
+response body are unchanged — only the enum constant is swapped, so the API contract is preserved.
+
+### Silence Jackson `setSerializationInclusion` deprecation
+
+`ObjectMapper.setSerializationInclusion(...)` is `@Deprecated` with no non-deprecated equivalent on
+the project's Jackson 2.x compat layer. {@code RedisIdempotencyStore#storeObjectMapper} (and the
+identical {@code RedisLinkCache#cacheObjectMapper}) are marked `@SuppressWarnings("deprecation")` with
+an explanatory comment; a later overload of the same method is itself deprecated, so the suppression is
+scoped to the single method rather than the whole class.
+
 ### CacheAsideIT TTL assertions made jitter-aware (removes flakiness)
 
 `CacheTtlPolicy` applies a symmetric `±15%` jitter to the written cache TTL (`base·(1+u)`,

@@ -6,7 +6,7 @@ Guidance for AI coding agents (Claude Code and similar tools) working in this re
 
 A production-oriented **URL Shortener** service. PostgreSQL is the source of truth; Redis accelerates redirects and buffers click counts before they are flushed back to PostgreSQL.
 
-Core capabilities: create short links (random Base62 code or custom alias), TTL/expiration, cache-aside redirects, atomic click counting via Redis + Lua, RFC 9457 error responses, OpenAPI docs, virtual threads, and a Testcontainers-based integration suite.
+Core capabilities: create short links (random Base62 code or custom alias), idempotent create via `Idempotency-Key` header (a retried create replays the original 201 instead of creating a second link), TTL/expiration, cache-aside redirects, atomic click counting via Redis + Lua, RFC 9457 error responses, OpenAPI docs, virtual threads, and a Testcontainers-based integration suite.
 
 ## 2. Tech stack
 
@@ -45,7 +45,7 @@ link:{code}   clicks:{code}
               Flyway migrations
 ```
 
-- **Create**: validate → generate Base62 code (or validate custom alias) → insert into PostgreSQL → `201`. The database `UNIQUE` constraint is the final defence against code collisions; an `existsByCode` pre-check is only an optimization, not a concurrency guarantee.
+- **Create**: if an `Idempotency-Key` header is present, the run is wrapped in the `IdempotencyStore` — a retried request replays the original 201 (same code) instead of creating a second link; otherwise validate → generate Base62 code (or validate custom alias) → insert into PostgreSQL → `201`. The database `UNIQUE` constraint is the final defence against code collisions; an `existsByCode` pre-check is only an optimization, not a concurrency guarantee.
 - **Redirect**: Redis lookup → on hit, check `expiresAt` from the cached value, `INCR` the click counter, `302`; on miss, read PostgreSQL, check expiration, write-through to Redis, then redirect.
 - **Click flush**: every `SHORTENER_FLUSH_INTERVAL` (default 5s), a Redis Lua script atomically reads-and-resets each `clicks:{code}` counter, then a batch `UPDATE` persists the drained values to PostgreSQL. Never implement this as separate `HGET` + `DEL` calls — increments arriving between the two would be lost.
 
@@ -63,6 +63,7 @@ src/main/java/com/javaded78/urlshorter/
 │   ├── counter/          # counter port: ClickCounter (no Redis types in signatures)
 │   ├── repository/       # pure persistence port (domain interface; no Spring Data/JPA)
 │   ├── config/           # pure domain config records (WriteServiceConfig, UrlConfig, AliasConfig; bridged from ShortenerProperties)
+│   ├── idempotency/      # IdempotencyStore port (Idempotency-Key result replay)
 │   └── service/          # application/domain services
 │   ├── exception/        # @ControllerAdvice-driven errors (sealed hierarchy)
 │   └── validation/       # input validators (AliasValidator, UrlValidator)
@@ -74,7 +75,8 @@ src/main/java/com/javaded78/urlshorter/
 │       ├── counter/      # click counters
 │       ├── script/       # Lua scripts
 │       ├── flush/        # ClickFlushJob (scheduler) + CounterFlushService (flush orchestrator)
-│       └── limiter/      # rate limiter (Redis-backed fixed window)
+│       ├── limiter/      # rate limiter (Redis-backed fixed window)
+│       └── idempotency/  # RedisIdempotencyStore (SET NX claim + Lua result store for Idempotency-Key)
 └── config/               # properties, filters, OpenAPI, startup diagnostics
 
 monitoring/               # repo-root Prometheus/Grafana configuration as code
@@ -152,6 +154,8 @@ The full sprint-by-sprint breakdown, with every task as a checkbox, lives in `DE
 | `SHORTENER_MAX_PAYLOAD_SIZE` | `16KB` | Raw request body ceiling |
 | `SHORTENER_BENCHMARK_ENABLED` | `false` (`true` in the dev compose stack) | Enables the benchmark-only `GET /bench-hit` redirect used by the k6 harness |
 | `SHORTENER_MAX_URI_LENGTH` | `1024` | Maximum request-URI length (characters); oversized paths answered `413` by `RequestUriLengthFilter` before any handler runs |
+| `SHORTENER_IDEMPOTENCY_TTL` | `24h` | Redis TTL for a stored idempotent create result (`idempotency.ttl`); a retried create within this window replays the original `201` with the original `code` instead of creating a second link |
+| `SHORTENER_IDEMPOTENCY_WAIT_TIMEOUT` | `5s` | How long a create whose key is owned by an in-flight request waits for the winner to finish (a create finishes in ms; this only guards against a stuck owner, which then fails as `500`) |
 
 All values also follow Spring relaxed binding — e.g. `SPRING_DATASOURCE_URL`
 maps to `spring.datasource.url`. Postgres credentials are passed to the
@@ -169,6 +173,8 @@ Postgres service. Prometheus and Grafana configuration is file-based under
 | `GET` | `/api/v1/links/{code}` | Get link details | `200`, `404` |
 | `GET` | `/api/v1/links/{code}/stats` | Get click statistics | `200`, `404` |
 | `DELETE` | `/api/v1/links/{code}` | Delete a link | `204`, `404` |
+
+> **Idempotency-Key** (optional): send `Idempotency-Key: <opaque>` on `POST /api/v1/links`. The first create that carries a key owns it and stores the result (~24h TTL in Redis); a retried create with the same key replays the original `201` with the original `code` instead of creating a second link. Omit it for a normal create.
 
 Errors use Spring's `ProblemDetail` (RFC 9457): `type`, `title`, `status`, `detail`, `instance`. Keep `type`/`title`/`detail` stable enough for clients to rely on. Error categories: `400` invalid request/URL, `409` code/alias already taken, `404` link not found, `410` link expired, `413` request body over the size limit, `503` database temporarily unavailable, `500` unexpected failure.
 
@@ -191,6 +197,7 @@ Errors use Spring's `ProblemDetail` (RFC 9457): `type`, `title`, `status`, `deta
 5. **Connection pool exhaustion** — virtual threads increase concurrency, but the PostgreSQL pool size is still the limit.
 6. **Stale cache after delete** — both PostgreSQL and Redis must be updated together. Closed: the second cache evict now runs in an `afterCommit` `TransactionSynchronization` (registered via `TransactionSynchronizationManager` in `WriteLinkService#delete`), so it fires only after the row is globally gone — ordered after any racing reader's write-back. A plain in-transaction evict leaves the `[evict → commit]` window open.
 7. **Stats lag** — PostgreSQL-only stats can undercount due to pending Redis clicks; the API semantics for this need to be explicit and documented.
+8. **Idempotent replay race** — a create whose key is owned by a concurrent in-flight request waits up to `SHORTENER_IDEMPOTENCY_WAIT_TIMEOUT` for the winner. If the winner never finishes (a stuck owner) the waiter fails `500` rather than hanging; the client can retry with the same key after the winner eventually claims or the key expires.
 
 ## 11. Testing expectations
 

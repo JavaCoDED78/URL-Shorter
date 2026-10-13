@@ -22,6 +22,7 @@ The service uses PostgreSQL as the source of truth, Redis for low-latency redire
 - **Graceful infrastructure degradation**: a PostgreSQL outage answers create/miss lookups with a fast `503` (bounded by a 5 s pool timeout) while Redis cache hits keep redirecting; a failed flush restores counters instead of losing clicks.
 - **Request size limit**: oversized bodies are rejected with `413` before parsing.
 - **Create-endpoint rate limiting** (Task 20.4): a key-scoped, Redis-backed fixed-window limiter (`shortener.rate-limiter`) protects `/api/v1/links` from abuse, answering `429 Too Many Requests` (`retryAfter: 1`) when the limit is exceeded. Disabled by default (`enabled: false`) so existing high-volume suites stay green; a Redis outage fails open so a create request is never lost to a transient outage.
+- **Idempotent create** via an optional `Idempotency-Key` header: a create retried after an HTTP timeout with the same key replays the original `201` with the original `code` instead of creating a second link, so a timeout can no longer duplicate a link for the same URL. The prior result is stored in Redis (~24h TTL).
 - **RFC 9457 error responses** based on Spring's `ProblemDetail`.
 - **OpenAPI 3 documentation** with interactive Swagger UI.
 - **Java virtual threads** enabled through a single Spring Boot property.
@@ -282,6 +283,11 @@ reproduce the monitoring setup from these files alone.
 POST /api/v1/links
       │
       ▼
+Idempotency-Key present?
+      ├── yes ─────────────────────► prior result: replay 201 with the original code
+      │    (waits for an in-flight winner, or 500 if the owner never finishes)
+      └── no / absent
+              ▼
 Rate limit probe (when enabled)
       │
       └── denied → 429 Too Many Requests
@@ -297,6 +303,14 @@ Insert into PostgreSQL
       ▼
 Return 201 Created
 ```
+
+When an `Idempotency-Key` header is present the whole create is wrapped in the `IdempotencyStore`
+— the first request that carries a key owns it, runs the create, and stores the result in Redis (~24h
+TTL); a retried request with the same key replays that original `201` (same `code`) instead of running
+the create again, so it consumes no rate-limit budget and performs no insert. A request whose key is
+owned by an in-flight request waits up to `SHORTENER_IDEMPOTENCY_WAIT_TIMEOUT` (5 s) for the winner,
+then fails `500` if the owner never finishes. When the header is absent or blank the create runs
+directly.
 
 The `RateLimiter` probe is the first gate in `WriteLinkService.create`: a denied
 probe answers `429` (`retryAfter: 1`) without touching PostgreSQL or Redis.
@@ -504,6 +518,24 @@ Response `201 Created`:
 `expiresAt` is optional — omit it (or pass `null`) for a link that never
 expires. A custom alias can be requested with `"alias": "my-link"`;
 `code` in the response is the alias. Codes are case-insensitive.
+
+### Idempotent create (Idempotency-Key)
+
+Send the optional `Idempotency-Key` header to make a create idempotent:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/links \
+  -H "Idempotency-Key: 3f2504e0-4f89-41d3-9607-1ed3f0b3963d" \
+  -H "Content-Type: application/json" \
+  -d '{"originalUrl": "https://example.com"}'
+```
+
+A retried create with the same key (for example after an HTTP timeout) replays the
+original `201 Created` with the original `code` instead of creating a second link.
+The result is stored in Redis with a ~24h TTL (`SHORTENER_IDEMPOTENCY_TTL`); a
+create whose key is owned by an in-flight request waits up to
+`SHORTENER_IDEMPOTENCY_WAIT_TIMEOUT` (`5s`), then fails as `500` if the owner never
+finishes. Omit the header for a normal, non-idempotent create.
 
 Error cases:
 
@@ -733,6 +765,8 @@ The following environment variables are used by the application.
 | `SHORTENER_MAX_PAYLOAD_SIZE` | `16KB` | Raw request body ceiling |
 | `SHORTENER_BENCHMARK_ENABLED` | `false` | Enables `GET /bench-hit` for k6 load tests |
 | `SHORTENER_MAX_URI_LENGTH` | `1024` | Maximum request-URI length (characters); oversized paths answered `413` by `RequestUriLengthFilter` before any handler runs |
+| `SHORTENER_IDEMPOTENCY_TTL` | `24h` | Redis TTL for a stored idempotent create result (`idempotency.ttl`); a retried create within this window replays the original `201` with the original `code` instead of creating a second link |
+| `SHORTENER_IDEMPOTENCY_WAIT_TIMEOUT` | `5s` | How long a create whose key is owned by an in-flight request waits for the winner to finish (a create finishes in ms; this only guards against a stuck owner, which then fails as `500`) |
 | `SHORTENER_RATE_LIMITER_ENABLED` | `false` | Enables the Redis-backed create-endpoint rate limiter (`shortener.rate-limiter.enabled`) |
 | `SHORTENER_RATE_LIMITER_WINDOW` | `PT1M` | Fixed-window length (see `SHORTENER_RATE_LIMITER_ENABLED`) |
 | `SHORTENER_RATE_LIMITER_MAX` | `100` | Max create probes admitted per key per window (see `SHORTENER_RATE_LIMITER_ENABLED`) |

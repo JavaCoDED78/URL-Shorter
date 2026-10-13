@@ -29,6 +29,7 @@
 К концу разработки сервис должен поддерживать:
 
 - [x] Создание коротких ссылок.
+- [x] Идемпотентное создание ссылок (`Idempotency-Key`).
 - [x] Генерацию уникального Base62-кода длиной 7 символов.
 - [x] Создание пользовательских alias.
 - [x] TTL/expiration ссылки.
@@ -3059,6 +3060,68 @@ Git repository
 
 Каждая задача должна завершаться проверяемым артефактом. Нельзя считать monitoring setup готовым, если Prometheus и Grafana были настроены вручную через UI и после удаления контейнеров конфигурация теряется.
 
+---
+
+# Sprint 30 — Idempotent create (Idempotency-Key)
+
+## Цель
+
+Сделать create-запрос идемпотентным: повторный create с тем же `Idempotency-Key` (например, после
+HTTP-timeout клиента, повтор запроса или at-least-once доставки) должен воспроизводить исходный
+`201` с исходным `code`, а не создавать вторую ссылку. Без заголовка create выполняется как обычно
+(non-idempotent).
+
+- [x] **Task 30.1 — Определить семантику идемпотентности**
+
+  Ключ опционален. При наличии заголовка:
+
+  ```text
+  первый запрос с key -> create -> сохранить результат в Redis
+  повторный запрос с key -> воспроизвести результат (тот же code, 201)
+  ```
+
+  Без заголовка create выполняется напрямую, без обвязки.
+
+- [x] **Task 30.2 — Порт `IdempotencyStore` (`domain.idempotency`)**
+
+  ```text
+  IdempotencyStore (порт, domain)
+     |
+  RedisIdempotencyStore (infra.redis.idempotency)
+  ```
+
+  Метод: `execute(key, Supplier<Link> create)` — claim -> `create` один раз -> сохранить результат;
+  когда результат готов — воспроизвести его. Реализация не должна знать о Redis.
+
+- [x] **Task 30.3 — Redis-фасад (`RedisIdempotencyStore`)**
+
+  - [x] ключ `idem:{sha256(key)}`, TTL ~24h (`shortener.idempotency.ttl`, `SHORTENER_IDEMPOTENCY_TTL`);
+  - [x] atomic claim через Lua `SET NX PX`, сентинел `IDEMPOTENCY_PENDING` отличает "in-flight" от "result ready";
+  - [x] `GET` классифицирует: `0`=claim, `1`=in-flight, `2`=result ready;
+  - [x] на Redis-down деградация в обычный create (availability-wins, как cache-aside).
+
+- [x] **Task 30.4 — Обвязка `WriteLinkService.create`**
+
+  - [x] новый аргумент `idempotencyKey`; при непустом — делегирование `IdempotencyStore`;
+  - [x] весь create (rate-limit probe -> validation -> insert) внутри store — повтор не тратит rate-бюджет и не делает insert;
+  - [x] ожидание winner до `SHORTENER_IDEMPOTENCY_WAIT_TIMEOUT` (5s) -> `500` при stuck owner;
+  - [x] неудачный create освобождает claim, чтобы следующий повтор с тем же ключом мог успешно создаться.
+
+- [x] **Task 30.5 — Конфигурация**
+
+  - [x] `shortener.idempotency.ttl` (`SHORTENER_IDEMPOTENCY_TTL`, default `24h`);
+  - [x] `shortener.idempotency.wait-timeout` (`SHORTENER_IDEMPOTENCY_WAIT_TIMEOUT`, default `5s`);
+  - [x] валидация в `ShortenerPropertiesValidationTest`.
+
+- [x] **Task 30.6 — Тесты**
+
+  - [x] `IdempotencyIT`: claim + create, replay исходного `201`, expiry stale-key;
+  - [x] `WriteLinkServiceTest`, `ShortenerPropertiesValidationTest` обновлены под новую арность конструктора;
+  - [x] полный сет green (324 теста, 0 падений, 0 skipped).
+
+---
+
+
 # 5. Рекомендуемый порядок реализации внутри каждого спринта
 
 Для каждой функциональности использовать одинаковый шаблон:
@@ -3202,6 +3265,7 @@ Refactoring
 Sprint 27
 Sprint 28
 Sprint 29
+Sprint 30
 ```
 
 Результат:
@@ -3506,6 +3570,7 @@ S26  Refactoring
 S27  Documentation
 S28  Production readiness
 S29  Prometheus + Grafana: metrics pipeline as code
+S30  Idempotent create (Idempotency-Key)
 ```
 
 Таким образом, разработка идёт от простого работающего CRUD/redirect-сервиса к полноценному production-oriented сервису: наиболее опасные части — Redis counter, atomic flush, consistency и concurrency — получают отдельные спринты и тестовые сценарии, а Sprint 29 добавляет полностью воспроизводимый Prometheus + Grafana metrics pipeline as code.
