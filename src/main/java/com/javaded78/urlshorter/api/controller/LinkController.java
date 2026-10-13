@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -44,7 +46,11 @@ public class LinkController {
   @Operation(
       summary = "Create a short link",
       description =
-          "Stores a new link under a generated Base62 code or the given " + "custom alias.")
+          "Stores a new link under a generated Base62 code or the given "
+              + "custom alias. Pass "
+              + "an {@code Idempotency-Key} header to make the create idempotent: a request retried "
+              + "after a timeout (same key) replays the original 201 with the original code instead "
+              + "of creating a second link. The key is stored in Redis (~24h TTL).")
   @ApiResponses({
     @ApiResponse(responseCode = "201", description = "Link created"),
     @ApiResponse(
@@ -61,8 +67,12 @@ public class LinkController {
         content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   })
   @PostMapping
-  public ResponseEntity<LinkResponse> create(@Valid @RequestBody CreateLinkRequest request) {
-    Link created = writeService.create(request.originalUrl(), request.alias(), request.expiresAt());
+  public ResponseEntity<LinkResponse> create(
+      @Valid @RequestBody CreateLinkRequest request,
+      @RequestHeader(value = "Idempotency-Key", required = false) @Nullable String idempotencyKey) {
+    Link created =
+        writeService.create(
+            request.originalUrl(), request.alias(), request.expiresAt(), idempotencyKey);
     LinkResponse body = LinkResponse.from(created);
     return ResponseEntity.created(URI.create("/api/v1/links/" + created.code())).body(body);
   }

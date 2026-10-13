@@ -34,6 +34,7 @@ public record ShortenerProperties(
     @Valid Create create,
     @Valid Cache cache,
     @Valid Code code,
+    @Valid Idempotency idempotency,
     DataSize maxPayloadSize,
     int maxUriLength) {
 
@@ -83,4 +84,15 @@ public record ShortenerProperties(
    *     value (length 11 would overflow the {@code long} range used by the generator)
    */
   public record Code(@Min(1) @Max(10) int length) {}
+
+  /**
+   * @param ttl how long a stored create result is replayable (default 24h): long enough to cover a
+   *     client retry after an HTTP timeout, short enough to bound Redis memory for keys that are
+   *     never retried
+   * @param waitTimeout how long a request whose key is owned by an in-flight request waits for that
+   *     request to finish and replay (default 5s). A create finishes in milliseconds, so this only
+   *     guards against a genuinely stuck owner; the request then fails as 500 rather than hanging
+   */
+  public record Idempotency(
+      @PositiveDuration java.time.Duration ttl, @PositiveDuration java.time.Duration waitTimeout) {}
 }

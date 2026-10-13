@@ -24,7 +24,7 @@ class CodeBloomFilterTest {
             Duration.ofHours(1), Duration.ofMinutes(30), 5_000L, 0.01, 0.15);
     // Only properties.cache() is read by the constructor; the rest stay null.
     ShortenerProperties properties =
-        new ShortenerProperties(null, null, null, cache, null, null, 0);
+        new ShortenerProperties(null, null, null, cache, null, null, null, 0);
     bloom = new CodeBloomFilter(properties);
   }
 

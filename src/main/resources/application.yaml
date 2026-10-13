@@ -50,6 +50,17 @@ shortener:
     reserved: api,actuator,swagger,swagger-ui,v3,favicon.ico,bench-hit
   create:
     max-collision-retries: ${SHORTENER_MAX_COLLISION_RETRIES:5}
+  # Idempotency for the create endpoint (Idempotency-Key). A client that retries
+  # a create after an HTTP timeout carries the same key; the store replays the
+  # original 201 with the original code instead of creating a second link, so a
+  # retry can no longer duplicate a link for the same URL. The key is hashed and
+  # stored under idem:{sha256(key)} with this TTL.
+  idempotency:
+    ttl: ${SHORTENER_IDEMPOTENCY_TTL:24h}
+    # How long a request whose key is owned by an in-flight request waits for the
+    # winner to finish (a create finishes in milliseconds; this only guards
+    # against a genuinely stuck owner, which then fails as 500).
+    wait-timeout: ${SHORTENER_IDEMPOTENCY_WAIT_TIMEOUT:5s}
   cache:
     ttl: ${SHORTENER_CACHE_TTL:1h}
     # Symmetric TTL jitter (±jitter, default ±15%) about the base cache TTL (min(configured TTL,

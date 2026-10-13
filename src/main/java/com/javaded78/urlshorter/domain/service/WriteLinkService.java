@@ -7,6 +7,7 @@ import com.javaded78.urlshorter.domain.exception.AliasAlreadyExistsException;
 import com.javaded78.urlshorter.domain.exception.DuplicateCodeException;
 import com.javaded78.urlshorter.domain.exception.LinkNotFoundException;
 import com.javaded78.urlshorter.domain.exception.RateLimitExceededException;
+import com.javaded78.urlshorter.domain.idempotency.IdempotencyStore;
 import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.domain.validation.AliasValidator;
@@ -49,9 +50,14 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * <p>Inserts use {@code saveAndFlush} so the unique-constraint outcome is known inside the retry
  * loop, not at an unpredictable commit point.
  *
+ * <p>Idempotency (Idempotency-Key): when {@code idempotencyKey} is present, the whole create is run
+ * inside {@link IdempotencyStore#execute} — a retried request replays the original result instead
+ * of creating a second link. When it is absent the create runs directly.
+ *
  * <p>Throws {@link IllegalArgumentException} (400 on invalid URL/alias/expiration), {@link
  * AliasAlreadyExistsException} (409), {@link RateLimitExceededException} (429) and {@link
- * IllegalStateException} (generated codes keep colliding).
+ * IllegalStateException} (generated codes keep colliding, or a concurrent idempotent request times
+ * out waiting for its winner).
  */
 @Service
 public class WriteLinkService {
@@ -69,6 +75,7 @@ public class WriteLinkService {
   private final MetricsRecorder metrics;
   private final RateLimiter rateLimiter;
   private final CreateRateLimitSource rateLimitSource;
+  private final IdempotencyStore idempotencyStore;
 
   public WriteLinkService(
       Clock clock,
@@ -81,7 +88,8 @@ public class WriteLinkService {
       ClickCounter clickCounter,
       MetricsRecorder metrics,
       RateLimiter rateLimiter,
-      CreateRateLimitSource rateLimitSource) {
+      CreateRateLimitSource rateLimitSource,
+      IdempotencyStore idempotencyStore) {
     this.clock = clock;
     this.repository = repository;
     this.codeGenerator = codeGenerator;
@@ -93,6 +101,7 @@ public class WriteLinkService {
     this.metrics = metrics;
     this.rateLimiter = rateLimiter;
     this.rateLimitSource = rateLimitSource;
+    this.idempotencyStore = idempotencyStore;
   }
 
   /**
@@ -101,46 +110,57 @@ public class WriteLinkService {
    * @param originalUrl destination URL, validated
    * @param alias optional custom alias; {@code null} or blank requests a generated code
    * @param expiresAt optional expiration instant (UTC); {@code null} means the link never expires
+   * @param idempotencyKey optional client-supplied {@code Idempotency-Key}; when present the create
+   *     is made idempotent (a retry with the same key replays the original result), when absent or
+   *     blank the create runs directly
    * @return the created link
    * @throws IllegalArgumentException on invalid URL or alias
    * @throws AliasAlreadyExistsException if the code is already taken
    * @throws RateLimitExceededException if the create-endpoint rate limit is exceeded (429)
-   * @throws IllegalStateException if generated codes keep colliding
+   * @throws IllegalStateException if generated codes keep colliding, or a concurrent idempotent
+   *     request times out waiting for its winner
    */
-  public Link create(String originalUrl, @Nullable String alias, @Nullable Instant expiresAt) {
-    // Enforce the create-endpoint rate limit before any other work. A denied
-    // probe returns immediately as 429 and never consumes a DB/Redis round-trip.
-    // The limiter is scoped per client: the key is the caller's IP (via
-    // rateLimitSource), so an abuser can only ever hit their own ceiling — a
-    // single global counter would let one client block everyone. The probe
-    // itself must not be rate limited.
-    if (!rateLimiter.tryAcquire(new RateLimitScope("create", rateLimitSource.resolveClientKey()))) {
-      throw new RateLimitExceededException();
-    }
-    // URL/alias validation runs OUTSIDE any transaction on purpose: the URL
-    // validation does a blocking DNS lookup, and holding a pooled PostgreSQL
-    // connection during that lookup is exactly what starved the connection
-    // pool under the 300-way ConcurrencyIT (only 10 creates survived before
-    // the 5s connection-timeout kicked in). Validate first, then delegate the
-    // short-lived DB insert to doCreate, which never holds a transaction.
-    urlValidator.validate(originalUrl);
-    if (expiresAt != null && !expiresAt.isAfter(clock.instant())) {
-      throw new IllegalArgumentException("expiresAt must be in the future, got: " + expiresAt);
+  public Link create(
+      String originalUrl,
+      @Nullable String alias,
+      @Nullable Instant expiresAt,
+      @Nullable String idempotencyKey) {
+    // Idempotent path: a retried request carrying the same key replays the original result instead
+    // of creating a second link. The whole create (rate-limit probe, validation, insert) runs
+    // inside
+    // the store, so a replay consumes no rate-limit budget and no insert happens.
+    if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+      return idempotencyStore.execute(
+          idempotencyKey, () -> doCreate(originalUrl, alias, expiresAt));
     }
     return doCreate(originalUrl, alias, expiresAt);
   }
 
   /**
-   * Core of {@link #create}: inserts the link, retrying a bounded number of times on a
-   * generated-code collision. No {@code @Transactional} boundary is intended here — each {@link
-   * LinkRepository#save} flushes immediately, so the database unique index is enforced per attempt
-   * and a collision is caught by {@link DuplicateCodeException} and retried (the retry depends on
-   * that immediate flush, not on a transaction). {@code @Transactional} is deliberately absent,
-   * because a transaction here would hold a pooled connection; the whole write path is split so
-   * that the blocking DNS lookup in {@link #create} never shares a connection with the fast DB
-   * insert.
+   * The core create: enforce the rate limit, validate, and insert. This is what {@link
+   * IdempotencyStore#execute} wraps for the idempotent path — so it runs at most once per key, and
+   * a replay never re-runs it.
+   *
+   * <p>Enforce the create-endpoint rate limit before any other work. A denied probe returns
+   * immediately as 429 and never consumes a DB/Redis round-trip. The limiter is scoped per client:
+   * the key is the caller's IP (via rateLimitSource), so an abuser can only ever hit their own
+   * ceiling — a single global counter would let one client block everyone. The probe itself must
+   * not be rate limited.
+   *
+   * <p>URL/alias validation runs OUTSIDE any transaction on purpose: the URL validation does a
+   * blocking DNS lookup, and holding a pooled PostgreSQL connection during that lookup is exactly
+   * what starved the connection pool under the 300-way ConcurrencyIT (only 10 creates survived
+   * before the 5s connection-timeout kicked in). Validate first, then insert via {@link
+   * #createWithGeneratedCode}/{@link #createWithAlias}, which never hold a transaction.
    */
-  public Link doCreate(String originalUrl, @Nullable String alias, @Nullable Instant expiresAt) {
+  private Link doCreate(String originalUrl, @Nullable String alias, @Nullable Instant expiresAt) {
+    if (!rateLimiter.tryAcquire(new RateLimitScope("create", rateLimitSource.resolveClientKey()))) {
+      throw new RateLimitExceededException();
+    }
+    urlValidator.validate(originalUrl);
+    if (expiresAt != null && !expiresAt.isAfter(clock.instant())) {
+      throw new IllegalArgumentException("expiresAt must be in the future, got: " + expiresAt);
+    }
     if (alias == null || alias.isBlank()) {
       Link link = createWithGeneratedCode(originalUrl, expiresAt);
       metrics.linkCreated();

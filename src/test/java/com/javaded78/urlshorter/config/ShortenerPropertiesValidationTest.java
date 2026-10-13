@@ -44,6 +44,8 @@ class ShortenerPropertiesValidationTest {
                 0.0001,
                 0.15),
             new ShortenerProperties.Code(7),
+            new ShortenerProperties.Idempotency(
+                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 
@@ -64,6 +66,8 @@ class ShortenerPropertiesValidationTest {
                 0.0001,
                 0.15),
             new ShortenerProperties.Code(999),
+            new ShortenerProperties.Idempotency(
+                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 
@@ -84,6 +88,8 @@ class ShortenerPropertiesValidationTest {
                 0.0001,
                 0.15),
             new ShortenerProperties.Code(7),
+            new ShortenerProperties.Idempotency(
+                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 
@@ -104,6 +110,8 @@ class ShortenerPropertiesValidationTest {
                 0.0001,
                 0.15),
             new ShortenerProperties.Code(7),
+            new ShortenerProperties.Idempotency(
+                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 
@@ -124,6 +132,8 @@ class ShortenerPropertiesValidationTest {
                 0.0001,
                 -0.1),
             new ShortenerProperties.Code(7),
+            new ShortenerProperties.Idempotency(
+                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 
@@ -144,6 +154,8 @@ class ShortenerPropertiesValidationTest {
                 0.0001,
                 0.6),
             new ShortenerProperties.Code(7),
+            new ShortenerProperties.Idempotency(
+                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 
@@ -164,6 +176,8 @@ class ShortenerPropertiesValidationTest {
                 0.0001,
                 0.15),
             new ShortenerProperties.Code(7),
+            new ShortenerProperties.Idempotency(
+                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 

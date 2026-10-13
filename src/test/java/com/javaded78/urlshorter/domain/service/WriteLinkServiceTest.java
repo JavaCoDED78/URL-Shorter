@@ -22,6 +22,7 @@ import com.javaded78.urlshorter.domain.exception.AliasAlreadyExistsException;
 import com.javaded78.urlshorter.domain.exception.DuplicateCodeException;
 import com.javaded78.urlshorter.domain.exception.LinkNotFoundException;
 import com.javaded78.urlshorter.domain.exception.RateLimitExceededException;
+import com.javaded78.urlshorter.domain.idempotency.IdempotencyStore;
 import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.validation.AliasValidator;
 import com.javaded78.urlshorter.domain.validation.UrlValidator;
@@ -58,6 +59,8 @@ class WriteLinkServiceTest {
               0.0001,
               0.15),
           new ShortenerProperties.Code(7),
+          new ShortenerProperties.Idempotency(
+              java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
           org.springframework.util.unit.DataSize.ofKilobytes(16),
           1024);
 
@@ -70,6 +73,7 @@ class WriteLinkServiceTest {
       mock(com.javaded78.urlshorter.domain.counter.ClickCounter.class);
   private final RateLimiter rateLimiter = mock(RateLimiter.class);
   private final CreateRateLimitSource rateLimitSource = mock(CreateRateLimitSource.class);
+  private final IdempotencyStore idempotencyStore = mock(IdempotencyStore.class);
   private final UrlValidator urlValidator =
       spy(
           new UrlValidator(
@@ -92,7 +96,8 @@ class WriteLinkServiceTest {
           clickCounter,
           metricsStub(),
           rateLimiter,
-          rateLimitSource);
+          rateLimitSource,
+          idempotencyStore);
 
   /** The metrics facade must pass calls through (timers wrap suppliers). */
   private static MetricsRecorder metricsStub() {
@@ -126,7 +131,7 @@ class WriteLinkServiceTest {
     when(codeGenerator.generate()).thenReturn("abc1234");
     doNothing().when(repository).save(any(Link.class));
 
-    Link link = service.create("https://example.com", null, null);
+    Link link = service.create("https://example.com", null, null, null);
 
     assertThat(link.code()).isEqualTo("abc1234");
     assertThat(link.originalUrl()).isEqualTo("https://example.com");
@@ -153,7 +158,7 @@ class WriteLinkServiceTest {
         .when(repository)
         .save(any(Link.class));
 
-    Link link = service.create("https://example.com", null, null);
+    Link link = service.create("https://example.com", null, null, null);
 
     assertThat(link.code()).isEqualTo("fresh12");
     verify(codeGenerator, times(2)).generate();
@@ -164,7 +169,7 @@ class WriteLinkServiceTest {
     when(codeGenerator.generate()).thenReturn("taken1");
     doThrow(new DuplicateCodeException("duplicate key")).when(repository).save(any(Link.class));
 
-    assertThatThrownBy(() -> service.create("https://example.com", null, null))
+    assertThatThrownBy(() -> service.create("https://example.com", null, null, null))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("collision");
     verify(codeGenerator, times(3)).generate();
@@ -174,7 +179,7 @@ class WriteLinkServiceTest {
   void createIsDeniedWhenRateLimiterRejectsProbe() {
     when(rateLimiter.tryAcquire(any())).thenReturn(false);
 
-    assertThatThrownBy(() -> service.create("https://example.com", null, null))
+    assertThatThrownBy(() -> service.create("https://example.com", null, null, null))
         .isInstanceOf(RateLimitExceededException.class);
     // A denied probe short-circuits before any other work: no validation, no insert.
     verify(repository, never()).existsByCode(any());
@@ -185,7 +190,7 @@ class WriteLinkServiceTest {
   void rateLimiterIsProbedBeforeValidation() {
     when(rateLimiter.tryAcquire(any())).thenReturn(false);
 
-    assertThatThrownBy(() -> service.create("not-a-url", null, null))
+    assertThatThrownBy(() -> service.create("not-a-url", null, null, null))
         .isInstanceOf(RateLimitExceededException.class);
     verify(urlValidator, never()).validate(any());
   }
@@ -194,7 +199,7 @@ class WriteLinkServiceTest {
   void createIsDeniedForAliasPathToo() {
     when(rateLimiter.tryAcquire(any())).thenReturn(false);
 
-    assertThatThrownBy(() -> service.create("https://example.com", "my-alias", null))
+    assertThatThrownBy(() -> service.create("https://example.com", "my-alias", null, null))
         .isInstanceOf(RateLimitExceededException.class);
     verify(aliasValidator, never()).validateAndNormalize(any());
   }
@@ -205,7 +210,7 @@ class WriteLinkServiceTest {
   void createsLinkWithNormalizedAlias() {
     doNothing().when(repository).save(any(Link.class));
 
-    Link link = service.create("https://example.com", "My-Link", null);
+    Link link = service.create("https://example.com", "My-Link", null, null);
 
     assertThat(link.code()).isEqualTo("my-link");
   }
@@ -214,7 +219,7 @@ class WriteLinkServiceTest {
   void rejectsAliasThatAlreadyExists() {
     when(repository.existsByCode("taken1")).thenReturn(true);
 
-    assertThatThrownBy(() -> service.create("https://example.com", "taken1", null))
+    assertThatThrownBy(() -> service.create("https://example.com", "taken1", null, null))
         .isInstanceOf(AliasAlreadyExistsException.class);
   }
 
@@ -223,25 +228,26 @@ class WriteLinkServiceTest {
     when(repository.existsByCode("racer1")).thenReturn(false);
     doThrow(new DuplicateCodeException("duplicate key")).when(repository).save(any(Link.class));
 
-    assertThatThrownBy(() -> service.create("https://example.com", "racer1", null))
+    assertThatThrownBy(() -> service.create("https://example.com", "racer1", null, null))
         .isInstanceOf(AliasAlreadyExistsException.class);
   }
 
   @Test
   void rejectsInvalidOriginalUrl() {
-    assertThatThrownBy(() -> service.create("not-a-url", null, null))
+    assertThatThrownBy(() -> service.create("not-a-url", null, null, null))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   void rejectsReservedAlias() {
-    assertThatThrownBy(() -> service.create("https://example.com", "api", null))
+    assertThatThrownBy(() -> service.create("https://example.com", "api", null, null))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   void rejectsExpirationInThePast() {
-    assertThatThrownBy(() -> service.create("https://example.com", null, NOW.minusSeconds(60)))
+    assertThatThrownBy(
+            () -> service.create("https://example.com", null, NOW.minusSeconds(60), null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("expiresAt");
     verify(repository, never()).save(any(Link.class));
@@ -249,7 +255,7 @@ class WriteLinkServiceTest {
 
   @Test
   void rejectsExpirationEqualToNow() {
-    assertThatThrownBy(() -> service.create("https://example.com", null, NOW))
+    assertThatThrownBy(() -> service.create("https://example.com", null, NOW, null))
         .isInstanceOf(IllegalArgumentException.class);
   }
 

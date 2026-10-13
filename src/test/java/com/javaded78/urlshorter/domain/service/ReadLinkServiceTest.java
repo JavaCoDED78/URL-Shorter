@@ -43,6 +43,8 @@ class ReadLinkServiceTest {
               0.0001,
               0.15),
           new ShortenerProperties.Code(7),
+          new ShortenerProperties.Idempotency(
+              java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
           org.springframework.util.unit.DataSize.ofKilobytes(16),
           1024);
 

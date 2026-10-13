@@ -182,7 +182,7 @@ class ConcurrencyIT {
         .when(spiedRepository)
         .save(any(com.javaded78.urlshorter.domain.model.Link.class));
 
-    assertThatThrownBy(() -> linkService.create("https://example.com/boom", null, null))
+    assertThatThrownBy(() -> linkService.create("https://example.com/boom", null, null, null))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("collision retries");
 
