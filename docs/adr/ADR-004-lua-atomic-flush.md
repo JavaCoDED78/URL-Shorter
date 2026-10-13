@@ -50,6 +50,27 @@ tested).
   `ClickFlushJob#flushClicks`, see `SchedulerLockIT`); a loser skips the drain
   entirely instead of re-running the same drain→restore.
 
+### Residual crash window (accepted, MVP)
+
+The drain and the DB commit are two independent stores, so the
+drain→commit transition cannot be made atomic without a durable ledger or
+2PC. The residual window is the single bulk `UPDATE` between `drainAll()`
+(Redis counters now zeroed) and its commit:
+
+- the `UPDATE` **committed** — the persisted count already includes the
+  drained clicks, Redis is empty, nothing is lost;
+- the `UPDATE` **did not commit** (crash inside the one DB round-trip) —
+  Redis is empty and the database update rolled back, so the drained
+  clicks are lost. The current design closes the *same-cycle* case by
+  restoring the drained values to Redis (`INCRBY`) on a failed write, but
+  a crash in that window still loses them.
+
+This is accepted by design: click counting is best-effort analytics
+(17.2 — the redirect is the product, the click counter is not). The
+window is one in-process write per cycle; recovering drained counters
+across a process death is a durable-outbox concern deferred to a proven
+need (see below).
+
 ## Alternatives considered
 
 - `GET` + `DEL` as two commands — rejected: loses increments, the exact
@@ -57,3 +78,16 @@ tested).
 - `WATCH`/`MULTI`/`EXEC` optimistic transaction — workable but requires a
   retry loop on conflict and moves complexity into the client; the Lua
   script expresses the invariant where it belongs (server side).
+- Drain into a staging key (rename `clicks:*` → `clicks:staging:*`) and
+  restore from staging on next startup — rejected: a rename is not
+  batch-atomic (a crash mid-rename leaves a partial mix across both
+  namespaces that needs reconciliation), and the DB `UPDATE` is
+  additive (`clicks = clicks + N`), so replaying staging on startup is
+  not idempotent — a crash after the DB commit but before the staging
+  key is deleted double-counts. This trades the tiny in-memory restore
+  window for a larger, non-idempotent replay window plus reconciliation
+  code; it is neutral, not free.
+- Durable outbox (a `click_flush_outbox` ledger replayed idempotently on
+  startup) — deferred until a proven need. This is the only path that
+  actually closes the cross-system window (durable idempotent ledger),
+  and would replace the in-memory restore here.
