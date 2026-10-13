@@ -69,6 +69,7 @@ src/main/java/com/javaded78/urlshorter/
 │   └── validation/       # input validators (AliasValidator, UrlValidator)
 ├── infra/
 │   ├── encoding/         # Base62Codec + Base62CodeGenerator (implements domain.service.CodeGenerator)
+│   ├── http/             # IP/CIDR matching + IP-based create-rate-limit source (CreateIpRateLimitSource, ADR-009)
 │   ├── persistence/      # JPA entity + LinkRepository implementation (JpaLinkRepository over LinkJpaRepository)
 │   └── redis/
 │       ├── cache/        # Redis cache implementation (LinkCache: get/put/evict)
@@ -77,7 +78,7 @@ src/main/java/com/javaded78/urlshorter/
 │       ├── flush/        # ClickFlushJob (scheduler) + CounterFlushService (flush orchestrator)
 │       ├── limiter/      # rate limiter (Redis-backed fixed window)
 │       └── idempotency/  # RedisIdempotencyStore (SET NX claim + Lua result store for Idempotency-Key)
-└── config/               # properties, filters, OpenAPI, startup diagnostics
+└── config/               # properties, filters, validation constraints, OpenAPI, scheduling/JPA auditing, startup diagnostics
 
 monitoring/               # repo-root Prometheus/Grafana configuration as code
 ├── prometheus/           # prometheus.yml + recording/alert rules
