@@ -45,7 +45,7 @@ public interface LinkJpaRepository extends JpaRepository<LinkEntity, String> {
   Optional<LinkEntity> findByCode(String code);
 
   /**
-   * Case-insensitive lookup for the redirect endpoint (Sprint 5). Matches the {@code lower(code)}
+   * Case-insensitive lookup for the redirect endpoint. Matches the {@code lower(code)}
    * functional unique index from V2, so PostgreSQL can serve it from the index.
    */
   @Query("SELECT l FROM LinkEntity l WHERE lower(l.code) = lower(:code)")
@@ -69,7 +69,7 @@ public interface LinkJpaRepository extends JpaRepository<LinkEntity, String> {
   int deleteByCode(@Param("code") String code);
 
   /**
-   * Batch click-count update for the flush (Task 8.5): one statement for the whole drain batch via
+   * Batch click-count update for the flush (ADR-003): one statement for the whole drain batch via
    * {@code unnest}, not one UPDATE per code. The statement is atomic — on failure nothing is
    * applied, which the flush recovery relies on. The {@code @Transactional} that wraps this in a
    * transaction lives on {@code CounterFlushService#flush}.

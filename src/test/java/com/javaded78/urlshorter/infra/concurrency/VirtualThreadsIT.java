@@ -32,7 +32,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Virtual threads contract (Tasks 14.1–14.2): HTTP request handling must execute on virtual
+ * Virtual threads contract: HTTP request handling must execute on virtual
  * threads, and a concurrent burst must not inflate the server platform thread count. Virtual
  * threads make blocking cheap but do not widen the PostgreSQL pool — see ConnectionPoolIT (14.3).
  */

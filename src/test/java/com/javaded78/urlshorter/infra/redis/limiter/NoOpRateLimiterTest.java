@@ -7,7 +7,7 @@ import com.javaded78.urlshorter.domain.service.RateLimiter;
 import org.junit.jupiter.api.Test;
 
 /**
- * Contract of the rate-limiting port (Task 20.4): the shipped no-op implementation admits
+ * Contract of the rate-limiting port (ADR-009): the shipped no-op implementation admits
  * everything, so behavior is unchanged until the Redis-backed implementation is added. The test
  * pins the semantics future implementations must keep: client-scoped, side-effect-free probing.
  */

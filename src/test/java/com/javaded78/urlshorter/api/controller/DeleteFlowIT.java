@@ -23,9 +23,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Delete flow (Task 10.4): delete must be consistent between PostgreSQL and Redis — after 204 the
+ * Delete flow: delete must be consistent between PostgreSQL and Redis — after 204 the
  * link redirects to 404, the cached entry is gone and the pending counter is discarded with the
- * link (Task 10.3 policy).
+ * link (policy).
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -61,9 +61,9 @@ class DeleteFlowIT {
     assertThat(delete.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     // Redirect is gone: 404 from PostgreSQL, no stale cache involved.
     assertThat(redirect("del01").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-    // Cached entry evicted (Task 10.1).
+    // Cached entry evicted.
     assertThat(redis.hasKey("link:del01")).isFalse();
-    // Pending counter discarded with the link (Task 10.3 policy).
+    // Pending counter discarded with the link (policy).
     assertThat(redis.hasKey("clicks:del01")).isFalse();
     // Details and stats are gone too.
     assertThat(

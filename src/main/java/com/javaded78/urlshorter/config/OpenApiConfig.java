@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * OpenAPI metadata (Task 12.1): the service identity every developer sees in Swagger UI and the
+ * OpenAPI metadata: the service identity every developer sees in Swagger UI and the
  * {@code /v3/api-docs} contract.
  */
 @Configuration

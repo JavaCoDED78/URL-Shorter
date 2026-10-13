@@ -5,7 +5,7 @@ import com.javaded78.urlshorter.domain.model.LinkStats;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
- * Statistics response (Task 9.3): persisted DB count plus pending Redis clicks — the logically
+ * Statistics response (ADR-003): persisted DB count plus pending Redis clicks — the logically
  * current click count.
  */
 @Schema(

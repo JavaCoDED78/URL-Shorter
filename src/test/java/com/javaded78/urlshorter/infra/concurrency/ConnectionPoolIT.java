@@ -12,7 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 
 /**
- * Connection pool review (Task 14.3): virtual threads increase request concurrency, but the
+ * Connection pool review: virtual threads increase request concurrency, but the
  * PostgreSQL pool must remain the explicit, bounded ceiling for database access. The value is
  * pinned in application.yaml and asserted here so a future bump requires a conscious, tested
  * decision.

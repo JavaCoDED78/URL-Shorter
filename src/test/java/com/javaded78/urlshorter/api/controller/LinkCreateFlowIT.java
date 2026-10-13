@@ -85,7 +85,7 @@ class LinkCreateFlowIT {
 
   @Test
   void concurrentDuplicateAliasCreatesYieldOneSuccessAndOneConflict() throws Exception {
-    // Task 15.6: two parallel creates with the same alias — the database
+    // two parallel creates with the same alias — the database
     // UNIQUE constraint is the final arbiter, so exactly one request can
     // win regardless of timing.
     java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);

@@ -4,7 +4,7 @@ import java.time.Instant;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Expiration policy (Task 5.2): {@code null} never expires; {@code expiresAt > now} is active;
+ * Expiration policy (ADR-006): {@code null} never expires; {@code expiresAt > now} is active;
  * {@code expiresAt <= now} is expired.
  *
  * <p>Centralized so the domain model and the cache value ({@code domain.cache.CachedLink}) never

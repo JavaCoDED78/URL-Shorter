@@ -33,7 +33,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Redis failure scenarios (Sprint 17) against real PostgreSQL and Redis.
+ * Redis failure scenarios against real PostgreSQL and Redis.
  *
  * <p>Chosen policies, verified here:
  *
@@ -92,7 +92,7 @@ class RedisFailureIT {
 
     ResponseEntity<String> response = rest.getForEntity(url("/s17down"), String.class);
 
-    // Task 17.1: cache degrades to pass-through, PostgreSQL serves the redirect
+    // cache degrades to pass-through, PostgreSQL serves the redirect
     assertThat(response.getStatusCode().value()).isEqualTo(302);
     assertThat(response.getHeaders().getLocation()).hasToString("https://example.com/fallback");
   }
@@ -110,7 +110,7 @@ class RedisFailureIT {
 
     ResponseEntity<String> response = rest.getForEntity(url("/s17click"), String.class);
 
-    // Task 17.2 policy: availability wins, the click is dropped, not the request
+    // availability wins, the click is dropped, not the request
     assertThat(response.getStatusCode().value()).isEqualTo(302);
     assertThat(metric("urlshorter.clicksIncrementFailed")).isGreaterThanOrEqualTo(1);
     assertThat(metric("urlshorter.linksRedirected")).isGreaterThanOrEqualTo(1);
@@ -156,7 +156,7 @@ class RedisFailureIT {
     ResponseEntity<String> first = rest.getForEntity(url("/s17corrupt"), String.class);
     assertThat(first.getStatusCode().value()).isEqualTo(302);
 
-    // Task 17.4: the bad entry was evicted and the cache restored from PostgreSQL
+    // the bad entry was evicted and the cache restored from PostgreSQL
     String restored = redis.opsForValue().get("link:s17corrupt");
     assertThat(restored).isNotNull().doesNotContain("{not-valid-json");
     JsonNode node = MAPPER.readTree(restored);

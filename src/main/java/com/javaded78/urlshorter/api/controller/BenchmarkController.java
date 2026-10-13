@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Benchmark-only redirect shortcut (Sprint 23), active only when {@code
+ * Benchmark-only redirect shortcut, active only when {@code
  * shortener.benchmark.enabled=true} — never part of the default API surface.
  *
  * <p>Always answers {@code 302} to a fixed target without a DB/Redis lookup, but records the same

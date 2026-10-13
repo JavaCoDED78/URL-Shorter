@@ -5,7 +5,7 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
 /**
- * Atomic key-scoped fixed-window rate-limit probe (Task 20.4).
+ * Atomic key-scoped fixed-window rate-limit probe (ADR-009).
  *
  * <p>Runs {@code INCR} and, only when the freshly-created key (the {@code INCR} result is {@code
  * 1}), {@code EXPIRE} on that key — all inside a single Lua execution. Redis runs one script

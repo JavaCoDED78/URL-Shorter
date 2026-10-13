@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Scheduled flush job (Tasks 8.1, 8.4): moves accumulated Redis clicks into PostgreSQL every {@code
+ * Scheduled flush job: moves accumulated Redis clicks into PostgreSQL every {@code
  * shortener.flush.interval} (default PT5S, {@code SHORTENER_FLUSH_INTERVAL}). Disable with {@code
  * shortener.flush.enabled=false} — integration tests drive the flush manually for deterministic
  * assertions.
@@ -29,7 +29,7 @@ public class ClickFlushJob {
   }
 
   /**
-   * Scheduled flush job (Tasks 8.1, 8.4): moves accumulated Redis clicks into PostgreSQL every
+   * Scheduled flush job: moves accumulated Redis clicks into PostgreSQL every
    * {@code shortener.flush.interval} (default PT5S, {@code SHORTENER_FLUSH_INTERVAL}).
    *
    * <p>Guarded by a distributed ShedLock ({@code @SchedulerLock(name = "clickFlush")}) so a
@@ -46,7 +46,7 @@ public class ClickFlushJob {
     } catch (RuntimeException ex) {
       // flush() counts the failure via metrics and either restored the
       // drained counters or left them untouched in Redis — keep the
-      // scheduler alive; the next cycle retries (Task 17.3).
+      // scheduler alive; the next cycle retries.
       log.warn("scheduled click flush failed; will retry next cycle", ex);
     }
   }

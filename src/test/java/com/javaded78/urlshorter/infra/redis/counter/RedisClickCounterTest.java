@@ -22,10 +22,10 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 /**
- * Counter key model (Task 7.1): {@code clicks:{lowercaseCode}} holding a plain integer — string
+ * Counter key model (ADR-003): {@code clicks:{lowercaseCode}} holding a plain integer — string
  * counters via INCR, no hash-based model, so the flush can drain atomically.
  *
- * <p>The tests in this class cover the fail-open failure policies (Tasks 17.1/17.2/17.3): Redis
+ * <p>The tests in this class cover the fail-open failure policies: Redis
  * unavailability must never surface to the caller, and a per-batch Redis outage mid-scan must not
  * drop counters that earlier (already-drained) batches returned.
  */

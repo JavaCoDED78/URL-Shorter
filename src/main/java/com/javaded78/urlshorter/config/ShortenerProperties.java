@@ -15,7 +15,7 @@ import org.springframework.util.unit.DataSize;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * Typed access to {@code shortener.*} configuration (Tasks 4.1-4.4), nested to mirror the YAML
+ * Typed access to {@code shortener.*} configuration, nested to mirror the YAML
  * structure.
  *
  * <p>Validated on startup: the constraints on the record components are applied by Spring Boot's
@@ -61,10 +61,10 @@ public record ShortenerProperties(
    * @param ttl Redis TTL for cached links ({@code link:{code}}); for links with {@code expiresAt}
    *     the effective TTL is the minimum of this value and the remaining lifetime
    * @param negativeTtl TTL for the negative cache (a short-lived marker on a code that did not
-   *     exist), so a scan of nonexistent codes stops hammering PostgreSQL (Task 21.2). The value
+   *     exist), so a scan of nonexistent codes stops hammering PostgreSQL. The value
    *     must be short — 30–60s is the trade-off window between shielding the database and missing a
    *     link that was created during the gap.
-   * @param expectedCodes the Bloom filter (Task 21.2) is sized for this many codes before it
+   * @param expectedCodes the Bloom filter (ADR-011) is sized for this many codes before it
    *     reaches the configured false-positive rate
    * @param bloomFalsePositiveRate target false-positive rate of the Bloom filter, in (0, 1)
    * @param jitter symmetric TTL jitter about the base cache TTL, in [0, 0.5] (default 0.15, i.e.

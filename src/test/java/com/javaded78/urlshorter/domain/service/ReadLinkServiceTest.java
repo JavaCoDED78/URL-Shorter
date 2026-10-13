@@ -99,7 +99,7 @@ class ReadLinkServiceTest {
         .isInstanceOf(LinkNotFoundException.class);
   }
 
-  // --- resolve: lookup + expiration (Tasks 5.1, 5.2, 5.4) ---
+  // --- resolve: lookup + expiration ---
 
   @Test
   void resolvesActiveLink() {
@@ -185,7 +185,7 @@ class ReadLinkServiceTest {
     verify(clickCounter, never()).increment(any());
   }
 
-  // --- getStats: persisted DB count + pending Redis counter (Task 9.2) ---
+  // --- getStats: persisted DB count + pending Redis counter ---
 
   @Test
   void getStatsSumsPersistedAndPendingClicks() {

@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 import org.springframework.stereotype.Component;
 
 /**
- * Observability facade (Tasks 13.2, 13.3): business counters and latency timers behind typed
+ * Observability facade: business counters and latency timers behind typed
  * methods, so application code never touches Micrometer APIs directly.
  *
  * <p>Counters: {@code urlshorter.linksCreated}, {@code urlshorter.linksRedirected}, {@code
@@ -95,7 +95,7 @@ public class MetricsRecorder {
 
   /**
    * A redirect short-circuited on a known-absent code — the Bloom filter or the short-TTL negative
-   * marker (Task 21.2) — so PostgreSQL was never touched.
+   * marker (ADR-011) — so PostgreSQL was never touched.
    */
   public void cacheNegativeHit() {
     cacheNegativeHit.increment();
@@ -118,7 +118,7 @@ public class MetricsRecorder {
     clicksFlushFailed.increment();
   }
 
-  /** A create-rate-limit probe was denied (Task 20.4). */
+  /** A create-rate-limit probe was denied (ADR-009). */
   public void rateLimiterDenied() {
     rateLimiterDenied.increment();
   }

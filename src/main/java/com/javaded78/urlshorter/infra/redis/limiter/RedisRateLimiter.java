@@ -11,7 +11,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 /**
- * Redis-backed client-scoped fixed-window rate limiter (Task 20.4).
+ * Redis-backed client-scoped fixed-window rate limiter (ADR-009).
  *
  * <p>One Redis key per client scope ({@code ratelimit:{key}}) holds a plain integer bumped by
  * {@code INCR} on every probe. Redis self-manages the window: the first probe of a window (the
@@ -27,7 +27,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  * <p>Admission is {@code count <= maxRequests}; the {@code maxRequests}-th probe of the window is
  * the last one admitted, the next is denied.
  *
- * <p>Per-client scoping (Task 20.4 hardening): the probe key is the caller's IP (resolved by the
+ * <p>Per-client scoping (ADR-009): the probe key is the caller's IP (resolved by the
  * {@code CreateRateLimitSource} that builds the {@link RateLimitScope} in {@code
  * WriteLinkService}), so each client has its own counter. A single global key would let one abuser
  * block every client — the limiter must never be keyed on a constant.
@@ -90,18 +90,18 @@ public class RedisRateLimiter implements RateLimiter {
     } catch (DataAccessException ex) {
       // Redis down (or a transient command failure): the outcome depends on policy. Fail open —
       // the default — lets creates ride through a transient outage (same availability-wins stance
-      // as Tasks 17.1/17.2); fail closed treats a broken limiter as a refusal instead of an open
+      // as availability-relevant); fail closed treats a broken limiter as a refusal instead of an open
       // door. Either way the request is not counted as a denial.
       if (failOpen) {
         log.warn(
-            "rate limiter unavailable ({}) — admitting scope {} (Task 20.4): {}",
+            "rate limiter unavailable ({}) — admitting scope {}: {}",
             scope.kind(),
             scope.clientKey(),
             ex);
         return true;
       }
       log.warn(
-          "rate limiter unavailable ({}) — refusing scope {} (Task 20.4): {}",
+          "rate limiter unavailable ({}) — refusing scope {}: {}",
           scope.kind(),
           scope.clientKey(),
           ex);

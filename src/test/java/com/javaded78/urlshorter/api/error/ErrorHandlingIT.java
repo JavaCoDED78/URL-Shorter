@@ -27,10 +27,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Unified error contract (Task 11.5): every API error — 400, 404, 409, 410 and 500 — is an RFC 9457
+ * Unified error contract: every API error — 400, 404, 409, 410 and 500 — is an RFC 9457
  * {@code ProblemDetail} with the same stable keys ({@code type}, {@code title}, {@code status},
  * {@code detail}, {@code instance}). Internals (SQL, connection URLs, stack traces) never leak into
- * the response (Task 11.4).
+ * the response.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
@@ -116,7 +116,7 @@ class ErrorHandlingIT {
 
   @Test
   void retiredUnversionedPathProduces404Not500() {
-    // Management API lives under /api/v1 (Sprint 13 versioning); the old
+    // Management API lives under /api/v1 versioning; the old
     // unversioned path must be a plain 404, not a misleading 500 from
     // the generic fallback handler.
     HttpHeaders headers = new HttpHeaders();
@@ -142,7 +142,7 @@ class ErrorHandlingIT {
 
   @Test
   void expiredLinkProduces410ProblemDetail() {
-    // Cannot create an already-expired link (Task 11.3): create with a
+    // Cannot create an already-expired link: create with a
     // future expiration relative to the deterministic clock, then step
     // the clock past it — no Thread.sleep racing the real clock.
     post(
@@ -165,7 +165,7 @@ class ErrorHandlingIT {
 
   @Test
   void unexpectedFailureProduces500ProblemDetailWithoutInternals() {
-    // Force an infrastructure-style failure (Task 11.4): the response
+    // Force an infrastructure-style failure: the response
     // must be a generic ProblemDetail with no SQL / URLs / message leak.
     doAnswer(
             invocation -> {

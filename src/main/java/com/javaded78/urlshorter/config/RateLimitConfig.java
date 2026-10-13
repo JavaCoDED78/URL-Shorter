@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 /**
- * Rate-limiter bean selection (Task 20.4): exactly one {@link RateLimiter} is bound per process,
+ * Rate-limiter bean selection (ADR-009): exactly one {@link RateLimiter} is bound per process,
  * chosen by {@code shortener.rate-limiter.enabled}.
  *
  * <ul>

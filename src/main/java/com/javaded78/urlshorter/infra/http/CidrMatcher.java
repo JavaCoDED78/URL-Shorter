@@ -3,7 +3,7 @@ package com.javaded78.urlshorter.infra.http;
 import java.math.BigInteger;
 
 /**
- * IPv4/IPv6 CIDR membership test for a trusted-proxy allowlist (Task 20.4 hardening).
+ * IPv4/IPv6 CIDR membership test for a trusted-proxy allowlist (ADR-009).
  *
  * <p>Handles the shapes the configuration accepts: a bare host ({@code 10.0.0.5}, {@code fe80::1}),
  * an IPv4 {@code a.b.c.d/n} block, and an IPv6 {@code prefix/plen} block. Anything else fails

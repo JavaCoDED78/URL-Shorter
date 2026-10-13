@@ -24,7 +24,7 @@ import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Redirect flow against real PostgreSQL (Sprint 5, Tasks 5.1/5.3): the root {@code GET /{code}}
+ * Redirect flow against real PostgreSQL: the root {@code GET /{code}}
  * endpoint must answer 302/404/410 and must not shadow the actuator health endpoint.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -109,7 +109,7 @@ class RedirectFlowIT {
 
   @Test
   void returnsGoneForExpiredLink() {
-    // Cannot create an already-expired link (Task 11.3): create with a
+    // Cannot create an already-expired link: create with a
     // future expiration (relative to the deterministic clock) then step
     // the clock past it, instead of Thread.sleep racing the real clock.
     Instant expiresAt = clock.instant().plusSeconds(30);

@@ -31,7 +31,7 @@ import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * PostgreSQL failure scenarios (Sprint 18) on real PostgreSQL and Redis.
+ * PostgreSQL failure scenarios against real PostgreSQL and Redis.
  *
  * <p>Policies:
  *
@@ -83,7 +83,7 @@ class PostgresFailureIT {
     ResponseEntity<Map> response = post("https://example.com/db-down", "s18create");
     long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
 
-    // Task 18.1: controlled 503, not a 409 conflict and not a leaked 500
+    // controlled 503, not a 409 conflict and not a leaked 500
     assertThat(response.getStatusCode().value()).isEqualTo(503);
     assertThat(response.getBody()).isNotNull();
     assertThat(response.getBody().get("title")).isEqualTo("Service unavailable");
@@ -96,7 +96,7 @@ class PostgresFailureIT {
 
   @Test
   void createReturns503WhenTransactionBeginFails() {
-    // Real outage mode (found in Sprint 28 live review): with the
+    // Real outage mode (found in the live review): with the
     // container down, the failure happens at transaction BEGIN —
     // JpaTransactionManager cannot open an EntityManager — which
     // surfaces as CannotCreateTransactionException, NOT a
@@ -130,7 +130,7 @@ class PostgresFailureIT {
 
     ResponseEntity<Map> response = rest.getForEntity(url("/s18miss"), Map.class);
 
-    // Task 18.2: controlled 503 instead of a misleading generic 500
+    // controlled 503 instead of a misleading generic 500
     assertThat(response.getStatusCode().value()).isEqualTo(503);
     assertThat(response.getBody()).isNotNull();
     assertThat(response.getBody().get("title")).isEqualTo("Service unavailable");

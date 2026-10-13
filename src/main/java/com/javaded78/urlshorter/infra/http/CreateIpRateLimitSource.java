@@ -9,7 +9,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 
 /**
- * {@link CreateRateLimitSource} that scopes the create limiter by the client's IP (Task 20.4
+ * {@link CreateRateLimitSource} that scopes the create limiter by the client's IP (ADR-009
  * hardening).
  *
  * <p>The key is the caller's IP. When {@code X-Forwarded-For} is present and the immediate peer is

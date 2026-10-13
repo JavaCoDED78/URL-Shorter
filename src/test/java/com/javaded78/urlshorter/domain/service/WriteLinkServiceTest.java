@@ -259,7 +259,7 @@ class WriteLinkServiceTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  // --- delete: cache eviction + counter cleanup (Tasks 10.1-10.3) ---
+  // --- delete: cache eviction + counter cleanup ---
 
   @Test
   void deleteEvictsCacheAfterCommitNotBefore() {
@@ -326,7 +326,7 @@ class WriteLinkServiceTest {
     assertThatThrownBy(() -> service.delete("abc1234"))
         .isInstanceOf(DataIntegrityViolationException.class);
     // Only the pre-delete evict happened; the row is still alive, so the
-    // cache repopulates on the next read (self-healing, Task 10.2).
+    // cache repopulates on the next read (self-healing).
     verify(linkCache).evict("abc1234");
   }
 }

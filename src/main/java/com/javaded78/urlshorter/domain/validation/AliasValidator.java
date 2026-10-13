@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 /**
- * Validates and normalizes custom aliases (Task 4.3).
+ * Validates and normalizes custom aliases.
  *
  * <p>Alias format: {@code [a-zA-Z0-9_-]+} (the character class is checked with a regex — it is a
  * simple character set, not structural validation), length bounded by configuration.

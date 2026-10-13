@@ -24,7 +24,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Request-size limits (Task 20.1) against the running application.
+ * Request-size limits against the running application.
  *
  * <p>Field validation already bounds URL (2048) and alias (64) lengths; this suite pins the third
  * limit — the raw JSON payload. Both declared sizes ({@code Content-Length}) and chunked bodies

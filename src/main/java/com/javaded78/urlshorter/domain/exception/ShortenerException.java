@@ -1,7 +1,7 @@
 package com.javaded78.urlshorter.domain.exception;
 
 /**
- * Base type for expected, client-facing application failures (Task 11.1).
+ * Base type for expected, client-facing application failures.
  *
  * <p>The hierarchy is intentionally small — one class per stable error category, not per minor
  * condition:

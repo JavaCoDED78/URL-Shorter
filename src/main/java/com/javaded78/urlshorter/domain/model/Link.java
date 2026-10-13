@@ -4,8 +4,7 @@ import java.time.Instant;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Domain representation of a short link — business data only, no persistence or cache annotations
- * (Task 3.1).
+ * Domain representation of a short link — business data only, no persistence or cache annotations.
  *
  * @param code short code; the unique business identifier
  * @param originalUrl destination URL

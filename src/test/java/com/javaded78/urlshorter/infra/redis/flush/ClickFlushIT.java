@@ -30,7 +30,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Atomic Redis → PostgreSQL flush (Tasks 8.3-8.7). Scheduler is disabled: the service is invoked
+ * Atomic Redis → PostgreSQL flush. Scheduler is disabled: the service is invoked
  * manually for deterministic assertions.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -121,7 +121,7 @@ class ClickFlushIT {
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("flush failed");
 
-    // drained values returned to Redis: nothing silently lost (Task 8.6)
+    // drained values returned to Redis: nothing silently lost (ADR-003)
     assertThat(redis.opsForValue().get("clicks:flush06")).isEqualTo("7");
     assertThat(detailsClickCount("flush06")).isEqualTo(0);
   }

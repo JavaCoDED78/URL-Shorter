@@ -174,7 +174,7 @@ public class WriteLinkService {
   }
 
   /**
-   * Deletes a link (Tasks 10.1–10.3). Order of operations:
+   * Deletes a link. Order of operations:
    *
    * <pre>
    * evict cache → discard pending counter → delete DB row → evict cache again (after commit)
@@ -193,7 +193,7 @@ public class WriteLinkService {
    * deletion becomes globally visible, closing that window (see {@link
    * ConcurrencyIT#deleteVersusRedirectRaceConverges}).
    *
-   * <p>Counter policy (Task 10.3): discard — pending clicks belong to the link row; once the row is
+   * <p>Counter policy: discard — pending clicks belong to the link row; once the row is
    * gone there is no owner for them, and flushing before delete would persist counts just to remove
    * them. An increment racing past the discard self-cleans on the next flush (the batch UPDATE
    * matches 0 rows for a deleted code).

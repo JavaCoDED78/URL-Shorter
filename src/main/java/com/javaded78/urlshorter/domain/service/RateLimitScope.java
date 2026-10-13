@@ -1,7 +1,7 @@
 package com.javaded78.urlshorter.domain.service;
 
 /**
- * The identity the create-rate limiter is scoped by (Task 20.4 hardening).
+ * The identity the create-rate limiter is scoped by (ADR-009).
  *
  * <p>A scope carries a limiter <em>kind</em> ({@code create}) and the per-client key the limiter
  * honours. The key is resolved per request by a {@link CreateRateLimitSource} — for the create

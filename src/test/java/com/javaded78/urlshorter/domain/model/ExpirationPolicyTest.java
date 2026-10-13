@@ -9,7 +9,7 @@ class ExpirationPolicyTest {
 
   private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
-  // Policy (Task 5.2): timestamps are UTC Instants — the single source of truth for the
+  // Policy (ADR-006): timestamps are UTC Instants — the single source of truth for the
   // "expired" decision shared by the model and the cached value, re-checked on every read.
 
   @Test

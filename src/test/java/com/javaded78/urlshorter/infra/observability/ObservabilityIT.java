@@ -33,7 +33,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Actuator contract (Tasks 13.1–13.3): liveness/readiness/application health with PostgreSQL and
+ * Actuator contract: liveness/readiness/application health with PostgreSQL and
  * Redis dependency checks, business counters (links.*, cache.*, clicks.*) and latency timers
  * (links_redirected, links_not_found, links_expired, etc.) and latency timers (redirect_duration,
  * postgres_lookup_duration, redis_lookup_duration). The scheduled flush is disabled; the test

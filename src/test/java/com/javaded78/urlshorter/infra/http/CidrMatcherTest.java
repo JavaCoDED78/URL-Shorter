@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-/** IPv4/IPv6 CIDR membership for the trusted-proxy allowlist (Task 20.4 hardening). */
+/** IPv4/IPv6 CIDR membership for the trusted-proxy allowlist (ADR-009). */
 class CidrMatcherTest {
 
   @Test

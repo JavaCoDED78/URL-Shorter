@@ -25,22 +25,22 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Redis-backed {@link LinkCache} (Tasks 6.1-6.4). Values are JSON; keys are {@code
+ * Redis-backed {@link LinkCache}. Values are JSON; keys are {@code
  * link:{lowercaseCode}} so lookups stay consistent with the case-insensitive {@code lower(code)}
  * unique index.
  *
  * <p>Uses a dedicated {@link ObjectMapper} rather than the web one: cache serialization must not
  * depend on HTTP message-converter configuration.
  *
- * <p>Stampede protection (Task 21.1): {@link #coalesce} coalesces concurrent misses for the same
+ * <p>Stampede protection (ADR-011): {@link #coalesce} coalesces concurrent misses for the same
  * code behind a single in-flight PostgreSQL lookup, so an evicted/expired hot key can no longer fan
  * {@code N} concurrent reads into one.
  *
- * <p>Negative caching (Task 21.2): {@link #coalesce} short-circuits the database for codes the
+ * <p>Negative caching (ADR-011): {@link #coalesce} short-circuits the database for codes the
  * Bloom filter has declared absent and for codes with a recent negative marker, so a scan of
  * nonexistent codes never reaches PostgreSQL.
  *
- * <p>Redis unavailability degrades the cache to a pass-through (Task 17.1): reads miss, writes are
+ * <p>Redis unavailability degrades the cache to a pass-through: reads miss, writes are
  * skipped, evictions are skipped — every access then flows through PostgreSQL, which remains the
  * source of truth.
  */
@@ -118,7 +118,7 @@ public class RedisLinkCache implements LinkCache {
       json = redis.opsForValue().get(key);
     } catch (DataAccessException ex) {
       // Redis down: degrade to a miss so the caller falls back to
-      // PostgreSQL (Task 17.1).
+      // PostgreSQL.
       log.warn("redis unavailable on cache read for {}: {}", key, ex);
       return Optional.empty();
     }
@@ -129,7 +129,7 @@ public class RedisLinkCache implements LinkCache {
       return Optional.of(objectMapper.readValue(json, CachedLink.class));
     } catch (JsonProcessingException | RuntimeException ex) {
       // Corrupted entry: evict and fall back to the database rather
-      // than failing the redirect (Task 6.5).
+      // than failing the redirect (ADR-002).
       log.warn("evicting unreadable cache entry {}: {}", key, ex);
       evict(code);
       return Optional.empty();
@@ -148,7 +148,7 @@ public class RedisLinkCache implements LinkCache {
     }
     metrics.cacheMiss();
 
-    // Bloom absent: the code is definitely not present, so skip PostgreSQL entirely (Task 21.2).
+    // Bloom absent: the code is definitely not present, so skip PostgreSQL entirely (ADR-011).
     // A fresh random code was never created anywhere and is absent from every replica's filter —
     // the cheap shield for a code scan.
     if (!bloom.contains(code)) {
@@ -157,14 +157,14 @@ public class RedisLinkCache implements LinkCache {
     }
     // Bloom present but a short-TTL negative marker is recorded: the code was created and later
     // deleted (or expired), so a Bloom-present lookup would still miss — short-circuit against
-    // Redis instead of hitting PostgreSQL again (Task 21.2).
+    // Redis instead of hitting PostgreSQL again (ADR-011).
     if (negativeCache.isAbsent(code)) {
       metrics.cacheNegativeHit();
       return Optional.empty();
     }
 
     // Bloom present and not-negative: coalesce concurrent misses for this code into a single
-    // in-flight lookup (Task 21.1).
+    // in-flight lookup (ADR-011).
     //
     // We use putIfAbsent, not computeIfAbsent. The Javadoc for computeIfAbsent explicitly allows
     // the mapping function to run more than once under contention — with an owner flag set inside
@@ -211,7 +211,7 @@ public class RedisLinkCache implements LinkCache {
           put(resolved.get());
         } else {
           // Absent: record the short-TTL negative marker so repeated misses of the same code
-          // short-circuit against Redis until the marker expires (Task 21.2).
+          // short-circuit against Redis until the marker expires (ADR-011).
           negativeCache.markAbsent(code);
           metrics.cacheNegativeHit();
         }
@@ -227,7 +227,7 @@ public class RedisLinkCache implements LinkCache {
       }
     }
 
-    // Another caller owns this code's lookup; share its resolved result (Task 21.1).
+    // Another caller owns this code's lookup; share its resolved result (ADR-011).
     try {
       return inFlight.join();
     } catch (CompletionException ex) {
@@ -254,7 +254,7 @@ public class RedisLinkCache implements LinkCache {
                     "failed to serialize cached link " + link.code(), ex);
               } catch (DataAccessException ex) {
                 // Redis down: the redirect itself is unaffected —
-                // PostgreSQL serves the reads (Task 17.1).
+                // PostgreSQL serves the reads.
                 log.warn("redis unavailable on cache write for {}: {}", key(link.code()), ex);
               }
             });

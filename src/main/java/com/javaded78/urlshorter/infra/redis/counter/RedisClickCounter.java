@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
  * the drain is O(number of batches) round-trips instead of O(number of counters) and stops scaling
  * with the number of hot links.
  *
- * <p>Increment failure policy (Task 17.2): redirect availability wins. If Redis is unavailable the
+ * <p>Increment failure policy: redirect availability wins. If Redis is unavailable the
  * click is dropped and the caller reports the loss via {@code MetricsRecorder#clickIncrementFailed}
  * — click counting is best-effort analytics, the redirect itself is the product.
  */
@@ -59,7 +59,7 @@ public class RedisClickCounter implements ClickCounter {
       redis.opsForValue().increment(key(code));
       return true;
     } catch (DataAccessException ex) {
-      // Task 17.2: the redirect must survive a dead Redis; the click is
+      // the redirect must survive a dead Redis; the click is
       // dropped (the caller reports the failure via
       // MetricsRecorder#clickIncrementFailed) so redirect availability wins.
       log.warn("click counter unavailable for {} — click dropped: {}", key(code), ex);
@@ -75,7 +75,7 @@ public class RedisClickCounter implements ClickCounter {
       // as "no counter" (zero) rather than blowing up the read path.
       return value == null ? 0L : safeLong(value);
     } catch (DataAccessException ex) {
-      // Task 17.1: a dead Redis makes the pending count invisible; return 0 and let the
+      // a dead Redis makes the pending count invisible; return 0 and let the
       // persisted count stand as the source of truth.
       log.warn("click counter unavailable on read for {}: {}", key(code), ex);
       return 0L;
@@ -160,7 +160,7 @@ public class RedisClickCounter implements ClickCounter {
     try {
       redis.delete(key(code));
     } catch (DataAccessException ex) {
-      // delete policy (Task 10.3): the DB row is gone, but a failed delete leaves the
+      // delete policy: the DB row is gone, but a failed delete leaves the
       // stale counter behind until it is drained into a missing row. Fail quietly — the
       // counter is best-effort and will be reaped on the next flush.
       log.warn("redis unavailable on counter delete for {}: {}", key(code), ex);

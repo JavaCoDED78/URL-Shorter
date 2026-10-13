@@ -23,7 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
- * Create-endpoint rate limiting (Task 20.4): when the {@link RateLimiter} probe denies a create
+ * Create-endpoint rate limiting (ADR-009): when the {@link RateLimiter} probe denies a create
  * request, the API answers 429 Too Many Requests with a stable {@code ProblemDetail} ({@code type},
  * {@code title}, {@code status}, {@code detail}, {@code instance}) whose {@code type} points at the
  * {@code rate-limited} error category. {@code NoOpRateLimiter} admits everything by default; this

@@ -32,7 +32,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Stampede protection and negative caching on the hot redirect path (Task 21.1, 21.2).
+ * Stampede protection and negative caching on the hot redirect path (ADR-011).
  *
  * <p>A hot code that has just evicted (or a never-cached link) must not fan N concurrent requests
  * into PostgreSQL: {@link ReadLinkService#resolve} coalesces them behind one in-flight lookup. A
@@ -64,7 +64,7 @@ class ReadLinkServiceNegativeIT {
     return "http://localhost:" + port + path;
   }
 
-  // --- Task 21.1: stampede protection (singleflight) ---
+  // --- stampede protection (singleflight) ---
 
   @Test
   void concurrentMissesOnSameCodeQueryDbOnce() throws InterruptedException {
@@ -99,7 +99,7 @@ class ReadLinkServiceNegativeIT {
     // Every request got a valid 302 — coalescing preserves correctness.
   }
 
-  // --- Task 21.2: negative caching ---
+  // --- negative caching ---
 
   @Test
   void nonexistentCodeHitsNegativeCacheNotDb() {

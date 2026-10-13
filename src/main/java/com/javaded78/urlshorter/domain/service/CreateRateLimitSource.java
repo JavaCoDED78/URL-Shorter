@@ -1,7 +1,7 @@
 package com.javaded78.urlshorter.domain.service;
 
 /**
- * Port for resolving the per-client identity the create rate limiter is scoped by (Task 20.4
+ * Port for resolving the per-client identity the create rate limiter is scoped by (ADR-009
  * hardening).
  *
  * <p>The shipped {@code CreateIpRateLimitSource} derives the key from the caller's IP — the first

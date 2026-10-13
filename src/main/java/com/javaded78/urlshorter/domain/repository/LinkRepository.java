@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Persistence port for {@link Link} (Task 2.2).
+ * Persistence port for {@link Link}.
  *
  * <p>A <b>pure domain interface</b> — no Spring Data, no JPA, no {@code LinkEntity}: the domain
  * depends only on the {@link Link} model, and the {@link JpaLinkRepository} adapter ({@code

@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
- * Probabilistic membership set over short-link codes (Task 21.2).
+ * Probabilistic membership set over short-link codes (ADR-011).
  *
  * <p>Uses the standard bit-array Bloom filter with {@code k} hash probes per key, computed by the
  * Kirsch–Mitzenmacher double-hashing trick from a single {@link MurmurHash3 x64_128} pass: two

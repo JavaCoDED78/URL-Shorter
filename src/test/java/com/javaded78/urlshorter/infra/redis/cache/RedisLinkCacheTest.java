@@ -140,7 +140,7 @@ class RedisLinkCacheTest {
     verify(negativeCache).evict("abc1234");
   }
 
-  // --- Task 21.1/21.2: coalesce stampede + negative caching ---
+  // --- coalesce stampede + negative caching ---
 
   @Test
   void coalesceReturnsRedisPositiveHitWithoutRunningMiss() throws Exception {
@@ -175,7 +175,7 @@ class RedisLinkCacheTest {
     Optional<CachedLink> result = cache.coalesce("ghost1", () -> Optional.empty());
 
     assertThat(result).isEmpty();
-    // The short-TTL negative marker was recorded for the absent code (Task 21.2).
+    // The short-TTL negative marker was recorded for the absent code (ADR-011).
     verify(negativeCache).markAbsent("ghost1");
   }
 

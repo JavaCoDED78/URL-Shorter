@@ -17,7 +17,7 @@ import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 /**
- * Client-scoped fixed-window rate limiter (Task 20.4): a single Redis counter ({@code
+ * Client-scoped fixed-window rate limiter (ADR-009): a single Redis counter ({@code
  * ratelimit:{key}}) is {@code INCR}ed on every probe. {@code INCR} and the window {@code EXPIRE}
  * run inside one atomic Lua script (see {@link RateLimitScript}), so the count and its TTL are
  * never two separate round-trips that could drift apart. Admission is {@code count <= maxRequests}.

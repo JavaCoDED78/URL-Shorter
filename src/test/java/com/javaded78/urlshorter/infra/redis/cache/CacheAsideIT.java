@@ -28,7 +28,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Cache-aside behavior (Tasks 6.3, 6.5): miss hits PostgreSQL and populates Redis, hit serves from
+ * Cache-aside behavior: miss hits PostgreSQL and populates Redis, hit serves from
  * Redis without a DB query, TTL is bounded by the remaining link lifetime, expired links are never
  * served from cache.
  */
@@ -118,7 +118,7 @@ class CacheAsideIT {
 
   @Test
   void expiredLinkIsNotCachedAndReturnsGone() throws InterruptedException {
-    // Links cannot be created already expired (Task 11.3): create with a
+    // Links cannot be created already expired: create with a
     // near-future expiration and let it lapse.
     create("https://example.com/dead", "cache06", Instant.now().plusSeconds(1).toString());
     Thread.sleep(1100);

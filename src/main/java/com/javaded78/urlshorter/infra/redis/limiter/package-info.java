@@ -1,5 +1,5 @@
 /**
- * Redis-backed rate-limiting implementations (Task 20.4).
+ * Redis-backed rate-limiting implementations (ADR-009).
  *
  * <p>Key-scoped, fixed-window limiter that protects the create endpoint from abuse. The limiter is
  * a best-effort defense — it is wired through the {@code RateLimiter} port in {@code

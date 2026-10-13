@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * In-memory per-replica Bloom membership set for short-link codes (Task 21.2).
+ * In-memory per-replica Bloom membership set for short-link codes (ADR-011).
  *
  * <p>Shields PostgreSQL from a scan of random codes that were never created: a fresh random code is
  * absent from every replica's filter, so the redirect short-circuits locally to a negative result
@@ -41,7 +41,7 @@ public class CodeBloomFilter {
   }
 
   /**
-   * Records that {@code code} exists (Task 21.2). Called by the write path after a successful
+   * Records that {@code code} exists (ADR-011). Called by the write path after a successful
    * create so the filter no longer short-circuits a redirect for it. Idempotent per key.
    *
    * @param code the (case-insensitive) link code

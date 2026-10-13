@@ -43,9 +43,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Concurrency and correctness (Sprint 16) on real PostgreSQL and Redis.
+ * Concurrency and correctness on real PostgreSQL and Redis.
  *
- * <p>Acceptable delete-vs-redirect semantics (Task 16.5): a redirect racing a delete may
+ * <p>Acceptable delete-vs-redirect semantics: a redirect racing a delete may
  * legitimately observe the link (302) or not (404) — the API does not promise linearizability for
  * the pair. The invariants are: no 5xx, and once the delete completes the link is gone everywhere.
  *
@@ -128,10 +128,10 @@ class ConcurrencyIT {
             .filter(response -> response.statusCode() == 302)
             .count();
 
-    // Task 16.1: every parallel redirect succeeded
+    // every parallel redirect succeeded
     assertThat(succeeded).isEqualTo(MASSIVE_CLICKS);
 
-    // Task 16.2: the atomic flush persists the exact count — no lost clicks
+    // the atomic flush persists the exact count — no lost clicks
     flushService.flush();
     assertThat(statsClickCount("conc10k")).isEqualTo(MASSIVE_CLICKS);
     var persisted = spiedRepository.findByCodeIgnoreCase("conc10k");

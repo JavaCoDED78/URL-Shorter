@@ -62,7 +62,7 @@ public class ReadLinkService {
   }
 
   /**
-   * Resolves a code for redirection (Tasks 5.1, 5.2, 5.4; cache-aside from Sprint 6, Task 6.3) and
+   * Resolves a code for redirection (cache-aside lookup, ADR-002) and
    * times the end-to-end redirect (controller → service) behind {@code
    * MetricsRecorder#redirectDuration}.
    *
@@ -83,7 +83,7 @@ public class ReadLinkService {
   }
 
   /**
-   * Click statistics for a code (Task 9.2): persisted DB count plus the pending Redis counter — the
+   * Click statistics for a code (ADR-003): persisted DB count plus the pending Redis counter — the
    * logically current value, without waiting for the flush interval. Lookup is case-insensitive
    * like redirects, because counters are keyed by the stored (lowercase) code.
    *
@@ -96,7 +96,7 @@ public class ReadLinkService {
   }
 
   /**
-   * Resolves a code for redirection (Tasks 5.1, 5.2, 5.4; cache-aside from Sprint 6, Task 6.3):
+   * Resolves a code for redirection (cache-aside lookup, ADR-002):
    *
    * <pre>
    * cache.get(code)
@@ -113,7 +113,7 @@ public class ReadLinkService {
    * @throws LinkExpiredException if the link's {@code expiresAt} has passed (410)
    */
   public ResolvedLink resolve(String code) {
-    // Singleflight + negative caching (Tasks 21.1/21.2): the cache coalesces concurrent cold
+    // Singleflight + negative caching: the cache coalesces concurrent cold
     // misses for this code into one PostgreSQL lookup, and short-circuits Bloom-absent and recently
     // absent codes before any DB hit. The miss supplier below performs the actual lookup and, on
     // absence, records the short-TTL negative marker via the cache.
@@ -138,7 +138,7 @@ public class ReadLinkService {
   }
 
   /**
-   * PostgreSQL lookup used as the {@link LinkCache#coalesce} miss supplier (Tasks 5.1, 5.2, 5.4).
+   * PostgreSQL lookup used as the {@link LinkCache#coalesce} miss supplier.
    */
   private Optional<CachedLink> lookupByCode(String code) {
     return metrics.timePostgresLookup(
@@ -148,7 +148,7 @@ public class ReadLinkService {
                 .map(
                     link -> {
                       if (ExpirationPolicy.isExpired(link.expiresAt(), clock.instant())) {
-                        // Expired links are never cached (Task 6.4) and never counted.
+                        // Expired links are never cached (ADR-006) and never counted.
                         metrics.linkExpired();
                         throw new LinkExpiredException(code);
                       }

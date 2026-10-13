@@ -19,7 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 /**
- * OpenAPI contract (Tasks 12.1–12.5): the API must be understandable without reading sources —
+ * OpenAPI contract: the API must be understandable without reading sources —
  * every endpoint has a summary, every DTO a description, and every documented error response is
  * declared.
  */

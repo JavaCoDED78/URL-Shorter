@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 /**
- * Validates original URLs (Task 4.2), hardened against SSRF.
+ * Validates original URLs, hardened against SSRF (ADR-010).
  *
  * <p>Uses {@link URI} structural parsing rather than a regex: the scheme must be present and in the
  * allowed list (case-insensitive), a host must exist, and the host must not resolve to an internal

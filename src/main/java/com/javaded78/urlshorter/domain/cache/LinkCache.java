@@ -4,12 +4,12 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
- * Cache-aside port for link lookup (Task 6.2). The service layer talks to Redis only through this
+ * Cache-aside port for link lookup (ADR-002). The service layer talks to Redis only through this
  * abstraction — never through Redis command details.
  *
- * <p>Stampede protection (Task 21.1): {@link #coalesce} coalesces concurrent misses for the same
+ * <p>Stampede protection (ADR-011): {@link #coalesce} coalesces concurrent misses for the same
  * code behind a single in-flight lookup, so an evicted/expired hot key can no longer fan N
- * concurrent PostgreSQL reads into one. Negative caching (Task 21.2): {@link #coalesce} short-
+ * concurrent PostgreSQL reads into one. Negative caching (ADR-011): {@link #coalesce} short-
  * circuits the database for codes the Bloom filter has declared absent, so a scan of nonexistent
  * codes never reaches PostgreSQL.
  *
@@ -27,7 +27,7 @@ public interface LinkCache {
   Optional<CachedLink> get(String code);
 
   /**
-   * Resolves a code with stampede protection and negative caching (Task 21.1, 21.2):
+   * Resolves a code with stampede protection and negative caching (ADR-011):
    *
    * <pre>
    *   Bloom filter absent  → miss (known non-existent): do NOT run `miss` — skip PostgreSQL
@@ -49,7 +49,7 @@ public interface LinkCache {
 
   /**
    * Caches the link with {@code min(configuredTtl, remainingLifetime)}; already-expired links are
-   * not cached at all (Task 6.4). A miss (empty result) is recorded as a negative cache entry with
+   * not cached at all (ADR-011). A miss (empty result) is recorded as a negative cache entry with
    * the configured negative TTL.
    */
   void put(CachedLink link);
@@ -58,7 +58,7 @@ public interface LinkCache {
   void evict(String code);
 
   /**
-   * Records that {@code code} now exists (Task 21.2), so the Bloom filter no longer short-circuits
+   * Records that {@code code} now exists (ADR-011), so the Bloom filter no longer short-circuits
    * a redirect for it. Called by the write path after a successful create; also evicts any stale
    * negative marker for the code so the freshly created link resolves against PostgreSQL.
    *

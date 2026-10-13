@@ -21,7 +21,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Abuse vectors (Tasks 20.2, 20.3) against the running application.
+ * Abuse vectors against the running application.
  *
  * <p>20.2 — SSRF posture: the redirect endpoint answers with a {@code 302 Location} only; it never
  * opens a connection to the stored destination. Internal destinations (loopback, link-local,

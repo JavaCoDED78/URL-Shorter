@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Root redirect endpoint (Tasks 5.1, 5.4): {@code GET /{code}} resolves the code through {@link
+ * Root redirect endpoint: {@code GET /{code}} resolves the code through {@link
  * ReadLinkService} and answers {@link HttpStatus#FOUND 302 Found} with the destination in {@code
  * Location}.
  *

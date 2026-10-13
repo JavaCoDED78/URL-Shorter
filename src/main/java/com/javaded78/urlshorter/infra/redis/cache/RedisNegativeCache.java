@@ -10,7 +10,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Short-TTL negative cache for the redirect path (Task 21.2).
+ * Short-TTL negative cache for the redirect path (ADR-011).
  *
  * <p>Records that a code was looked up and <em>did not exist<em> (a created-then-deleted link, or a
  * link that expired) under a {@code neg:{code}} key with a short TTL, so a repeated miss of the
@@ -48,7 +48,7 @@ public class RedisNegativeCache {
   }
 
   /**
-   * Whether {@code code} is currently marked absent (Task 21.2). A {@code false} answer — whether
+   * Whether {@code code} is currently marked absent (ADR-011). A {@code false} answer — whether
    * the key is genuinely absent or Redis was unavailable — means "not known absent", so the caller
    * falls through to a real lookup; a dead Redis must never masquerade as a known-absent code.
    *

@@ -1,7 +1,7 @@
 package com.javaded78.urlshorter.domain.service;
 
 /**
- * Rate-limiting port (Task 20.4). The shipped implementation is a no-op so behavior is unchanged;
+ * Rate-limiting port (ADR-009). The shipped implementation is a no-op so behavior is unchanged;
  * the roadmap replaces it with a Redis-backed (Bucket4j) implementation without touching call
  * sites.
  *

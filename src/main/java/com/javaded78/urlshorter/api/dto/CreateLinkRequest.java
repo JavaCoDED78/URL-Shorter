@@ -8,7 +8,7 @@ import java.time.Instant;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Request body for {@code POST /api/v1/links} (Task 4.1).
+ * Request body for {@code POST /api/v1/links}.
  *
  * @param originalUrl destination URL; required, validated structurally here (non-blank, length) and
  *     semantically in the service (scheme/host)

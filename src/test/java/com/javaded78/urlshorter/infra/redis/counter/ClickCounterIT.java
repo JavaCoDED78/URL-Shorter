@@ -24,7 +24,7 @@ import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Click counting semantics (Tasks 7.2-7.4): every successful redirect increments {@code
+ * Click counting semantics: every successful redirect increments {@code
  * clicks:{code}}; 404/410 and malformed requests do not; concurrent increments must not lose
  * clicks.
  */
@@ -68,7 +68,7 @@ class ClickCounterIT {
 
   @Test
   void expiredLinkDoesNotIncrement() throws InterruptedException {
-    // Links cannot be created already expired (Task 11.3): create with a
+    // Links cannot be created already expired: create with a
     // near-future expiration and let it lapse.
     create("https://example.com/old", "click02", Instant.now().plusSeconds(1).toString());
     Thread.sleep(1100);

@@ -27,7 +27,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Cache consistency (Sprint 19) against real PostgreSQL and Redis.
+ * Cache consistency against real PostgreSQL and Redis.
  *
  * <ul>
  *   <li>19.1 — business TTL outlives the cache entry: when the Redis entry expires first the

@@ -8,7 +8,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Shared test infrastructure (Task 15.1).
+ * Shared test infrastructure.
  *
  * <p>Lifecycle: the containers are Spring-managed singletons — Boot's Testcontainers lifecycle
  * post-processor starts them with the application context and stops them when it closes.

@@ -6,7 +6,7 @@ import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * TTL for cached links (Task 6.4), with staggered expiry to avoid a database stampede.
+ * TTL for cached links (ADR-006), with staggered expiry to avoid a database stampede.
  *
  * <p>The base TTL is {@code min(configuredTtl, remainingLinkLifetime)}: never-expiring links get
  * the configured TTL, links with less time left get that remainder, and already-expired links are

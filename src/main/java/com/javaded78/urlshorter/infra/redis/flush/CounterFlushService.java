@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Infra orchestrator for the click flush (Tasks 8.4-8.6): drains every Redis counter, applies one
+ * Infra orchestrator for the click flush: drains every Redis counter, applies one
  * batch UPDATE to PostgreSQL, and restores drained values to Redis when that write fails — never
  * losing clicks silently.
  *
@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
  * drain and the DB write are both behind domain ports ({@link ClickCounter}, {@link
  * LinkRepository}), so this class is an adapter-level orchestrator, not a domain service.
  *
- * <p>Recovery strategy (Task 8.6 — explicitly chosen for the MVP): <b>return drained values to
+ * <p>Recovery strategy (ADR-003 — explicitly chosen for the MVP): <b>return drained values to
  * Redis</b> ({@code INCRBY}) when the database write fails. The batch UPDATE is a single SQL
  * statement and therefore atomic: on failure nothing was applied, so restoring the full drained
  * amount to Redis is safe. Restored values are re-drained by the next flush round. Alternatives
@@ -54,7 +54,7 @@ public class CounterFlushService {
     try {
       drained = clickCounter.drainAll();
     } catch (RuntimeException ex) {
-      // Redis down mid-drain (Task 17.3): nothing was drained, so
+      // Redis down mid-drain: nothing was drained, so
       // counters are still intact in Redis — count the failure and let
       // the scheduler retry next cycle.
       metrics.clickFlushFailed();

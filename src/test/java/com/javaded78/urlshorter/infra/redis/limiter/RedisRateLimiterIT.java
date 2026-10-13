@@ -22,7 +22,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 /**
- * End-to-end verification of the Redis-backed create rate limiter (Task 20.4): with the limiter
+ * End-to-end verification of the Redis-backed create rate limiter (ADR-009): with the limiter
  * enabled at {@code maxRequests=3} per {@code PT30S} window, the first three creates are admitted
  * and the fourth is rejected with {@code 429}, and the denial is recorded on the {@code
  * urlshorter.rateLimiterDenied} counter exposed via {@code /actuator/metrics}.

@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * Typed access to {@code shortener.rate-limiter.*} configuration (Task 20.4): the client-scoped,
+ * Typed access to {@code shortener.rate-limiter.*} configuration (ADR-009): the client-scoped,
  * Redis-backed create-rate limiter.
  *
  * <p>Bound by {@link ConfigurationPropertiesScan}; default values live in {@code application.yaml}

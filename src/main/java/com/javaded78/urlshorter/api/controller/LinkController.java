@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Link API endpoints (Tasks 4.5, 4.6). Controllers stay thin: validate the request, delegate to the
+ * Link API endpoints. Controllers stay thin: validate the request, delegate to the
  * service, map the result to DTOs.
  */
 @Tag(name = "Links", description = "Create, read, get statistics and delete short links")

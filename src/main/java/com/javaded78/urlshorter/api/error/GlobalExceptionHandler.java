@@ -23,12 +23,12 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 /**
  * Maps application exceptions to RFC 9457 {@link ProblemDetail} responses.
  *
- * <p>Stable, client-facing categories (Task 11.2): 400 invalid request, 404 not found, 409
+ * <p>Stable, client-facing categories: 400 invalid request, 404 not found, 409
  * conflict, 410 gone, 500 internal error. Every response carries the same keys — {@code type},
  * {@code title}, {@code status}, {@code detail}, {@code instance}. The {@code type} field is a
  * machine-readable URI identifying each error class (so clients can branch on the error kind
  * without parsing the human-readable {@code title}), while {@code title} stays stable for human
- * consumption. The unexpected-failure fallback (Task 11.4) logs the cause server-side but never
+ * consumption. The unexpected-failure fallback logs the cause server-side but never
  * exposes stack traces, SQL, connection URLs or Redis internals to the client.
  */
 @RestControllerAdvice
@@ -69,7 +69,7 @@ public class GlobalExceptionHandler {
    * subtype (or dropping one) is a compile-time error, not a silent fallback to 500 — which keeps
    * the {@code ErrorType} contract stable.
    *
-   * <p>The rate-limit case carries an extra {@code retryAfter} property (Task 20.4); it is distinct
+   * <p>The rate-limit case carries an extra {@code retryAfter} property (ADR-009); it is distinct
    * from {@link DataAccessException} (503) and the unexpected-failure fallback (500).
    */
   @ExceptionHandler(ShortenerException.class)
@@ -94,7 +94,7 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * Database unavailable (Tasks 18.1, 18.2): a data-access failure means a dependency is down, not
+   * Database unavailable: a data-access failure means a dependency is down, not
    * a bug — 503 tells the client to retry later, distinct from both 409 (business conflict) and 500
    * (unexpected). The cause is logged server-side only; the connection-acquisition timeout is
    * pinned at 5 s in application.yaml so the request cannot hang.
@@ -111,7 +111,7 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * Transaction-begin failure with the database unreachable (found in the Sprint 28 live review):
+   * Transaction-begin failure with the database unreachable (found in the live review):
    * when the container is down, the JPA transaction manager cannot even open an EntityManager, so
    * the failure surfaces as {@link CannotCreateTransactionException} — which is NOT a {@code
    * DataAccessException} and would otherwise leak through as a misleading 500. This is the same
@@ -130,7 +130,7 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * Body over the payload limit (Task 20.1): thrown by the bounded stream for chunked bodies;
+   * Body over the payload limit: thrown by the bounded stream for chunked bodies;
    * usually arrives wrapped by the message converter.
    */
   @ExceptionHandler(PayloadTooLargeException.class)
@@ -140,7 +140,7 @@ public class GlobalExceptionHandler {
 
   /**
    * Unreadable body: 400 for syntactically broken JSON, 413 when the cause chain shows the bounded
-   * stream hit the payload limit (chunked oversized bodies, Task 20.1).
+   * stream hit the payload limit (chunked oversized bodies).
    */
   @ExceptionHandler(HttpMessageNotReadableException.class)
   public ProblemDetail handleUnreadableBody(HttpMessageNotReadableException ex) {
@@ -179,7 +179,7 @@ public class GlobalExceptionHandler {
 
   /**
    * Fallback for everything not covered above — infrastructure failures (PostgreSQL, Redis),
-   * unexpected runtime exceptions. The cause is logged server-side only (Task 11.4); the client
+   * unexpected runtime exceptions. The cause is logged server-side only; the client
    * gets a generic ProblemDetail.
    */
   @ExceptionHandler(Exception.class)

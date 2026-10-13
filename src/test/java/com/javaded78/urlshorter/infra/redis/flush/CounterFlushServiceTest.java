@@ -17,7 +17,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataAccessException;
 
 /**
- * CounterFlushService (Tasks 8.4-8.6): drains all Redis counters atomically, applies one batch
+ * CounterFlushService: drains all Redis counters atomically, applies one batch
  * UPDATE, and restores drained values to Redis when the database write fails — never losing clicks
  * silently. Infra orchestrator (see {@code infra.redis.flush}).
  */

@@ -3,14 +3,14 @@ package com.javaded78.urlshorter.domain.counter;
 import java.util.Map;
 
 /**
- * Click counter port (Task 7.1). Every successful redirect increments {@code
+ * Click counter port (ADR-003). Every successful redirect increments {@code
  * clicks:{lowercaseCode}}; the value is a plain integer string incremented with {@code INCR} — one
  * format, no hash-based model, so the flush drains counters atomically.
  *
- * <p>Semantics (Task 7.3): the caller increments only after the link was found, is not expired and
+ * <p>Semantics: the caller increments only after the link was found, is not expired and
  * the redirect is prepared — never for 404, 410 or malformed requests.
  *
- * <p>Flush support (Task 8.3+): {@link #drainAll()} atomically reads and resets every counter;
+ * <p>Flush support (ADR-004): {@link #drainAll()} atomically reads and resets every counter;
  * {@link #restore(String, long)} puts a drained value back after a failed database write.
  */
 public interface ClickCounter {
@@ -46,6 +46,6 @@ public interface ClickCounter {
    */
   void restore(String code, long value);
 
-  /** Removes the counter for the code (delete policy, Task 10.3); idempotent. */
+  /** Removes the counter for the code (delete policy); idempotent. */
   void delete(String code);
 }
