@@ -98,6 +98,10 @@ public class RedisLinkCache implements LinkCache {
     this.metrics = metrics;
   }
 
+  // com.fasterxml.jackson.databind ObjectMapper is the 2.x compat layer the project uses;
+  // every set*Inclusion overload is @Deprecated with no non-deprecated equivalent, so the
+  // call below is intentional. Silence the warning here.
+  @SuppressWarnings("deprecation")
   private static ObjectMapper cacheObjectMapper() {
     ObjectMapper mapper = new ObjectMapper();
     mapper.registerModule(new JavaTimeModule());
