@@ -83,7 +83,7 @@ jobs:
       - name: Build application jar
         run: ./gradlew bootJar -x test
       - name: Install Python for smoke tests
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Validate monitoring configuration as code
