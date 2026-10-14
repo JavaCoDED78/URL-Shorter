@@ -1,6 +1,7 @@
 package com.javaded78.urlshorter.api.error;
 
 import java.net.URI;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
  * that reaches the API must appear here so its {@code type}/{@code status}/{@code title} stay
  * stable for clients.
  */
+@RequiredArgsConstructor
 public enum ErrorType {
   VALIDATION("validation-error", HttpStatus.BAD_REQUEST, "Invalid request"),
   INVALID_REQUEST("invalid-request", HttpStatus.BAD_REQUEST, "Invalid request"),
@@ -35,12 +37,6 @@ public enum ErrorType {
   private final String code;
   private final HttpStatus status;
   private final String title;
-
-  ErrorType(String code, HttpStatus status, String title) {
-    this.code = code;
-    this.status = status;
-    this.title = title;
-  }
 
   /** Human-readable, trace-friendly segment, e.g. {@code "validation-error"}. */
   public String code() {

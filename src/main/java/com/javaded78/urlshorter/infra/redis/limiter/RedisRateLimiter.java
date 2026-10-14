@@ -5,6 +5,7 @@ import com.javaded78.urlshorter.domain.service.RateLimitScope;
 import com.javaded78.urlshorter.domain.service.RateLimiter;
 import java.time.Duration;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -44,6 +45,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  * <p>Bean registration is conditional and property-driven (see {@code RateLimitConfig}).
  */
 @Slf4j
+@RequiredArgsConstructor
 public class RedisRateLimiter implements RateLimiter {
 
   static final String KEY_PREFIX = "ratelimit:";
@@ -54,21 +56,6 @@ public class RedisRateLimiter implements RateLimiter {
   private final boolean failOpen;
   private final MetricsRecorder metrics;
   private final RateLimitScript script;
-
-  public RedisRateLimiter(
-      StringRedisTemplate redis,
-      Duration window,
-      int maxRequests,
-      boolean failOpen,
-      MetricsRecorder metrics,
-      RateLimitScript script) {
-    this.redis = redis;
-    this.window = window;
-    this.maxRequests = maxRequests;
-    this.failOpen = failOpen;
-    this.metrics = metrics;
-    this.script = script;
-  }
 
   @Override
   public boolean tryAcquire(RateLimitScope scope) {

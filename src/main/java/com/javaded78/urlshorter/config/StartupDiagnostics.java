@@ -2,6 +2,7 @@ package com.javaded78.urlshorter.config;
 
 import java.sql.Connection;
 import javax.sql.DataSource;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -23,15 +24,11 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile({"local", "test"})
 @Slf4j
+@RequiredArgsConstructor
 public class StartupDiagnostics implements ApplicationRunner {
 
   private final DataSource dataSource;
   private final RedisConnectionFactory redisConnectionFactory;
-
-  public StartupDiagnostics(DataSource dataSource, RedisConnectionFactory redisConnectionFactory) {
-    this.dataSource = dataSource;
-    this.redisConnectionFactory = redisConnectionFactory;
-  }
 
   @Override
   public void run(ApplicationArguments args) {

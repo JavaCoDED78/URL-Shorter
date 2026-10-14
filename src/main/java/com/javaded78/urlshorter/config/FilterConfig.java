@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,13 +26,10 @@ import org.springframework.core.Ordered;
  * expose the URL patterns and the order, both of which stay stable as more filters are added later.
  */
 @Configuration
+@RequiredArgsConstructor
 public class FilterConfig {
 
   private final ShortenerProperties properties;
-
-  public FilterConfig(ShortenerProperties properties) {
-    this.properties = properties;
-  }
 
   @Bean
   public FilterRegistrationBean<RequestUriLengthFilter> requestUriLengthFilter() {

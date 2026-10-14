@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -33,15 +34,11 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Links", description = "Create, read, get statistics and delete short links")
 @RestController
 @RequestMapping("/api/v1/links")
+@RequiredArgsConstructor
 public class LinkController {
 
   private final WriteLinkService writeService;
   private final ReadLinkService readService;
-
-  public LinkController(WriteLinkService writeService, ReadLinkService readService) {
-    this.writeService = writeService;
-    this.readService = readService;
-  }
 
   @Operation(
       summary = "Create a short link",

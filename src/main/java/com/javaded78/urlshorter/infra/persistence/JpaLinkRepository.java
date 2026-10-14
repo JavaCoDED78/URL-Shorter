@@ -5,6 +5,7 @@ import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import java.util.Map;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
@@ -21,13 +22,10 @@ import org.springframework.stereotype.Repository;
  * retry loop — this is a required semantic for the write path, not an optimization.
  */
 @Repository
+@RequiredArgsConstructor
 public class JpaLinkRepository implements LinkRepository {
 
   private final LinkJpaRepository jpaRepository;
-
-  public JpaLinkRepository(LinkJpaRepository jpaRepository) {
-    this.jpaRepository = jpaRepository;
-  }
 
   @Override
   public Optional<Link> findByCodeIgnoreCase(String code) {

@@ -2,6 +2,7 @@ package com.javaded78.urlshorter.api.controller;
 
 import com.javaded78.urlshorter.domain.service.MetricsRecorder;
 import java.net.URI;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,15 +20,12 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @ConditionalOnProperty(name = "shortener.benchmark.enabled", havingValue = "true")
+@RequiredArgsConstructor
 public class BenchmarkController {
 
   private static final String BENCH_TARGET = "https://example.com/bench";
 
   private final MetricsRecorder metrics;
-
-  public BenchmarkController(MetricsRecorder metrics) {
-    this.metrics = metrics;
-  }
 
   @GetMapping("/bench-hit")
   public ResponseEntity<Void> benchHit() {

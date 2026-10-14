@@ -1,5 +1,6 @@
 package com.javaded78.urlshorter.infra.redis.flush;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -18,13 +19,10 @@ import org.springframework.stereotype.Component;
     havingValue = "true",
     matchIfMissing = true)
 @Slf4j
+@RequiredArgsConstructor
 public class ClickFlushJob {
 
   private final CounterFlushService flushService;
-
-  public ClickFlushJob(CounterFlushService flushService) {
-    this.flushService = flushService;
-  }
 
   /**
    * Scheduled flush job: moves accumulated Redis clicks into PostgreSQL every {@code

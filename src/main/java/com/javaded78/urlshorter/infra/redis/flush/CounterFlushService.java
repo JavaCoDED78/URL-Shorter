@@ -4,6 +4,7 @@ import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.domain.service.MetricsRecorder;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,18 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class CounterFlushService {
 
   private final ClickCounter clickCounter;
   private final LinkRepository repository;
   private final MetricsRecorder metrics;
-
-  public CounterFlushService(
-      ClickCounter clickCounter, LinkRepository repository, MetricsRecorder metrics) {
-    this.clickCounter = clickCounter;
-    this.repository = repository;
-    this.metrics = metrics;
-  }
 
   /**
    * Drains every Redis counter and applies one batch UPDATE.

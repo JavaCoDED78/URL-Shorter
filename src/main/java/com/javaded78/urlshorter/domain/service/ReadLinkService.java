@@ -12,6 +12,7 @@ import com.javaded78.urlshorter.domain.model.ResolvedLink;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import java.time.Clock;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -38,6 +39,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class ReadLinkService {
 
   private final LinkRepository repository;
@@ -45,19 +47,6 @@ public class ReadLinkService {
   private final ClickCounter clickCounter;
   private final MetricsRecorder metrics;
   private final Clock clock;
-
-  public ReadLinkService(
-      LinkRepository repository,
-      LinkCache linkCache,
-      ClickCounter clickCounter,
-      MetricsRecorder metrics,
-      Clock clock) {
-    this.repository = repository;
-    this.linkCache = linkCache;
-    this.clickCounter = clickCounter;
-    this.metrics = metrics;
-    this.clock = clock;
-  }
 
   /**
    * Resolves a code for redirection (cache-aside lookup, ADR-002) and times the end-to-end redirect
