@@ -11,7 +11,7 @@
 # The app runs as a dedicated non-root user; configuration arrives exclusively
 # through environment variables (see docker-compose.yml / AGENTS.md §7).
 
-FROM gradle:9.7-jdk25-alpine AS build
+FROM gradle:9.8-jdk25-alpine AS build
 WORKDIR /workspace
 # dependency layer cache: only a build-file change re-resolves dependencies
 COPY build.gradle.kts settings.gradle.kts ./
