@@ -14,9 +14,8 @@ import com.javaded78.urlshorter.domain.validation.AliasValidator;
 import com.javaded78.urlshorter.domain.validation.UrlValidator;
 import java.time.Clock;
 import java.time.Instant;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -60,9 +59,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * out waiting for its winner).
  */
 @Service
+@Slf4j
 public class WriteLinkService {
-
-  private static final Logger log = LoggerFactory.getLogger(WriteLinkService.class);
 
   private final Clock clock;
   private final LinkRepository repository;

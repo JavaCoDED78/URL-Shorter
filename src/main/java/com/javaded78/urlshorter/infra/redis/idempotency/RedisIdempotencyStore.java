@@ -16,8 +16,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.function.Supplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -44,9 +43,8 @@ import org.springframework.stereotype.Component;
  * could not be recorded never surfaces a spurious failure to the caller.
  */
 @Component
+@Slf4j
 public class RedisIdempotencyStore implements IdempotencyStore {
-
-  private static final Logger log = LoggerFactory.getLogger(RedisIdempotencyStore.class);
 
   static final String KEY_PREFIX = "idem:";
 

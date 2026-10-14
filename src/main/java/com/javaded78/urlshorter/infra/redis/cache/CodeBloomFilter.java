@@ -2,8 +2,7 @@ package com.javaded78.urlshorter.infra.redis.cache;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
 import java.util.Locale;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
@@ -24,9 +23,8 @@ import org.springframework.stereotype.Component;
  * filter.
  */
 @Component
+@Slf4j
 public class CodeBloomFilter {
-
-  private static final Logger log = LoggerFactory.getLogger(CodeBloomFilter.class);
 
   private final BloomFilter filter;
 

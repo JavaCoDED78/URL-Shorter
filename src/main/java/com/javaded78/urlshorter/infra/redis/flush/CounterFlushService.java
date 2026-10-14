@@ -4,8 +4,7 @@ import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.domain.service.MetricsRecorder;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,9 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
  * (durable outbox, pending buffer) are deferred until a proven need.
  */
 @Component
+@Slf4j
 public class CounterFlushService {
-
-  private static final Logger log = LoggerFactory.getLogger(CounterFlushService.class);
 
   private final ClickCounter clickCounter;
   private final LinkRepository repository;

@@ -17,8 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -44,9 +43,8 @@ import org.springframework.stereotype.Component;
  * truth.
  */
 @Component
+@Slf4j
 public class RedisLinkCache implements LinkCache {
-
-  private static final Logger log = LoggerFactory.getLogger(RedisLinkCache.class);
 
   static final String KEY_PREFIX = "link:";
 

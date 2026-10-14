@@ -12,8 +12,7 @@ import com.javaded78.urlshorter.domain.model.ResolvedLink;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import java.time.Clock;
 import java.util.Optional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
@@ -38,9 +37,8 @@ import org.springframework.stereotype.Service;
  * reported to {@code MetricsRecorder}.
  */
 @Service
+@Slf4j
 public class ReadLinkService {
-
-  private static final Logger log = LoggerFactory.getLogger(ReadLinkService.class);
 
   private final LinkRepository repository;
   private final LinkCache linkCache;

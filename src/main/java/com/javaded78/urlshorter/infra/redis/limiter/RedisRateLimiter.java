@@ -5,8 +5,7 @@ import com.javaded78.urlshorter.domain.service.RateLimitScope;
 import com.javaded78.urlshorter.domain.service.RateLimiter;
 import java.time.Duration;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
@@ -44,11 +43,10 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  *
  * <p>Bean registration is conditional and property-driven (see {@code RateLimitConfig}).
  */
+@Slf4j
 public class RedisRateLimiter implements RateLimiter {
 
   static final String KEY_PREFIX = "ratelimit:";
-
-  private static final Logger log = LoggerFactory.getLogger(RedisRateLimiter.class);
 
   private final StringRedisTemplate redis;
   private final Duration window;

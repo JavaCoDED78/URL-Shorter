@@ -7,8 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.Cursor;
@@ -30,13 +29,12 @@ import org.springframework.stereotype.Component;
  * counting is best-effort analytics, the redirect itself is the product.
  */
 @Component
+@Slf4j
 public class RedisClickCounter implements ClickCounter {
 
   static final String KEY_PREFIX = "clicks:";
 
   private static final int DEFAULT_BATCH_SIZE = 1000;
-
-  private static final Logger log = LoggerFactory.getLogger(RedisClickCounter.class);
 
   private final StringRedisTemplate redis;
   private final RedisScript<List<String>> drainScript;
