@@ -59,6 +59,31 @@ def main() -> None:
     counter = itertools.count()
     failures = []
 
+    # Truncate + flush first so the freshly-created pool survives: stateful
+    # scenarios (create/delete) use deterministic aliases (c-<id>-<iter>), so a
+    # dirty DB makes them collide with prior runs' rows and k6 reports 409s that
+    # are *correct* app behaviour, not a regression. links has no FK references
+    # (parent table), so a plain TRUNCATE is safe. FLUSHALL gives a cold cache
+    # so the first 'run -e SCENARIO=miss' measures genuine PostgreSQL lookups.
+    pg_container = "urlshorter-postgres-dev"
+    if subprocess.run(["docker", "inspect", pg_container],
+                      capture_output=True).returncode != 0:
+        pg_container = "urlshorter-postgres"
+    subprocess.run(
+        ["docker", "exec", pg_container, "psql", "-U", "postgres", "-d",
+         "urlshortener", "-c", "TRUNCATE links"],
+        check=True, capture_output=True)
+
+    # Dev compose names the container urlshorter-redis-dev, the full stack
+    # urlshorter-redis — pick whichever is running.
+    redis_container = "urlshorter-redis-dev"
+    if subprocess.run(["docker", "inspect", redis_container],
+                      capture_output=True).returncode != 0:
+        redis_container = "urlshorter-redis"
+    subprocess.run(
+        ["docker", "exec", redis_container, "redis-cli", "FLUSHALL"],
+        check=True, capture_output=True)
+
     def worker() -> None:
         while True:
             i = next(counter)
@@ -93,28 +118,6 @@ def main() -> None:
     if failures:
         raise SystemExit(f"{len(failures)} creations failed, first: {failures[:3]}")
 
-    # Truncate links first: stateful scenarios (create/delete) use deterministic
-    # aliases (c-<id>-<iter>), so a dirty DB makes them collide with prior runs'
-    # rows and k6 reports 409s that are *correct* app behaviour, not a regression.
-    # links has no FK references (parent table), so a plain TRUNCATE is safe.
-    pg_container = "urlshorter-postgres-dev"
-    if subprocess.run(["docker", "inspect", pg_container],
-                      capture_output=True).returncode != 0:
-        pg_container = "urlshorter-postgres"
-    subprocess.run(
-        ["docker", "exec", pg_container, "psql", "-U", "postgres", "-d",
-         "urlshortener", "-c", "TRUNCATE links"],
-        check=True, capture_output=True)
-
-    # Dev compose names the container urlshorter-redis-dev, the full stack
-    # urlshorter-redis — pick whichever is running.
-    redis_container = "urlshorter-redis-dev"
-    if subprocess.run(["docker", "inspect", redis_container],
-                      capture_output=True).returncode != 0:
-        redis_container = "urlshorter-redis"
-    subprocess.run(
-        ["docker", "exec", redis_container, "redis-cli", "FLUSHALL"],
-        check=True, capture_output=True)
     with open("benchmarks/links.json", "w", encoding="utf-8") as fh:
         json.dump({"codes": aliases[1:]}, fh)
     print(
