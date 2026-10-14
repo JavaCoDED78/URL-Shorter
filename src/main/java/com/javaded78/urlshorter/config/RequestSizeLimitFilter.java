@@ -19,8 +19,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 
 /**
- * Bounds the raw request body. Field validation already limits the URL (2048) and alias
- * (64) lengths; without this filter a client could still post an arbitrarily large JSON document.
+ * Bounds the raw request body. Field validation already limits the URL (2048) and alias (64)
+ * lengths; without this filter a client could still post an arbitrarily large JSON document.
  *
  * <p>Two paths are covered:
  *

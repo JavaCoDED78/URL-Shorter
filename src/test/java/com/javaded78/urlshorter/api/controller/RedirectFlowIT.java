@@ -24,8 +24,8 @@ import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Redirect flow against real PostgreSQL: the root {@code GET /{code}}
- * endpoint must answer 302/404/410 and must not shadow the actuator health endpoint.
+ * Redirect flow against real PostgreSQL: the root {@code GET /{code}} endpoint must answer
+ * 302/404/410 and must not shadow the actuator health endpoint.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate

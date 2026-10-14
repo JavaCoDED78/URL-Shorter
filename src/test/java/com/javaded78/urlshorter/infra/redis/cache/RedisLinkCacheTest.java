@@ -32,6 +32,7 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.util.unit.DataSize;
 
 class RedisLinkCacheTest {
 
@@ -52,9 +53,8 @@ class RedisLinkCacheTest {
           new ShortenerProperties.Cache(
               Duration.ofHours(1), Duration.ofSeconds(45), 1_000_000L, 0.0001, 0d),
           new ShortenerProperties.Code(7),
-          new ShortenerProperties.Idempotency(
-              java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
-          org.springframework.util.unit.DataSize.ofKilobytes(16),
+          new ShortenerProperties.Idempotency(Duration.ofHours(24), Duration.ofSeconds(5)),
+          DataSize.ofKilobytes(16),
           1024);
 
   private final RedisLinkCache cache =

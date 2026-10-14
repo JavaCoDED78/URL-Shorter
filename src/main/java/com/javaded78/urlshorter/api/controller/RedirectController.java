@@ -18,9 +18,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Root redirect endpoint: {@code GET /{code}} resolves the code through {@link
- * ReadLinkService} and answers {@link HttpStatus#FOUND 302 Found} with the destination in {@code
- * Location}.
+ * Root redirect endpoint: {@code GET /{code}} resolves the code through {@link ReadLinkService} and
+ * answers {@link HttpStatus#FOUND 302 Found} with the destination in {@code Location}.
  *
  * <p>302 (not 301) is deliberate: a 301 can be cached by clients and intermediaries, silently
  * bypassing server-side click counting.

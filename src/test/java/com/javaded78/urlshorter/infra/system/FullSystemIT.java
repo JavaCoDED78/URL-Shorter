@@ -23,10 +23,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Full-system lifecycle check: one end-to-end chain through every subsystem on real
- * PostgreSQL and Redis — create → redirect × N → stats (pending) → flush → stats (persisted) →
- * delete → 404 everywhere → Redis evicted → alias reusable. The class gets its own application
- * context, hence fresh containers and clean state.
+ * Full-system lifecycle check: one end-to-end chain through every subsystem on real PostgreSQL and
+ * Redis — create → redirect × N → stats (pending) → flush → stats (persisted) → delete → 404
+ * everywhere → Redis evicted → alias reusable. The class gets its own application context, hence
+ * fresh containers and clean state.
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,

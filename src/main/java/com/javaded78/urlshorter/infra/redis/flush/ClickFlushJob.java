@@ -29,8 +29,8 @@ public class ClickFlushJob {
   }
 
   /**
-   * Scheduled flush job: moves accumulated Redis clicks into PostgreSQL every
-   * {@code shortener.flush.interval} (default PT5S, {@code SHORTENER_FLUSH_INTERVAL}).
+   * Scheduled flush job: moves accumulated Redis clicks into PostgreSQL every {@code
+   * shortener.flush.interval} (default PT5S, {@code SHORTENER_FLUSH_INTERVAL}).
    *
    * <p>Guarded by a distributed ShedLock ({@code @SchedulerLock(name = "clickFlush")}) so a
    * multi-pod deployment drains Redis exactly once per cycle instead of once per replica —

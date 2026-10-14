@@ -6,14 +6,15 @@ import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
 /**
- * Atomic counter drain: reads every counter and deletes its key in a single Lua
- * execution, so increments cannot interleave between the read and the delete. One Lua script now
- * processes a whole batch of {@code clicks:*} keys at once, so the drain is O(number of batches)
- * round-trips, not O(number of counters) — it stops scaling with the number of hot links.
+ * Atomic counter drain: reads every counter and deletes its key in a single Lua execution, so
+ * increments cannot interleave between the read and the delete. One Lua script now processes a
+ * whole batch of {@code clicks:*} keys at once, so the drain is O(number of batches) round-trips,
+ * not O(number of counters) — it stops scaling with the number of hot links.
  *
  * <p>Idempotent for missing keys: a drained or absent key does not appear in the reply, so
  * re-running is safe. Each drained counter comes back as a [key, value] pair (raw strings); the
- * caller pairs them and keeps only value > 0. Requires plain string counters (INCR model from ADR-003).
+ * caller pairs them and keeps only value > 0. Requires plain string counters (INCR model from
+ * ADR-003).
  */
 @Component
 public class CounterDrainScript {

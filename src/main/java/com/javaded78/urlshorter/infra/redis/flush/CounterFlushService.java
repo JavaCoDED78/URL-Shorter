@@ -10,9 +10,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Infra orchestrator for the click flush: drains every Redis counter, applies one
- * batch UPDATE to PostgreSQL, and restores drained values to Redis when that write fails — never
- * losing clicks silently.
+ * Infra orchestrator for the click flush: drains every Redis counter, applies one batch UPDATE to
+ * PostgreSQL, and restores drained values to Redis when that write fails — never losing clicks
+ * silently.
  *
  * <p>Lives in {@code infra.redis.flush} alongside {@link ClickFlushJob} because it orchestrates
  * infrastructure concerns (Redis drain, DB transaction) rather than domain behaviour — the Redis

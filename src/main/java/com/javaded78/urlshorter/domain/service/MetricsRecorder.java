@@ -7,8 +7,8 @@ import java.util.function.Supplier;
 import org.springframework.stereotype.Component;
 
 /**
- * Observability facade: business counters and latency timers behind typed
- * methods, so application code never touches Micrometer APIs directly.
+ * Observability facade: business counters and latency timers behind typed methods, so application
+ * code never touches Micrometer APIs directly.
  *
  * <p>Counters: {@code urlshorter.linksCreated}, {@code urlshorter.linksRedirected}, {@code
  * urlshorter.linksNotFound}, {@code urlshorter.linksExpired}, {@code urlshorter.linksDeleted},

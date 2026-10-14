@@ -11,22 +11,22 @@ import static org.mockito.Mockito.when;
 import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.domain.service.MetricsRecorder;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataAccessException;
 
 /**
- * CounterFlushService: drains all Redis counters atomically, applies one batch
- * UPDATE, and restores drained values to Redis when the database write fails — never losing clicks
- * silently. Infra orchestrator (see {@code infra.redis.flush}).
+ * CounterFlushService: drains all Redis counters atomically, applies one batch UPDATE, and restores
+ * drained values to Redis when the database write fails — never losing clicks silently. Infra
+ * orchestrator (see {@code infra.redis.flush}).
  */
 class CounterFlushServiceTest {
 
   private final ClickCounter clickCounter = mock(ClickCounter.class);
   private final LinkRepository repository = mock(LinkRepository.class);
-  private final MetricsRecorder metrics =
-      new MetricsRecorder(new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+  private final MetricsRecorder metrics = new MetricsRecorder(new SimpleMeterRegistry());
 
   private final CounterFlushService flushService =
       new CounterFlushService(clickCounter, repository, metrics);

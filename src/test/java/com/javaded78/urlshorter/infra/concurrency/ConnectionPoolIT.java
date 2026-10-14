@@ -12,10 +12,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 
 /**
- * Connection pool review: virtual threads increase request concurrency, but the
- * PostgreSQL pool must remain the explicit, bounded ceiling for database access. The value is
- * pinned in application.yaml and asserted here so a future bump requires a conscious, tested
- * decision.
+ * Connection pool review: virtual threads increase request concurrency, but the PostgreSQL pool
+ * must remain the explicit, bounded ceiling for database access. The value is pinned in
+ * application.yaml and asserted here so a future bump requires a conscious, tested decision.
  */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)

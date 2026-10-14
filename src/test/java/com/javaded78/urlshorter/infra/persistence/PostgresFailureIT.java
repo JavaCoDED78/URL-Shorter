@@ -6,14 +6,17 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
+import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.infra.redis.flush.CounterFlushService;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;
 import org.springframework.boot.resttestclient.TestRestTemplate;
@@ -28,7 +31,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.CannotGetJdbcConnectionException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.transaction.CannotCreateTransactionException;
 
 /**
  * PostgreSQL failure scenarios against real PostgreSQL and Redis.
@@ -62,7 +67,7 @@ class PostgresFailureIT {
 
   @Autowired private StringRedisTemplate redis;
 
-  @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   @MockitoSpyBean private LinkRepository repository;
 
@@ -77,7 +82,7 @@ class PostgresFailureIT {
   void createReturns503WhenDatabaseUnavailable() {
     doThrow(new CannotGetJdbcConnectionException("simulated database outage"))
         .when(repository)
-        .save(any(com.javaded78.urlshorter.domain.model.Link.class));
+        .save(any(Link.class));
 
     long started = System.nanoTime();
     ResponseEntity<Map> response = post("https://example.com/db-down", "s18create");
@@ -103,11 +108,11 @@ class PostgresFailureIT {
     // DataAccessException. A stubbed DataAccessException alone (above)
     // does not reproduce this path.
     doThrow(
-            new org.springframework.transaction.CannotCreateTransactionException(
+            new CannotCreateTransactionException(
                 "Could not open JPA EntityManager for transaction",
                 new CannotGetJdbcConnectionException("simulated database outage")))
         .when(repository)
-        .save(any(com.javaded78.urlshorter.domain.model.Link.class));
+        .save(any(Link.class));
 
     ResponseEntity<Map> response = post("https://example.com/db-down-tx", "s18txbegin");
 
@@ -126,7 +131,7 @@ class PostgresFailureIT {
 
     doThrow(new CannotGetJdbcConnectionException("simulated database outage"))
         .when(repository)
-        .findByCodeIgnoreCase(org.mockito.ArgumentMatchers.anyString());
+        .findByCodeIgnoreCase(ArgumentMatchers.anyString());
 
     ResponseEntity<Map> response = rest.getForEntity(url("/s18miss"), Map.class);
 
@@ -168,8 +173,7 @@ class PostgresFailureIT {
         .batchIncrementClicks(any(Map.class));
 
     // DB down during flush: counters restored to Redis, failure surfaces
-    org.assertj.core.api.Assertions.assertThatThrownBy(flushService::flush)
-        .isInstanceOf(IllegalStateException.class);
+    Assertions.assertThatThrownBy(flushService::flush).isInstanceOf(IllegalStateException.class);
     assertThat(redis.opsForValue().get("clicks:s18flush")).isEqualTo("5");
 
     // recovery: next flush persists the restored counters — no silent loss

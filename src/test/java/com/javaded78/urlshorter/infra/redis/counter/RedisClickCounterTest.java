@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.javaded78.urlshorter.infra.redis.script.CounterDrainScript;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -25,9 +26,9 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
  * Counter key model (ADR-003): {@code clicks:{lowercaseCode}} holding a plain integer — string
  * counters via INCR, no hash-based model, so the flush can drain atomically.
  *
- * <p>The tests in this class cover the fail-open failure policies: Redis
- * unavailability must never surface to the caller, and a per-batch Redis outage mid-scan must not
- * drop counters that earlier (already-drained) batches returned.
+ * <p>The tests in this class cover the fail-open failure policies: Redis unavailability must never
+ * surface to the caller, and a per-batch Redis outage mid-scan must not drop counters that earlier
+ * (already-drained) batches returned.
  */
 class RedisClickCounterTest {
 
@@ -42,8 +43,7 @@ class RedisClickCounterTest {
   @SuppressWarnings("unchecked")
   private final DefaultRedisScript<List<String>> script = mock(DefaultRedisScript.class);
 
-  private final com.javaded78.urlshorter.infra.redis.script.CounterDrainScript drainScript =
-      mock(com.javaded78.urlshorter.infra.redis.script.CounterDrainScript.class);
+  private final CounterDrainScript drainScript = mock(CounterDrainScript.class);
 
   private final RedisClickCounter counter = new RedisClickCounter(redis, drainScript);
 

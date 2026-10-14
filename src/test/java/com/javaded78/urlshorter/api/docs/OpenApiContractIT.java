@@ -19,9 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 /**
- * OpenAPI contract: the API must be understandable without reading sources —
- * every endpoint has a summary, every DTO a description, and every documented error response is
- * declared.
+ * OpenAPI contract: the API must be understandable without reading sources — every endpoint has a
+ * summary, every DTO a description, and every documented error response is declared.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate

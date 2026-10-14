@@ -5,10 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 /**
- * Key resolution for the create rate limiter (ADR-009): the key is the caller's IP,
- * taken from the first hop of {@code X-Forwarded-For} when the proxy is trusted, otherwise the
- * direct remote address. A trusted proxy must therefore <em>not</em> let a caller forge its key,
- * and an absent header must fall back to {@code remoteAddr} — never {@code "unknown"}.
+ * Key resolution for the create rate limiter (ADR-009): the key is the caller's IP, taken from the
+ * first hop of {@code X-Forwarded-For} when the proxy is trusted, otherwise the direct remote
+ * address. A trusted proxy must therefore <em>not</em> let a caller forge its key, and an absent
+ * header must fall back to {@code remoteAddr} — never {@code "unknown"}.
  */
 class CreateIpRateLimitSourceTest {
 

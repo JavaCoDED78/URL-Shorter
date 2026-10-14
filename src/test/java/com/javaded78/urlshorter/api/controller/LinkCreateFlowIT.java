@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.api.dto.LinkResponse;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,11 +91,9 @@ class LinkCreateFlowIT {
     // two parallel creates with the same alias — the database
     // UNIQUE constraint is the final arbiter, so exactly one request can
     // win regardless of timing.
-    java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
-    java.util.concurrent.atomic.AtomicReference<ResponseEntity<Map<String, Object>>> first =
-        new java.util.concurrent.atomic.AtomicReference<>();
-    java.util.concurrent.atomic.AtomicReference<ResponseEntity<Map<String, Object>>> second =
-        new java.util.concurrent.atomic.AtomicReference<>();
+    CountDownLatch start = new CountDownLatch(1);
+    AtomicReference<ResponseEntity<Map<String, Object>>> first = new AtomicReference<>();
+    AtomicReference<ResponseEntity<Map<String, Object>>> second = new AtomicReference<>();
 
     Thread t1 = Thread.ofVirtual().start(() -> awaitAndCreate(start, first));
     Thread t2 = Thread.ofVirtual().start(() -> awaitAndCreate(start, second));
@@ -100,15 +101,12 @@ class LinkCreateFlowIT {
     t1.join();
     t2.join();
 
-    assertThat(
-            java.util.List.of(
-                first.get().getStatusCode().value(), second.get().getStatusCode().value()))
+    assertThat(List.of(first.get().getStatusCode().value(), second.get().getStatusCode().value()))
         .containsExactlyInAnyOrder(201, 409);
   }
 
   private void awaitAndCreate(
-      java.util.concurrent.CountDownLatch start,
-      java.util.concurrent.atomic.AtomicReference<ResponseEntity<Map<String, Object>>> result) {
+      CountDownLatch start, AtomicReference<ResponseEntity<Map<String, Object>>> result) {
     try {
       start.await();
     } catch (InterruptedException e) {

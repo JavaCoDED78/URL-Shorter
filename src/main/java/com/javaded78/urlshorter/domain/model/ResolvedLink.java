@@ -1,9 +1,9 @@
 package com.javaded78.urlshorter.domain.model;
 
 /**
- * Result of resolving a code for redirection: exactly what the redirect path needs — the
- * canonical code and the destination URL. Unlike {@link Link} it carries no stats or timestamps, so
- * it can be served from a cache entry that stores only redirect-relevant fields.
+ * Result of resolving a code for redirection: exactly what the redirect path needs — the canonical
+ * code and the destination URL. Unlike {@link Link} it carries no stats or timestamps, so it can be
+ * served from a cache entry that stores only redirect-relevant fields.
  */
 public record ResolvedLink(String code, String originalUrl) {
 

@@ -41,8 +41,8 @@ public class CodeBloomFilter {
   }
 
   /**
-   * Records that {@code code} exists (ADR-011). Called by the write path after a successful
-   * create so the filter no longer short-circuits a redirect for it. Idempotent per key.
+   * Records that {@code code} exists (ADR-011). Called by the write path after a successful create
+   * so the filter no longer short-circuits a redirect for it. Idempotent per key.
    *
    * @param code the (case-insensitive) link code
    */
@@ -70,7 +70,7 @@ public class CodeBloomFilter {
       return false;
     }
     try {
-      return filter.contains(code.toLowerCase(java.util.Locale.ROOT));
+      return filter.contains(code.toLowerCase(Locale.ROOT));
     } catch (RuntimeException ex) {
       // A corrupt filter must never hide a real link: fall through to PostgreSQL, which is the
       // source of truth (answer "present" so the caller still performs a real lookup).

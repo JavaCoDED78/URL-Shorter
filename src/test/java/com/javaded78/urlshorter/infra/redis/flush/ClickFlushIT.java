@@ -21,6 +21,7 @@ import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -30,8 +31,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Atomic Redis → PostgreSQL flush. Scheduler is disabled: the service is invoked
- * manually for deterministic assertions.
+ * Atomic Redis → PostgreSQL flush. Scheduler is disabled: the service is invoked manually for
+ * deterministic assertions.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
@@ -113,7 +114,7 @@ class ClickFlushIT {
   void dbFailureRestoresCountersWithoutDataLoss() {
     create("https://example.com/fail", "flush06");
     click("flush06", 7);
-    doThrow(new org.springframework.dao.DataAccessException("connection lost") {})
+    doThrow(new DataAccessException("connection lost") {})
         .when(repository)
         .batchIncrementClicks(any(Map.class));
 

@@ -15,30 +15,38 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
+import com.javaded78.urlshorter.domain.cache.LinkCache;
 import com.javaded78.urlshorter.domain.config.AliasConfig;
 import com.javaded78.urlshorter.domain.config.UrlConfig;
 import com.javaded78.urlshorter.domain.config.WriteServiceConfig;
+import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import com.javaded78.urlshorter.domain.exception.AliasAlreadyExistsException;
 import com.javaded78.urlshorter.domain.exception.DuplicateCodeException;
 import com.javaded78.urlshorter.domain.exception.LinkNotFoundException;
 import com.javaded78.urlshorter.domain.exception.RateLimitExceededException;
 import com.javaded78.urlshorter.domain.idempotency.IdempotencyStore;
 import com.javaded78.urlshorter.domain.model.Link;
+import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.domain.validation.AliasValidator;
 import com.javaded78.urlshorter.domain.validation.UrlValidator;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.unit.DataSize;
 
 /**
  * Unit tests for {@link WriteLinkService}: the request-side path — URL/alias validation, rate
@@ -53,24 +61,16 @@ class WriteLinkServiceTest {
           new ShortenerProperties.Alias(64, Set.of("api")),
           new ShortenerProperties.Create(3),
           new ShortenerProperties.Cache(
-              java.time.Duration.ofHours(1),
-              java.time.Duration.ofSeconds(45),
-              1_000_000L,
-              0.0001,
-              0.15),
+              Duration.ofHours(1), Duration.ofSeconds(45), 1_000_000L, 0.0001, 0.15),
           new ShortenerProperties.Code(7),
-          new ShortenerProperties.Idempotency(
-              java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
-          org.springframework.util.unit.DataSize.ofKilobytes(16),
+          new ShortenerProperties.Idempotency(Duration.ofHours(24), Duration.ofSeconds(5)),
+          DataSize.ofKilobytes(16),
           1024);
 
-  private final com.javaded78.urlshorter.domain.repository.LinkRepository repository =
-      mock(com.javaded78.urlshorter.domain.repository.LinkRepository.class);
+  private final LinkRepository repository = mock(LinkRepository.class);
   private final CodeGenerator codeGenerator = mock(CodeGenerator.class);
-  private final com.javaded78.urlshorter.domain.cache.LinkCache linkCache =
-      mock(com.javaded78.urlshorter.domain.cache.LinkCache.class);
-  private final com.javaded78.urlshorter.domain.counter.ClickCounter clickCounter =
-      mock(com.javaded78.urlshorter.domain.counter.ClickCounter.class);
+  private final LinkCache linkCache = mock(LinkCache.class);
+  private final ClickCounter clickCounter = mock(ClickCounter.class);
   private final RateLimiter rateLimiter = mock(RateLimiter.class);
   private final CreateRateLimitSource rateLimitSource = mock(CreateRateLimitSource.class);
   private final IdempotencyStore idempotencyStore = mock(IdempotencyStore.class);
@@ -102,15 +102,12 @@ class WriteLinkServiceTest {
   /** The metrics facade must pass calls through (timers wrap suppliers). */
   private static MetricsRecorder metricsStub() {
     MetricsRecorder metrics = mock(MetricsRecorder.class);
-    org.mockito.Mockito.when(metrics.timeRedisLookup(org.mockito.ArgumentMatchers.any()))
-        .thenAnswer(
-            invocation -> ((java.util.function.Supplier<?>) invocation.getArgument(0)).get());
-    org.mockito.Mockito.when(metrics.timePostgresLookup(org.mockito.ArgumentMatchers.any()))
-        .thenAnswer(
-            invocation -> ((java.util.function.Supplier<?>) invocation.getArgument(0)).get());
-    org.mockito.Mockito.when(metrics.timeRedirect(org.mockito.ArgumentMatchers.any()))
-        .thenAnswer(
-            invocation -> ((java.util.function.Supplier<?>) invocation.getArgument(0)).get());
+    Mockito.when(metrics.timeRedisLookup(ArgumentMatchers.any()))
+        .thenAnswer(invocation -> ((Supplier<?>) invocation.getArgument(0)).get());
+    Mockito.when(metrics.timePostgresLookup(ArgumentMatchers.any()))
+        .thenAnswer(invocation -> ((Supplier<?>) invocation.getArgument(0)).get());
+    Mockito.when(metrics.timeRedirect(ArgumentMatchers.any()))
+        .thenAnswer(invocation -> ((Supplier<?>) invocation.getArgument(0)).get());
     return metrics;
   }
 
@@ -307,7 +304,7 @@ class WriteLinkServiceTest {
 
   @Test
   void deleteForMissingLinkThrowsNotFoundAndTouchesNothing() {
-    when(repository.findByCodeIgnoreCase(any())).thenReturn(java.util.Optional.empty());
+    when(repository.findByCodeIgnoreCase(any())).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.delete("missing1")).isInstanceOf(LinkNotFoundException.class);
     verify(repository, never()).deleteByCode(any());
@@ -319,7 +316,7 @@ class WriteLinkServiceTest {
   void deleteDoesNotEvictAgainWhenDatabaseDeleteFails() {
     Link link = new Link("abc1234", "https://example.com", null, 0, NOW);
     when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(Optional.of(link));
-    org.mockito.Mockito.doThrow(new DataIntegrityViolationException("db down"))
+    Mockito.doThrow(new DataIntegrityViolationException("db down"))
         .when(repository)
         .deleteByCode("abc1234");
 

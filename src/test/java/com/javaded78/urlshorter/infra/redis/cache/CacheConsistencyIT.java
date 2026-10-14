@@ -9,6 +9,7 @@ import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,7 +62,7 @@ class CacheConsistencyIT {
 
   private TestRestTemplate rest;
 
-  @org.junit.jupiter.api.BeforeEach
+  @BeforeEach
   void setUp() {
     rest = restTemplate.withRedirects(HttpRedirects.DONT_FOLLOW);
   }

@@ -8,6 +8,7 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 
@@ -52,11 +53,11 @@ public class RequestUriLengthFilter implements Filter {
 
   private void write413(ServletResponse response) throws IOException {
     HttpServletResponse http = (HttpServletResponse) response;
-    http.setStatus(org.springframework.http.HttpStatus.CONTENT_TOO_LARGE.value());
+    http.setStatus(HttpStatus.CONTENT_TOO_LARGE.value());
     http.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(
-            org.springframework.http.HttpStatus.CONTENT_TOO_LARGE,
+            HttpStatus.CONTENT_TOO_LARGE,
             "request URI exceeds the maximum of " + maxUriLength + " characters");
     problem.setTitle("Request URI too long");
     ProblemDetailWriter.write(http, problem);

@@ -3,6 +3,9 @@ package com.javaded78.urlshorter.infra.redis.flush;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
+import java.time.Duration;
+import java.time.Instant;
+import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -23,10 +26,9 @@ import org.springframework.test.context.TestPropertySource;
  * <p>The scheduled flush is disabled for the whole context ({@code shortener.flush.enabled=false})
  * so no {@code @Scheduled} job fires during the test, and the assertions are not racing a real
  * drain. The lock provider runs against real PostgreSQL. Each test starts from a clean {@code
- * shedlock} row. The assertions are on {@link
- * net.javacrumbs.shedlock.core.LockProvider#lock(net.javacrumbs.shedlock.core.LockConfiguration)}
- * directly — that is the exact seam {@code PROXY_METHOD} proxies: non-empty Optional = the guarded
- * flush runs, empty Optional = another instance holds the lock and this instance sheds the cycle.
+ * shedlock} row. The assertions are on {@link LockProvider#lock(LockConfiguration)} directly — that
+ * is the exact seam {@code PROXY_METHOD} proxies: non-empty Optional = the guarded flush runs,
+ * empty Optional = another instance holds the lock and this instance sheds the cycle.
  */
 @SpringBootTest
 @TestPropertySource(
@@ -50,11 +52,8 @@ class SchedulerLockIT {
   void lockAcquiredWhenFree() {
     var lock =
         lockProvider.lock(
-            new net.javacrumbs.shedlock.core.LockConfiguration(
-                java.time.Instant.now(),
-                "clickFlush",
-                java.time.Duration.ofSeconds(60),
-                java.time.Duration.ZERO));
+            new LockConfiguration(
+                Instant.now(), "clickFlush", Duration.ofSeconds(60), Duration.ZERO));
 
     assertThat(lock).isPresent();
   }
@@ -68,11 +67,8 @@ class SchedulerLockIT {
 
     var lock =
         lockProvider.lock(
-            new net.javacrumbs.shedlock.core.LockConfiguration(
-                java.time.Instant.now(),
-                "clickFlush",
-                java.time.Duration.ofSeconds(60),
-                java.time.Duration.ZERO));
+            new LockConfiguration(
+                Instant.now(), "clickFlush", Duration.ofSeconds(60), Duration.ZERO));
 
     assertThat(lock).isEmpty();
   }

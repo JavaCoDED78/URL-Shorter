@@ -5,28 +5,26 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
 import com.javaded78.urlshorter.domain.config.UrlConfig;
+import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.util.unit.DataSize;
 
 class UrlValidatorTest {
 
   private final ShortenerProperties properties =
       new ShortenerProperties(
           new ShortenerProperties.Url(2048, List.of("http", "https")),
-          new ShortenerProperties.Alias(64, java.util.Set.of("api")),
+          new ShortenerProperties.Alias(64, Set.of("api")),
           new ShortenerProperties.Create(5),
           new ShortenerProperties.Cache(
-              java.time.Duration.ofHours(1),
-              java.time.Duration.ofSeconds(45),
-              1_000_000L,
-              0.0001,
-              0.15),
+              Duration.ofHours(1), Duration.ofSeconds(45), 1_000_000L, 0.0001, 0.15),
           new ShortenerProperties.Code(7),
-          new ShortenerProperties.Idempotency(
-              java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
-          org.springframework.util.unit.DataSize.ofKilobytes(16),
+          new ShortenerProperties.Idempotency(Duration.ofHours(24), Duration.ofSeconds(5)),
+          DataSize.ofKilobytes(16),
           1024);
 
   private final UrlValidator validator =

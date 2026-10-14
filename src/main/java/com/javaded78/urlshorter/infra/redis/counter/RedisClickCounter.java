@@ -25,9 +25,9 @@ import org.springframework.stereotype.Component;
  * the drain is O(number of batches) round-trips instead of O(number of counters) and stops scaling
  * with the number of hot links.
  *
- * <p>Increment failure policy: redirect availability wins. If Redis is unavailable the
- * click is dropped and the caller reports the loss via {@code MetricsRecorder#clickIncrementFailed}
- * — click counting is best-effort analytics, the redirect itself is the product.
+ * <p>Increment failure policy: redirect availability wins. If Redis is unavailable the click is
+ * dropped and the caller reports the loss via {@code MetricsRecorder#clickIncrementFailed} — click
+ * counting is best-effort analytics, the redirect itself is the product.
  */
 @Component
 public class RedisClickCounter implements ClickCounter {

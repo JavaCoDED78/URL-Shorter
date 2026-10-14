@@ -1,6 +1,7 @@
 package com.javaded78.urlshorter.infra.http;
 
 import java.math.BigInteger;
+import java.net.InetAddress;
 
 /**
  * IPv4/IPv6 CIDR membership test for a trusted-proxy allowlist (ADR-009).
@@ -65,7 +66,7 @@ final class CidrMatcher {
     if (address.contains(":")) {
       // IPv6: 128 bits.
       try {
-        java.net.InetAddress inet = java.net.InetAddress.getByName(address);
+        InetAddress inet = InetAddress.getByName(address);
         byte[] bytes = inet.getAddress();
         if (bytes.length != 16) {
           return null;

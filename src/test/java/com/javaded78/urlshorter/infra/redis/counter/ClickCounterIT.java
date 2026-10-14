@@ -9,6 +9,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,9 +25,8 @@ import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Click counting semantics: every successful redirect increments {@code
- * clicks:{code}}; 404/410 and malformed requests do not; concurrent increments must not lose
- * clicks.
+ * Click counting semantics: every successful redirect increments {@code clicks:{code}}; 404/410 and
+ * malformed requests do not; concurrent increments must not lose clicks.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
@@ -43,7 +43,7 @@ class ClickCounterIT {
   /** Redirect assertions need the raw 302; the default client follows. */
   private TestRestTemplate rest;
 
-  @org.junit.jupiter.api.BeforeEach
+  @BeforeEach
   void doNotFollowRedirects() {
     rest = restTemplate.withRedirects(HttpRedirects.DONT_FOLLOW);
   }

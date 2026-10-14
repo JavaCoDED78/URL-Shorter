@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -15,8 +16,7 @@ import org.springframework.util.unit.DataSize;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * Typed access to {@code shortener.*} configuration, nested to mirror the YAML
- * structure.
+ * Typed access to {@code shortener.*} configuration, nested to mirror the YAML structure.
  *
  * <p>Validated on startup: the constraints on the record components are applied by Spring Boot's
  * {@code ConfigurationPropertiesBindingPostProcessor} (this class carries {@code @Validated}), so
@@ -61,19 +61,19 @@ public record ShortenerProperties(
    * @param ttl Redis TTL for cached links ({@code link:{code}}); for links with {@code expiresAt}
    *     the effective TTL is the minimum of this value and the remaining lifetime
    * @param negativeTtl TTL for the negative cache (a short-lived marker on a code that did not
-   *     exist), so a scan of nonexistent codes stops hammering PostgreSQL. The value
-   *     must be short — 30–60s is the trade-off window between shielding the database and missing a
-   *     link that was created during the gap.
-   * @param expectedCodes the Bloom filter (ADR-011) is sized for this many codes before it
-   *     reaches the configured false-positive rate
+   *     exist), so a scan of nonexistent codes stops hammering PostgreSQL. The value must be short
+   *     — 30–60s is the trade-off window between shielding the database and missing a link that was
+   *     created during the gap.
+   * @param expectedCodes the Bloom filter (ADR-011) is sized for this many codes before it reaches
+   *     the configured false-positive rate
    * @param bloomFalsePositiveRate target false-positive rate of the Bloom filter, in (0, 1)
    * @param jitter symmetric TTL jitter about the base cache TTL, in [0, 0.5] (default 0.15, i.e.
    *     ±15%). Spreads out the expiry of a mass of links created together (imports, campaigns) so
    *     they do not all expire in the same second and stampede PostgreSQL; 0 disables jitter
    */
   public record Cache(
-      @PositiveDuration java.time.Duration ttl,
-      @PositiveDuration java.time.Duration negativeTtl,
+      @PositiveDuration Duration ttl,
+      @PositiveDuration Duration negativeTtl,
       @Positive long expectedCodes,
       double bloomFalsePositiveRate,
       @PositiveOrZero @DecimalMax("0.5") double jitter) {}
@@ -94,5 +94,5 @@ public record ShortenerProperties(
    *     guards against a genuinely stuck owner; the request then fails as 500 rather than hanging
    */
   public record Idempotency(
-      @PositiveDuration java.time.Duration ttl, @PositiveDuration java.time.Duration waitTimeout) {}
+      @PositiveDuration Duration ttl, @PositiveDuration Duration waitTimeout) {}
 }

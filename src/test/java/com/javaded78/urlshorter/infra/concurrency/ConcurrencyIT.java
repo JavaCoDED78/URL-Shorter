@@ -10,24 +10,31 @@ import static org.mockito.Mockito.verify;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.domain.exception.DuplicateCodeException;
+import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import com.javaded78.urlshorter.domain.service.WriteLinkService;
 import com.javaded78.urlshorter.infra.redis.flush.CounterFlushService;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;
 import org.springframework.boot.resttestclient.TestRestTemplate;
@@ -35,19 +42,22 @@ import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRe
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.web.client.ResourceAccessException;
 
 /**
  * Concurrency and correctness on real PostgreSQL and Redis.
  *
- * <p>Acceptable delete-vs-redirect semantics: a redirect racing a delete may
- * legitimately observe the link (302) or not (404) — the API does not promise linearizability for
- * the pair. The invariants are: no 5xx, and once the delete completes the link is gone everywhere.
+ * <p>Acceptable delete-vs-redirect semantics: a redirect racing a delete may legitimately observe
+ * the link (302) or not (404) — the API does not promise linearizability for the pair. The
+ * invariants are: no 5xx, and once the delete completes the link is gone everywhere.
  *
  * <p>The stale-entry race is closed by the post-commit evict in the write service's {@code delete}:
  * the second evict runs in an {@code afterCommit} transaction hook, so a cache entry a racing
@@ -99,22 +109,21 @@ class ConcurrencyIT {
     // no explicit warm-up redirect: it would add a click of its own.
     // The first burst request warms the cache via the miss path.
 
-    HttpClient client =
-        HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(5)).build();
+    HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     HttpRequest request =
         HttpRequest.newBuilder(URI.create(url("/conc10k")))
-            .timeout(java.time.Duration.ofSeconds(30))
+            .timeout(Duration.ofSeconds(30))
             .GET()
             .build();
 
-    List<CompletableFuture<HttpResponse<Void>>> futures = new java.util.ArrayList<>(MASSIVE_CLICKS);
+    List<CompletableFuture<HttpResponse<Void>>> futures = new ArrayList<>(MASSIVE_CLICKS);
     // Bound concurrent connection establishments and retry refused
     // connects: under full-suite load the Windows loopback refuses
     // client-side opens (bare ConnectException) long before the server
     // breaks. A refused connect never reached the server, so retrying
     // the idempotent GET is safe for the harness; server-side behavior
     // is still asserted exactly.
-    java.util.concurrent.Semaphore inFlight = new java.util.concurrent.Semaphore(600);
+    Semaphore inFlight = new Semaphore(600);
     for (int i = 0; i < MASSIVE_CLICKS; i++) {
       inFlight.acquire();
       futures.add(
@@ -180,13 +189,13 @@ class ConcurrencyIT {
   void collisionRetriesAreBounded() {
     doThrow(new DuplicateCodeException("duplicate key"))
         .when(spiedRepository)
-        .save(any(com.javaded78.urlshorter.domain.model.Link.class));
+        .save(any(Link.class));
 
     assertThatThrownBy(() -> linkService.create("https://example.com/boom", null, null, null))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("collision retries");
 
-    verify(spiedRepository, times(5)).save(any(com.javaded78.urlshorter.domain.model.Link.class));
+    verify(spiedRepository, times(5)).save(any(Link.class));
   }
 
   @Test
@@ -261,10 +270,9 @@ class ConcurrencyIT {
               }
             })
         .when(spiedRepository)
-        .deleteByCode(org.mockito.ArgumentMatchers.anyString());
+        .deleteByCode(ArgumentMatchers.anyString());
 
-    java.util.concurrent.atomic.AtomicReference<ResponseEntity<String>> deleteResult =
-        new java.util.concurrent.atomic.AtomicReference<>();
+    AtomicReference<ResponseEntity<String>> deleteResult = new AtomicReference<>();
     Thread deleter =
         Thread.ofVirtual()
             .start(
@@ -301,11 +309,11 @@ class ConcurrencyIT {
     return ((Number) stats.getBody().get("clickCount")).longValue();
   }
 
-  @Autowired private org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
+  @Autowired private StringRedisTemplate stringRedisTemplate;
 
-  @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
-  private org.springframework.data.redis.core.StringRedisTemplate redisTemplate() {
+  private StringRedisTemplate redisTemplate() {
     return stringRedisTemplate;
   }
 
@@ -322,7 +330,7 @@ class ConcurrencyIT {
     for (int attempt = 0; attempt < 4; attempt++) {
       try {
         return post(originalUrl);
-      } catch (org.springframework.web.client.ResourceAccessException ex) {
+      } catch (ResourceAccessException ex) {
         last = ex;
       }
     }
@@ -342,7 +350,7 @@ class ConcurrencyIT {
               if (error == null) {
                 return CompletableFuture.completedFuture(response);
               }
-              if (attemptsLeft > 0 && hasCause(error, java.net.ConnectException.class)) {
+              if (attemptsLeft > 0 && hasCause(error, ConnectException.class)) {
                 return sendWithRetry(client, request, attemptsLeft - 1);
               }
               return CompletableFuture.<HttpResponse<Void>>failedFuture(error);

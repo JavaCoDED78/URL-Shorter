@@ -8,6 +8,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
+import com.javaded78.urlshorter.domain.repository.LinkRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +52,7 @@ class ReadLinkServiceNegativeIT {
 
   @Autowired private StringRedisTemplate redis;
 
-  @MockitoSpyBean private com.javaded78.urlshorter.domain.repository.LinkRepository repository;
+  @MockitoSpyBean private LinkRepository repository;
 
   private TestRestTemplate rest;
 

@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;
 import org.springframework.boot.resttestclient.TestRestTemplate;
@@ -32,9 +33,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Virtual threads contract: HTTP request handling must execute on virtual
- * threads, and a concurrent burst must not inflate the server platform thread count. Virtual
- * threads make blocking cheap but do not widen the PostgreSQL pool — see ConnectionPoolIT (14.3).
+ * Virtual threads contract: HTTP request handling must execute on virtual threads, and a concurrent
+ * burst must not inflate the server platform thread count. Virtual threads make blocking cheap but
+ * do not widen the PostgreSQL pool — see ConnectionPoolIT (14.3).
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -76,7 +77,7 @@ class VirtualThreadsIT {
               return invocation.callRealMethod();
             })
         .when(linkService)
-        .resolve(org.mockito.ArgumentMatchers.anyString());
+        .resolve(ArgumentMatchers.anyString());
 
     runConcurrentBurst("/vt-direct");
 
@@ -92,7 +93,7 @@ class VirtualThreadsIT {
               return invocation.callRealMethod();
             })
         .when(linkService)
-        .resolve(org.mockito.ArgumentMatchers.anyString());
+        .resolve(ArgumentMatchers.anyString());
 
     Supplier<Integer> serverThreads = VirtualThreadsIT::serverPlatformThreadCount;
     int baseline = serverThreads.get();

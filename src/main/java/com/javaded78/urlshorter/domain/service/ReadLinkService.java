@@ -62,9 +62,8 @@ public class ReadLinkService {
   }
 
   /**
-   * Resolves a code for redirection (cache-aside lookup, ADR-002) and
-   * times the end-to-end redirect (controller → service) behind {@code
-   * MetricsRecorder#redirectDuration}.
+   * Resolves a code for redirection (cache-aside lookup, ADR-002) and times the end-to-end redirect
+   * (controller → service) behind {@code MetricsRecorder#redirectDuration}.
    *
    * @throws LinkNotFoundException if no such link exists (404)
    * @throws LinkExpiredException if the link's {@code expiresAt} has passed (410)
@@ -137,9 +136,7 @@ public class ReadLinkService {
     throw new LinkNotFoundException(code);
   }
 
-  /**
-   * PostgreSQL lookup used as the {@link LinkCache#coalesce} miss supplier.
-   */
+  /** PostgreSQL lookup used as the {@link LinkCache#coalesce} miss supplier. */
   private Optional<CachedLink> lookupByCode(String code) {
     return metrics.timePostgresLookup(
         () ->

@@ -23,9 +23,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Delete flow: delete must be consistent between PostgreSQL and Redis — after 204 the
- * link redirects to 404, the cached entry is gone and the pending counter is discarded with the
- * link (policy).
+ * Delete flow: delete must be consistent between PostgreSQL and Redis — after 204 the link
+ * redirects to 404, the cached entry is gone and the pending counter is discarded with the link
+ * (policy).
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,

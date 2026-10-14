@@ -7,11 +7,11 @@ import java.util.function.Supplier;
  * Cache-aside port for link lookup (ADR-002). The service layer talks to Redis only through this
  * abstraction — never through Redis command details.
  *
- * <p>Stampede protection (ADR-011): {@link #coalesce} coalesces concurrent misses for the same
- * code behind a single in-flight lookup, so an evicted/expired hot key can no longer fan N
- * concurrent PostgreSQL reads into one. Negative caching (ADR-011): {@link #coalesce} short-
- * circuits the database for codes the Bloom filter has declared absent, so a scan of nonexistent
- * codes never reaches PostgreSQL.
+ * <p>Stampede protection (ADR-011): {@link #coalesce} coalesces concurrent misses for the same code
+ * behind a single in-flight lookup, so an evicted/expired hot key can no longer fan N concurrent
+ * PostgreSQL reads into one. Negative caching (ADR-011): {@link #coalesce} short- circuits the
+ * database for codes the Bloom filter has declared absent, so a scan of nonexistent codes never
+ * reaches PostgreSQL.
  *
  * <p>Entries carry {@code expiresAt} and the caller re-validates expiration on every hit.
  *
@@ -58,8 +58,8 @@ public interface LinkCache {
   void evict(String code);
 
   /**
-   * Records that {@code code} now exists (ADR-011), so the Bloom filter no longer short-circuits
-   * a redirect for it. Called by the write path after a successful create; also evicts any stale
+   * Records that {@code code} now exists (ADR-011), so the Bloom filter no longer short-circuits a
+   * redirect for it. Called by the write path after a successful create; also evicts any stale
    * negative marker for the code so the freshly created link resolves against PostgreSQL.
    *
    * @param code the (case-insensitive) link code

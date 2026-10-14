@@ -27,10 +27,10 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  * <p>Admission is {@code count <= maxRequests}; the {@code maxRequests}-th probe of the window is
  * the last one admitted, the next is denied.
  *
- * <p>Per-client scoping (ADR-009): the probe key is the caller's IP (resolved by the
- * {@code CreateRateLimitSource} that builds the {@link RateLimitScope} in {@code
- * WriteLinkService}), so each client has its own counter. A single global key would let one abuser
- * block every client — the limiter must never be keyed on a constant.
+ * <p>Per-client scoping (ADR-009): the probe key is the caller's IP (resolved by the {@code
+ * CreateRateLimitSource} that builds the {@link RateLimitScope} in {@code WriteLinkService}), so
+ * each client has its own counter. A single global key would let one abuser block every client —
+ * the limiter must never be keyed on a constant.
  *
  * <p>Failure policy: a Redis outage is {@code fail-open} or {@code fail-closed} as configured by
  * {@code shortener.rate-limiter.fail-open} (default {@code true}). A denied probe on a healthy
@@ -90,7 +90,8 @@ public class RedisRateLimiter implements RateLimiter {
     } catch (DataAccessException ex) {
       // Redis down (or a transient command failure): the outcome depends on policy. Fail open —
       // the default — lets creates ride through a transient outage (same availability-wins stance
-      // as availability-relevant); fail closed treats a broken limiter as a refusal instead of an open
+      // as availability-relevant); fail closed treats a broken limiter as a refusal instead of an
+      // open
       // door. Either way the request is not counted as a denial.
       if (failOpen) {
         log.warn(

@@ -7,11 +7,11 @@ import java.util.Map;
  * clicks:{lowercaseCode}}; the value is a plain integer string incremented with {@code INCR} — one
  * format, no hash-based model, so the flush drains counters atomically.
  *
- * <p>Semantics: the caller increments only after the link was found, is not expired and
- * the redirect is prepared — never for 404, 410 or malformed requests.
+ * <p>Semantics: the caller increments only after the link was found, is not expired and the
+ * redirect is prepared — never for 404, 410 or malformed requests.
  *
- * <p>Flush support (ADR-004): {@link #drainAll()} atomically reads and resets every counter;
- * {@link #restore(String, long)} puts a drained value back after a failed database write.
+ * <p>Flush support (ADR-004): {@link #drainAll()} atomically reads and resets every counter; {@link
+ * #restore(String, long)} puts a drained value back after a failed database write.
  */
 public interface ClickCounter {
 

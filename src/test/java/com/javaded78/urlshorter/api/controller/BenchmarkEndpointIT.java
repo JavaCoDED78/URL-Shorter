@@ -3,10 +3,12 @@ package com.javaded78.urlshorter.api.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.javaded78.urlshorter.TestcontainersConfiguration;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.http.client.HttpRedirects;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -53,11 +55,9 @@ class BenchmarkEndpointIT {
     /** Redirect assertions need the raw 302; the default client follows. */
     private TestRestTemplate rest;
 
-    @org.junit.jupiter.api.BeforeEach
+    @BeforeEach
     void doNotFollowRedirects() {
-      rest =
-          restTemplate.withRedirects(
-              org.springframework.boot.http.client.HttpRedirects.DONT_FOLLOW);
+      rest = restTemplate.withRedirects(HttpRedirects.DONT_FOLLOW);
     }
 
     @Test

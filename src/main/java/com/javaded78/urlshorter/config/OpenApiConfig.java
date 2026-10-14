@@ -6,8 +6,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * OpenAPI metadata: the service identity every developer sees in Swagger UI and the
- * {@code /v3/api-docs} contract.
+ * OpenAPI metadata: the service identity every developer sees in Swagger UI and the {@code
+ * /v3/api-docs} contract.
  */
 @Configuration
 public class OpenApiConfig {

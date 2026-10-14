@@ -28,9 +28,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Cache-aside behavior: miss hits PostgreSQL and populates Redis, hit serves from
- * Redis without a DB query, TTL is bounded by the remaining link lifetime, expired links are never
- * served from cache.
+ * Cache-aside behavior: miss hits PostgreSQL and populates Redis, hit serves from Redis without a
+ * DB query, TTL is bounded by the remaining link lifetime, expired links are never served from
+ * cache.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate

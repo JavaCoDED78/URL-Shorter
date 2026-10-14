@@ -24,9 +24,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Statistics API flow: stats = persisted DB count + pending Redis counter, so the user
- * never sees a lagging value while the flush interval has not elapsed. The scheduled flush is
- * disabled; the test controls flushing explicitly.
+ * Statistics API flow: stats = persisted DB count + pending Redis counter, so the user never sees a
+ * lagging value while the flush interval has not elapsed. The scheduled flush is disabled; the test
+ * controls flushing explicitly.
  */
 @AutoConfigureTestRestTemplate
 @SpringBootTest(

@@ -193,10 +193,10 @@ public class WriteLinkService {
    * deletion becomes globally visible, closing that window (see {@link
    * ConcurrencyIT#deleteVersusRedirectRaceConverges}).
    *
-   * <p>Counter policy: discard — pending clicks belong to the link row; once the row is
-   * gone there is no owner for them, and flushing before delete would persist counts just to remove
-   * them. An increment racing past the discard self-cleans on the next flush (the batch UPDATE
-   * matches 0 rows for a deleted code).
+   * <p>Counter policy: discard — pending clicks belong to the link row; once the row is gone there
+   * is no owner for them, and flushing before delete would persist counts just to remove them. An
+   * increment racing past the discard self-cleans on the next flush (the batch UPDATE matches 0
+   * rows for a deleted code).
    *
    * @throws LinkNotFoundException if no such link exists
    */

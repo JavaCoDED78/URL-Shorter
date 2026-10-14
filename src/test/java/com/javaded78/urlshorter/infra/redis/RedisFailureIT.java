@@ -12,9 +12,11 @@ import com.javaded78.urlshorter.TestcontainersConfiguration;
 import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.HttpRedirects;
 import org.springframework.boot.resttestclient.TestRestTemplate;
@@ -121,7 +123,7 @@ class RedisFailureIT {
     create("https://example.com/flush-recovery", "s17flush");
 
     AtomicBoolean redisDown = new AtomicBoolean(true);
-    org.mockito.Mockito.doAnswer(
+    Mockito.doAnswer(
             invocation -> {
               if (redisDown.get()) {
                 throw new RedisConnectionFailureException("simulated outage");
@@ -166,8 +168,7 @@ class RedisFailureIT {
     assertThat(second.getStatusCode().value()).isEqualTo(302);
   }
 
-  private void waitFor(java.util.function.BooleanSupplier condition, long timeoutMs)
-      throws Exception {
+  private void waitFor(BooleanSupplier condition, long timeoutMs) throws Exception {
     long deadline = System.currentTimeMillis() + timeoutMs;
     while (System.currentTimeMillis() < deadline) {
       if (condition.getAsBoolean()) {

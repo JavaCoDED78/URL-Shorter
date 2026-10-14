@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
@@ -38,14 +39,9 @@ class ShortenerPropertiesValidationTest {
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(5),
             new ShortenerProperties.Cache(
-                java.time.Duration.ofMinutes(1),
-                java.time.Duration.ofMinutes(1),
-                1_000_000L,
-                0.0001,
-                0.15),
+                Duration.ofMinutes(1), Duration.ofMinutes(1), 1_000_000L, 0.0001, 0.15),
             new ShortenerProperties.Code(7),
-            new ShortenerProperties.Idempotency(
-                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
+            new ShortenerProperties.Idempotency(Duration.ofHours(24), Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 
@@ -60,14 +56,9 @@ class ShortenerPropertiesValidationTest {
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(5),
             new ShortenerProperties.Cache(
-                java.time.Duration.ofMinutes(1),
-                java.time.Duration.ofMinutes(1),
-                1_000_000L,
-                0.0001,
-                0.15),
+                Duration.ofMinutes(1), Duration.ofMinutes(1), 1_000_000L, 0.0001, 0.15),
             new ShortenerProperties.Code(999),
-            new ShortenerProperties.Idempotency(
-                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
+            new ShortenerProperties.Idempotency(Duration.ofHours(24), Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 
@@ -82,14 +73,9 @@ class ShortenerPropertiesValidationTest {
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(5),
             new ShortenerProperties.Cache(
-                java.time.Duration.ofMinutes(1),
-                java.time.Duration.ofMinutes(1),
-                1_000_000L,
-                0.0001,
-                0.15),
+                Duration.ofMinutes(1), Duration.ofMinutes(1), 1_000_000L, 0.0001, 0.15),
             new ShortenerProperties.Code(7),
-            new ShortenerProperties.Idempotency(
-                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
+            new ShortenerProperties.Idempotency(Duration.ofHours(24), Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 
@@ -104,14 +90,9 @@ class ShortenerPropertiesValidationTest {
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(5),
             new ShortenerProperties.Cache(
-                java.time.Duration.ofMinutes(-5),
-                java.time.Duration.ofMinutes(1),
-                1_000_000L,
-                0.0001,
-                0.15),
+                Duration.ofMinutes(-5), Duration.ofMinutes(1), 1_000_000L, 0.0001, 0.15),
             new ShortenerProperties.Code(7),
-            new ShortenerProperties.Idempotency(
-                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
+            new ShortenerProperties.Idempotency(Duration.ofHours(24), Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 
@@ -126,14 +107,9 @@ class ShortenerPropertiesValidationTest {
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(5),
             new ShortenerProperties.Cache(
-                java.time.Duration.ofMinutes(1),
-                java.time.Duration.ofMinutes(1),
-                1_000_000L,
-                0.0001,
-                -0.1),
+                Duration.ofMinutes(1), Duration.ofMinutes(1), 1_000_000L, 0.0001, -0.1),
             new ShortenerProperties.Code(7),
-            new ShortenerProperties.Idempotency(
-                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
+            new ShortenerProperties.Idempotency(Duration.ofHours(24), Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 
@@ -148,14 +124,9 @@ class ShortenerPropertiesValidationTest {
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(5),
             new ShortenerProperties.Cache(
-                java.time.Duration.ofMinutes(1),
-                java.time.Duration.ofMinutes(1),
-                1_000_000L,
-                0.0001,
-                0.6),
+                Duration.ofMinutes(1), Duration.ofMinutes(1), 1_000_000L, 0.0001, 0.6),
             new ShortenerProperties.Code(7),
-            new ShortenerProperties.Idempotency(
-                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
+            new ShortenerProperties.Idempotency(Duration.ofHours(24), Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 
@@ -170,14 +141,9 @@ class ShortenerPropertiesValidationTest {
             new ShortenerProperties.Alias(64, Set.of("api")),
             new ShortenerProperties.Create(5),
             new ShortenerProperties.Cache(
-                java.time.Duration.ofMinutes(1),
-                java.time.Duration.ofMinutes(1),
-                1_000_000L,
-                0.0001,
-                0.15),
+                Duration.ofMinutes(1), Duration.ofMinutes(1), 1_000_000L, 0.0001, 0.15),
             new ShortenerProperties.Code(7),
-            new ShortenerProperties.Idempotency(
-                java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
+            new ShortenerProperties.Idempotency(Duration.ofHours(24), Duration.ofSeconds(5)),
             DataSize.ofMegabytes(1),
             1024);
 

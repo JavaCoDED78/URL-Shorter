@@ -25,24 +25,23 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Redis-backed {@link LinkCache}. Values are JSON; keys are {@code
- * link:{lowercaseCode}} so lookups stay consistent with the case-insensitive {@code lower(code)}
- * unique index.
+ * Redis-backed {@link LinkCache}. Values are JSON; keys are {@code link:{lowercaseCode}} so lookups
+ * stay consistent with the case-insensitive {@code lower(code)} unique index.
  *
  * <p>Uses a dedicated {@link ObjectMapper} rather than the web one: cache serialization must not
  * depend on HTTP message-converter configuration.
  *
- * <p>Stampede protection (ADR-011): {@link #coalesce} coalesces concurrent misses for the same
- * code behind a single in-flight PostgreSQL lookup, so an evicted/expired hot key can no longer fan
+ * <p>Stampede protection (ADR-011): {@link #coalesce} coalesces concurrent misses for the same code
+ * behind a single in-flight PostgreSQL lookup, so an evicted/expired hot key can no longer fan
  * {@code N} concurrent reads into one.
  *
- * <p>Negative caching (ADR-011): {@link #coalesce} short-circuits the database for codes the
- * Bloom filter has declared absent and for codes with a recent negative marker, so a scan of
- * nonexistent codes never reaches PostgreSQL.
+ * <p>Negative caching (ADR-011): {@link #coalesce} short-circuits the database for codes the Bloom
+ * filter has declared absent and for codes with a recent negative marker, so a scan of nonexistent
+ * codes never reaches PostgreSQL.
  *
- * <p>Redis unavailability degrades the cache to a pass-through: reads miss, writes are
- * skipped, evictions are skipped — every access then flows through PostgreSQL, which remains the
- * source of truth.
+ * <p>Redis unavailability degrades the cache to a pass-through: reads miss, writes are skipped,
+ * evictions are skipped — every access then flows through PostgreSQL, which remains the source of
+ * truth.
  */
 @Component
 public class RedisLinkCache implements LinkCache {

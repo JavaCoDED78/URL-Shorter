@@ -11,18 +11,31 @@ import static org.mockito.Mockito.when;
 
 import com.javaded78.urlshorter.config.ShortenerProperties;
 import com.javaded78.urlshorter.domain.cache.CachedLink;
+import com.javaded78.urlshorter.domain.cache.LinkCache;
+import com.javaded78.urlshorter.domain.counter.ClickCounter;
 import com.javaded78.urlshorter.domain.exception.LinkExpiredException;
 import com.javaded78.urlshorter.domain.exception.LinkNotFoundException;
 import com.javaded78.urlshorter.domain.model.Link;
 import com.javaded78.urlshorter.domain.model.LinkStats;
 import com.javaded78.urlshorter.domain.model.ResolvedLink;
+import com.javaded78.urlshorter.domain.repository.LinkRepository;
+import com.javaded78.urlshorter.infra.redis.cache.RedisLinkCache;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+import org.springframework.util.unit.DataSize;
 
 /**
  * Unit tests for {@link ReadLinkService}: the hot request-side path — cache-aside redirect,
@@ -37,22 +50,15 @@ class ReadLinkServiceTest {
           new ShortenerProperties.Alias(64, Set.of("api")),
           new ShortenerProperties.Create(3),
           new ShortenerProperties.Cache(
-              java.time.Duration.ofHours(1),
-              java.time.Duration.ofSeconds(45),
-              1_000_000L,
-              0.0001,
-              0.15),
+              Duration.ofHours(1), Duration.ofSeconds(45), 1_000_000L, 0.0001, 0.15),
           new ShortenerProperties.Code(7),
-          new ShortenerProperties.Idempotency(
-              java.time.Duration.ofHours(24), java.time.Duration.ofSeconds(5)),
-          org.springframework.util.unit.DataSize.ofKilobytes(16),
+          new ShortenerProperties.Idempotency(Duration.ofHours(24), Duration.ofSeconds(5)),
+          DataSize.ofKilobytes(16),
           1024);
 
-  private final com.javaded78.urlshorter.domain.repository.LinkRepository repository =
-      mock(com.javaded78.urlshorter.domain.repository.LinkRepository.class);
+  private final LinkRepository repository = mock(LinkRepository.class);
   private final FakeLinkCache linkCache = new FakeLinkCache();
-  private final com.javaded78.urlshorter.domain.counter.ClickCounter clickCounter =
-      mock(com.javaded78.urlshorter.domain.counter.ClickCounter.class);
+  private final ClickCounter clickCounter = mock(ClickCounter.class);
 
   /** The fixed reference instant all resolve/expiration assertions run against. */
   private static final Instant NOW = Instant.parse("2025-06-01T00:00:00Z");
@@ -65,15 +71,12 @@ class ReadLinkServiceTest {
   /** The metrics facade must pass calls through (timers wrap suppliers). */
   private static MetricsRecorder metricsStub() {
     MetricsRecorder metrics = mock(MetricsRecorder.class);
-    org.mockito.Mockito.when(metrics.timeRedisLookup(org.mockito.ArgumentMatchers.any()))
-        .thenAnswer(
-            invocation -> ((java.util.function.Supplier<?>) invocation.getArgument(0)).get());
-    org.mockito.Mockito.when(metrics.timePostgresLookup(org.mockito.ArgumentMatchers.any()))
-        .thenAnswer(
-            invocation -> ((java.util.function.Supplier<?>) invocation.getArgument(0)).get());
-    org.mockito.Mockito.when(metrics.timeRedirect(org.mockito.ArgumentMatchers.any()))
-        .thenAnswer(
-            invocation -> ((java.util.function.Supplier<?>) invocation.getArgument(0)).get());
+    Mockito.when(metrics.timeRedisLookup(ArgumentMatchers.any()))
+        .thenAnswer(invocation -> ((Supplier<?>) invocation.getArgument(0)).get());
+    Mockito.when(metrics.timePostgresLookup(ArgumentMatchers.any()))
+        .thenAnswer(invocation -> ((Supplier<?>) invocation.getArgument(0)).get());
+    Mockito.when(metrics.timeRedirect(ArgumentMatchers.any()))
+        .thenAnswer(invocation -> ((Supplier<?>) invocation.getArgument(0)).get());
     return metrics;
   }
 
@@ -93,7 +96,7 @@ class ReadLinkServiceTest {
 
   @Test
   void throwsWhenLinkNotFound() {
-    when(repository.findByCodeIgnoreCase("missing")).thenReturn(java.util.Optional.empty());
+    when(repository.findByCodeIgnoreCase("missing")).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.getByCode("missing"))
         .isInstanceOf(LinkNotFoundException.class);
@@ -153,7 +156,7 @@ class ReadLinkServiceTest {
 
   @Test
   void resolveThrowsNotFoundForUnknownCode() {
-    when(repository.findByCodeIgnoreCase("missing")).thenReturn(java.util.Optional.empty());
+    when(repository.findByCodeIgnoreCase("missing")).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.resolve("missing")).isInstanceOf(LinkNotFoundException.class);
   }
@@ -162,7 +165,7 @@ class ReadLinkServiceTest {
   void resolveThrowsGoneForExpiredLink() {
     // A stored, already-expired entry is served, then rejected by the re-check.
     linkCache.put(new CachedLink("abc1234", "https://example.com", NOW.minusSeconds(1)));
-    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(java.util.Optional.empty());
+    when(repository.findByCodeIgnoreCase("abc1234")).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.resolve("abc1234")).isInstanceOf(LinkExpiredException.class);
     verify(clickCounter, never()).increment(any());
@@ -179,7 +182,7 @@ class ReadLinkServiceTest {
 
   @Test
   void resolveDoesNotCountClickForUnknownCode() {
-    when(repository.findByCodeIgnoreCase("missing")).thenReturn(java.util.Optional.empty());
+    when(repository.findByCodeIgnoreCase("missing")).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.resolve("missing")).isInstanceOf(LinkNotFoundException.class);
     verify(clickCounter, never()).increment(any());
@@ -222,7 +225,7 @@ class ReadLinkServiceTest {
 
   @Test
   void getStatsForMissingLinkThrowsNotFound() {
-    when(repository.findByCodeIgnoreCase(any())).thenReturn(java.util.Optional.empty());
+    when(repository.findByCodeIgnoreCase(any())).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.getStats("missing1"))
         .isInstanceOf(LinkNotFoundException.class);
@@ -230,49 +233,43 @@ class ReadLinkServiceTest {
 }
 
 /**
- * In-memory {@link com.javaded78.urlshorter.domain.cache.LinkCache} for {@link
- * ReadLinkServiceTest}: a single code-slot cache that mirrors the real cache-aside shape — {@link
- * #store} populates the slot, {@link #coalesce} serves from it on a hit and otherwise runs the miss
- * supplier exactly once (coalescing concurrent misses behind one in-flight lookup), so stampede
- * singleflight is exercised at the unit level.
+ * In-memory {@link LinkCache} for {@link ReadLinkServiceTest}: a single code-slot cache that
+ * mirrors the real cache-aside shape — {@link #store} populates the slot, {@link #coalesce} serves
+ * from it on a hit and otherwise runs the miss supplier exactly once (coalescing concurrent misses
+ * behind one in-flight lookup), so stampede singleflight is exercised at the unit level.
  */
-class FakeLinkCache implements com.javaded78.urlshorter.domain.cache.LinkCache {
-  private final java.util.concurrent.ConcurrentMap<String, java.util.Optional<CachedLink>> store =
-      new java.util.concurrent.ConcurrentHashMap<>();
-  private final java.util.concurrent.ConcurrentMap<
-          String, java.util.concurrent.CompletableFuture<java.util.Optional<CachedLink>>>
-      inFlight = new java.util.concurrent.ConcurrentHashMap<>();
+class FakeLinkCache implements LinkCache {
+  private final ConcurrentMap<String, Optional<CachedLink>> store = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, CompletableFuture<Optional<CachedLink>>> inFlight =
+      new ConcurrentHashMap<>();
 
   @Override
-  public java.util.Optional<CachedLink> get(String code) {
-    return store.get(com.javaded78.urlshorter.infra.redis.cache.RedisLinkCache.key(code));
+  public Optional<CachedLink> get(String code) {
+    return store.get(RedisLinkCache.key(code));
   }
 
   @Override
-  public java.util.Optional<CachedLink> coalesce(
-      String code, java.util.function.Supplier<java.util.Optional<CachedLink>> miss) {
-    String key = com.javaded78.urlshorter.infra.redis.cache.RedisLinkCache.key(code);
-    java.util.Optional<CachedLink> cached = store.get(key);
+  public Optional<CachedLink> coalesce(String code, Supplier<Optional<CachedLink>> miss) {
+    String key = RedisLinkCache.key(code);
+    Optional<CachedLink> cached = store.get(key);
     if (cached != null && cached.isPresent()) {
       return cached;
     }
-    java.util.concurrent.CompletableFuture<java.util.Optional<CachedLink>> existing =
-        inFlight.get(key);
+    CompletableFuture<Optional<CachedLink>> existing = inFlight.get(key);
     if (existing != null) {
       return existing.join();
     }
     // Single-flight: the miss supplier runs once across concurrent callers for the same code.
-    java.util.concurrent.CompletableFuture<java.util.Optional<CachedLink>> future =
-        java.util.concurrent.CompletableFuture.supplyAsync(() -> miss.get());
+    CompletableFuture<Optional<CachedLink>> future =
+        CompletableFuture.supplyAsync(() -> miss.get());
     inFlight.put(key, future);
-    java.util.concurrent.atomic.AtomicReference<java.util.Optional<CachedLink>> resolved =
-        new java.util.concurrent.atomic.AtomicReference<>();
+    AtomicReference<Optional<CachedLink>> resolved = new AtomicReference<>();
     future.whenComplete(
         (value, error) -> {
           resolved.set(value);
           inFlight.remove(key, future);
         });
-    java.util.Optional<CachedLink> joined = future.join();
+    Optional<CachedLink> joined = future.join();
     if (joined.isPresent()) {
       store.put(key, joined);
     }
@@ -281,14 +278,12 @@ class FakeLinkCache implements com.javaded78.urlshorter.domain.cache.LinkCache {
 
   @Override
   public void put(CachedLink link) {
-    store.put(
-        com.javaded78.urlshorter.infra.redis.cache.RedisLinkCache.key(link.code()),
-        java.util.Optional.of(link));
+    store.put(RedisLinkCache.key(link.code()), Optional.of(link));
   }
 
   @Override
   public void evict(String code) {
-    store.remove(com.javaded78.urlshorter.infra.redis.cache.RedisLinkCache.key(code));
+    store.remove(RedisLinkCache.key(code));
   }
 
   @Override

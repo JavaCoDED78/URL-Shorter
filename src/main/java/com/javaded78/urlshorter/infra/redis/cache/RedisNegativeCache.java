@@ -3,6 +3,7 @@ package com.javaded78.urlshorter.infra.redis.cache;
 import com.javaded78.urlshorter.config.ShortenerProperties;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -48,8 +49,8 @@ public class RedisNegativeCache {
   }
 
   /**
-   * Whether {@code code} is currently marked absent (ADR-011). A {@code false} answer — whether
-   * the key is genuinely absent or Redis was unavailable — means "not known absent", so the caller
+   * Whether {@code code} is currently marked absent (ADR-011). A {@code false} answer — whether the
+   * key is genuinely absent or Redis was unavailable — means "not known absent", so the caller
    * falls through to a real lookup; a dead Redis must never masquerade as a known-absent code.
    *
    * @param code the (case-insensitive) link code
@@ -95,6 +96,6 @@ public class RedisNegativeCache {
   }
 
   static String key(String code) {
-    return KEY_PREFIX + code.toLowerCase(java.util.Locale.ROOT);
+    return KEY_PREFIX + code.toLowerCase(Locale.ROOT);
   }
 }

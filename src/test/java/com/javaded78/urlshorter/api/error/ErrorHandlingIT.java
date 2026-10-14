@@ -27,10 +27,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Unified error contract: every API error — 400, 404, 409, 410 and 500 — is an RFC 9457
- * {@code ProblemDetail} with the same stable keys ({@code type}, {@code title}, {@code status},
- * {@code detail}, {@code instance}). Internals (SQL, connection URLs, stack traces) never leak into
- * the response.
+ * Unified error contract: every API error — 400, 404, 409, 410 and 500 — is an RFC 9457 {@code
+ * ProblemDetail} with the same stable keys ({@code type}, {@code title}, {@code status}, {@code
+ * detail}, {@code instance}). Internals (SQL, connection URLs, stack traces) never leak into the
+ * response.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
