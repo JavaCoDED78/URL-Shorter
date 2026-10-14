@@ -55,7 +55,7 @@ They are not owned by the application but are part of the operational picture.
 
 | Category | Examples |
 |---|---|
-| **JVM** | `jvm_memory_used_bytes`, `jvm_gc_pause_seconds`, `jvm_threads_live`, `jvm_threads_daemon` |
+| **JVM** | `jvm_memory_used_bytes`, `jvm_gc_pause_seconds`, `jvm_threads_live_threads`, `jvm_threads_daemon_threads` |
 | **Process** | `process_cpu_usage`, `process_jvm_memory_used_bytes`, `process_files_open_files`, `process_jvm_memory_committed_bytes` |
 | **HikariCP** | `hikaricp_connections_active`, `hikaricp_connections_pending`, `hikaricp_connections_timeout_total` |
 | **Tomcat** | `tomcat_sessions_active_current`, `tomcat_threads_config_max` |

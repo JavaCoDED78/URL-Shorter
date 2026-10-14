@@ -30,12 +30,14 @@ groups:
   - name: urlshorter.rates
     interval: 15s
     rules:
-      # Requests per second, per URI template (method/status/outcome collapsed).
+      # Requests per second, per (job, uri) template. Carrying `job` keeps the
+      # series scoped to the scrape target so dashboard panels can filter by
+      # `{job=~"$job"}` (a bare `sum by (uri)` would drop it and match nothing).
       - record: urlshorter_http_requests:rate5m
-        expr: sum by (uri) (rate(http_server_requests_seconds_count[5m]))
-      # HTTP 5xx errors per second, per URI template.
+        expr: sum by (job, uri) (rate(http_server_requests_seconds_count[5m]))
+      # HTTP 5xx errors per second, per (job, uri) template.
       - record: urlshorter_http_errors:rate5m
-        expr: sum by (uri) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+        expr: sum by (job, uri) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
       # Successful redirects per second (302 resolution).
       - record: urlshorter_redirects:rate5m
         expr: rate(urlshorter_linksRedirected_total[5m])

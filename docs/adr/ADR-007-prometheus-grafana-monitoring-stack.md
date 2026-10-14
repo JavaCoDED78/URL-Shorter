@@ -54,7 +54,7 @@ production-oriented service).
 - Each scrape of `/actuator/prometheus` returns a flat text block; Micrometer
   appends `application` labels (e.g. `application: URL-Shorter`).
 - Recording rules (evaluated every 15 seconds) pre-compute derived metrics
-  (e.g. `urlshorter:link_redirected:rate5m`) to reduce query complexity and
+  (e.g. `urlshorter_redirects:rate5m`) to reduce query complexity and
   dashboard load.
 - Alert rules (evaluated every 15 seconds) produce alerts that can be
   forwarded to external notification channels (currently unconfigured — the

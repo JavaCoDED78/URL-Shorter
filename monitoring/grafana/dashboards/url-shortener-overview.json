@@ -1788,7 +1788,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "jvm_threads_live",
+          "expr": "jvm_threads_live_threads",
           "legendFormat": "Live threads",
           "range": true,
           "refId": "A"
@@ -1799,7 +1799,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "jvm_threads_daemon",
+          "expr": "jvm_threads_daemon_threads",
           "legendFormat": "Daemon threads",
           "range": true,
           "refId": "B"
