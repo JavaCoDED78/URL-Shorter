@@ -39,7 +39,7 @@ dependencies {
 
     // --- Web / REST API + OpenAPI ---
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
 
     // --- Bean Validation (request DTOs) ---
     implementation("org.springframework.boot:spring-boot-starter-validation")
