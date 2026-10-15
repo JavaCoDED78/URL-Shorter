@@ -203,31 +203,23 @@ constructor-injectable (default 1000).
 
 ## 🏛 Architecture
 
-```text
-                              ┌─────────────────────────────┐
-                              │       Spring Boot app       │
-                              │      Java 25 / Web         │
-                              └──────────────┬──────────────┘
-                                             │
-                         ┌───────────────────┴───────────────────┐
-                         │                                       │
-                     Cache-aside                                INCR
-                         │                                       │
-                         ▼                                       ▼
-                ┌─────────────────┐                    ┌─────────────────┐
-                │    Redis 7      │                    │    Redis 7      │
-                │ link:{code}     │                    │ clicks:{code}   │
-                └────────┬────────┘                    └────────┬────────┘
-                         │ cache miss                            │
-                         ▼                                       │
-                ┌─────────────────┐                              │
-                │  PostgreSQL 17  │◄──── Lua atomic flush ───────┘
-                │ source of truth │       every 5 seconds
-                └─────────────────┘
-                         ▲
-                         │ Flyway
-                         │
-                    schema migrations
+```mermaid
+flowchart TB
+    subgraph app["Spring Boot app — Java 25 / Web"]
+    end
+    subgraph cacheR["Redis 7 — cache-aside"]
+        link["link:{code}"]
+    end
+    subgraph cntR["Redis 7 — click counters"]
+        clicks["clicks:{code}"]
+    end
+    pg["PostgreSQL 17 — source of truth"]
+
+    app --> link
+    app -->|"INCR"| clicks
+    link -->|"cache miss"| pg
+    pg <-->|"Lua atomic flush<br/>(every 5s)"| clicks
+    pg -.->|"Flyway"| mig["schema migrations"]
 ```
 
 ### Monitoring flow (Sprint 29)
@@ -235,25 +227,18 @@ constructor-injectable (default 1000).
 The monitoring pipeline is fully reproducible from Git and requires no manual
 Prometheus or Grafana configuration:
 
-```text
-Spring Boot application
-        │
-        ▼
-Spring Boot Actuator
-/actuator/prometheus
-        │
-        │ scrape
-        ▼
-Prometheus
-├── recording rules
-└── alert rules
-        │
-        │ PromQL
-        ▼
-Grafana
-├── datasource provisioning
-└── dashboard provisioning
+```mermaid
+flowchart TB
+    app2["Spring Boot application"] --> actuator2["Spring Boot Actuator<br/>/actuator/prometheus"]
+    actuator2 -.|"scrape"| prom2["Prometheus"]
+    prom2 --> rec22["recording rules"]
+    prom2 --> alert22["alert rules"]
+    prom2 -.|"PromQL"| graf2["Grafana"]
+    graf2 --> ds2["datasource provisioning"]
+    graf2 --> dp2["dashboard provisioning"]
+```
 
+```text
 Repository
 └── monitoring/
     ├── prometheus/
@@ -279,29 +264,16 @@ reproduce the monitoring setup from these files alone.
 
 #### Create link
 
-```text
-POST /api/v1/links
-      │
-      ▼
-Idempotency-Key present?
-      ├── yes ─────────────────────► prior result: replay 201 with the original code
-      │    (waits for an in-flight winner, or 500 if the owner never finishes)
-      └── no / absent
-              ▼
-Rate limit probe (when enabled)
-      │
-      └── denied → 429 Too Many Requests
-      ▼
-Validate request
-      │
-      ▼
-Generate Base62 code
-      │
-      ▼
-Insert into PostgreSQL
-      │
-      ▼
-Return 201 Created
+```mermaid
+flowchart TD
+    start["POST /api/v1/links"] --> ik{"Idempotency-Key present?"}
+    ik -->|yes| replay["Prior result: replay 201 with original code<br/>(waits for in-flight winner, else 500)"]
+    ik -->|no / absent| rate["Rate limit probe (when enabled)"]
+    rate -->|denied| denied429["429 Too Many Requests"]
+    rate -->|admitted| validate["Validate request"]
+    validate --> gen["Generate Base62 code"]
+    gen --> insert["Insert into PostgreSQL"]
+    insert --> return201["Return 201 Created"]
 ```
 
 When an `Idempotency-Key` header is present the whole create is wrapped in the `IdempotencyStore`
@@ -320,49 +292,26 @@ The database `UNIQUE` constraint is the final protection against code collisions
 
 #### Redirect
 
-```text
-GET /{code}
-      │
-      ▼
-Redis lookup
-   ┌──┴───┐
-   │      │
- HIT    MISS
-   │      │
-   │      ▼
-   │  PostgreSQL
-   │      │
-   │      ▼
-   │   Cache write
-   │      │
-   └──┬───┘
-      ▼
-Check expiration
-      │
-      ▼
-INCR click counter
-      │
-      ▼
-HTTP 302 → original URL
+```mermaid
+flowchart TD
+    req["GET /{code}"] --> lookup{"Redis lookup"}
+    lookup -->|HIT| expire["Check expiration"]
+    lookup -->|MISS| pg["PostgreSQL"]
+    pg --> cache["Cache write"]
+    cache --> expire
+    expire --> incr["INCR click counter"]
+    incr --> resp["HTTP 302 → original URL"]
 ```
 
 The cached representation contains `expiresAt`, so an expired link is not accidentally served just because its Redis entry has not yet expired.
 
 #### Click counter flush
 
-```text
-Redirect request
-      │
-      ▼
-Redis INCR
-      │
-      │ every 5 seconds
-      ▼
-Lua script
-(GET + DEL atomically)
-      │
-      ▼
-Batch UPDATE PostgreSQL
+```mermaid
+flowchart TB
+    redirect["Redirect request"] --> incr["Redis INCR"]
+    incr -->|"every 5s"| lua["Lua script<br/>(GET + DEL atomically)"]
+    lua --> update["Batch UPDATE PostgreSQL"]
 ```
 
 The Lua script prevents the classic read-then-delete race where increments
@@ -890,20 +839,13 @@ that foundation into a complete Prometheus + Grafana metrics pipeline.
 
 ### Metrics pipeline
 
-```text
-Application metrics
-      ↓
-Micrometer
-      ↓
-Spring Boot Actuator
-      ↓
-/actuator/prometheus
-      ↓
-Prometheus
-      ↓
-Recording / alert rules
-      ↓
-Grafana dashboards
+```mermaid
+flowchart TB
+    metrics["Application metrics"] --> micrometer["Micrometer"]
+    micrometer --> actuator["Spring Boot Actuator<br/>/actuator/prometheus"]
+    actuator -.|"scrape"| prom["Prometheus"]
+    prom --> rules["Recording / alert rules"]
+    rules --> graf["Grafana dashboards"]
 ```
 
 ### Metrics contract
@@ -1013,13 +955,13 @@ must all pass automated validation in CI.
 
 At least one automated smoke/integration scenario verifies the complete path:
 
-```text
-request
-  → application metric changes
-  → /actuator/prometheus
-  → Prometheus scrape
-  → PromQL / recording rule
-  → Grafana query
+```mermaid
+flowchart LR
+    req["request"] --> chg["application metric changes"]
+    chg --> act["/actuator/prometheus"]
+    act -.|scrape| prom["Prometheus"]
+    prom --> q["PromQL / recording rule"]
+    q --> graf["Grafana query"]
 ```
 
 The monitoring endpoints and dashboards must not expose secrets or
@@ -1061,34 +1003,27 @@ docker compose -f docker-compose.dev.yml up -d
 
 ## 🔄 End-to-End Example
 
-```text
-1. POST /api/v1/links
-   └─> PostgreSQL INSERT
-       └─> 201 Created
-
-2. GET /aB3xK92
-   └─> Redis HIT
-       └─> Redis INCR
-           └─> 302 Redirect
-
-3. GET /aB3xK92
-   └─> Redis HIT
-       └─> Redis INCR
-           └─> 302 Redirect
-
-4. Every 5 seconds
-   └─> Lua GET+DEL (atomic)
-       └─> PostgreSQL batch UPDATE
-
-5. GET /api/v1/links/aB3xK92/stats
-   └─> PostgreSQL count + pending Redis counter
-
-6. Monitoring
-   └─> Micrometer
-       └─> /actuator/prometheus
-           └─> Prometheus scrape
-               └─> recording / alert rules
-                   └─> Grafana dashboard
+```mermaid
+flowchart TB
+    subgraph s1["1. Create link"]
+        c1["POST /api/v1/links"] --> c2["PostgreSQL INSERT"] --> c3["201 Created"]
+    end
+    subgraph s2["2. Redirect"]
+        r1["GET /aB3xK92"] --> r2["Redis HIT"] --> r3["Redis INCR"] --> r4["302 Redirect"]
+    end
+    subgraph s3["3. Redirect"]
+        d1["GET /aB3xK92"] --> d2["Redis HIT"] --> d3["Redis INCR"] --> d4["302 Redirect"]
+    end
+    subgraph s4["4. Every 5 seconds"]
+        f1["Lua GET+DEL (atomic)"] --> f2["PostgreSQL batch UPDATE"]
+    end
+    subgraph s5["5. Stats"]
+        st1["GET /api/v1/links/aB3xK92/stats"] --> st2["PostgreSQL count + pending Redis counter"]
+    end
+    subgraph s6["6. Monitoring"]
+        m1["Micrometer"] --> m2["/actuator/prometheus"] --> m3["Prometheus scrape"] --> m4["recording / alert rules"] --> m5["Grafana dashboard"]
+    end
+    s1 --> s2 --> s3 --> s4 --> s5 --> s6
 ```
 
 ## 🗺 Roadmap
@@ -1111,18 +1046,15 @@ docker compose -f docker-compose.dev.yml up -d
 
 The production-oriented roadmap now includes a reproducible monitoring stack:
 
-```text
-Spring Boot / Micrometer
-        ↓
-Actuator /actuator/prometheus
-        ↓
-Prometheus
-├── recording rules
-└── alert rules
-        ↓
-Grafana
-├── datasource provisioning
-└── dashboard provisioning
+```mermaid
+flowchart TB
+    mic["Spring Boot / Micrometer"] --> act["Actuator<br/>/actuator/prometheus"]
+    act -.|"scrape"| prom["Prometheus"]
+    prom --> rec2["recording rules"]
+    prom --> alert2["alert rules"]
+    prom --> graf2["Grafana"]
+    graf2 --> ds2["datasource provisioning"]
+    graf2 --> dp2["dashboard provisioning"]
 ```
 
 The target is **metrics pipeline as code**: monitoring configuration is
