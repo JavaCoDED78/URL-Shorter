@@ -4,7 +4,7 @@ A production-oriented URL shortening service built with **Spring Boot 4.1.1**, *
 
 The service uses PostgreSQL as the source of truth, Redis for low-latency redirects and click buffering, Flyway for schema migrations, and Testcontainers for realistic integration testing.
 
-![CI](https://github.com/JavaCoDED78/url-shortener/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/JavaCoDED78/URL-Shorter/actions/workflows/ci.yml/badge.svg)
 ![Java](https://img.shields.io/badge/Java-25-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
