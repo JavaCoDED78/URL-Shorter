@@ -104,7 +104,7 @@ class CacheConsistencyIT {
         .opsForValue()
         .set(
             KEY_PREFIX + alias,
-            """
+"""
                 {"code":"%s","originalUrl":"https://example.com/expired-cache",\
 "expiresAt":"2020-01-01T00:00:00Z"}"""
                 .formatted(alias),
@@ -133,7 +133,7 @@ class CacheConsistencyIT {
         .opsForValue()
         .set(
             KEY_PREFIX + alias,
-            """
+"""
                 {"code":"%s","originalUrl":"https://example.com/future-fields",\
 "expiresAt":null,"schemaVersion":2,"addedByFutureRelease":"x"}"""
                 .formatted(alias),

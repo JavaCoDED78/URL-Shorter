@@ -2,7 +2,7 @@ plugins {
     java
     id("org.springframework.boot") version "4.1.1"
     id("io.spring.dependency-management") version "1.1.7"
-    id("com.diffplug.spotless") version "6.25.0"
+    id("com.diffplug.spotless") version "8.10.4"
 }
 
 group = "com.javaded78"
@@ -110,7 +110,7 @@ tasks.register<Test>("unitTest") {
 spotless {
     java {
         target("src/**/*.java")
-        googleJavaFormat("1.22.0")
+        googleJavaFormat("1.36.0")
         // Fix imports that are out of alphabetical order
         importOrder()
         // Remove unused imports
