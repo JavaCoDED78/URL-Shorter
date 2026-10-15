@@ -231,6 +231,36 @@ def wait_for_health(base_url, check_path="/-/healthy", max_attempts=30, delay=2)
     return False
 
 
+def warm_up_endpoint():
+    """Trigger the first, cold create after boot so the timed end-to-end check
+    below does not trip its own connection timeout.
+
+    The app's very first /api/v1/links create after startup incurs ~5s one-time
+    latency (cold Redis/DB connection pool); warm creates are ~12ms. This
+    warm-up absorbs that once and its result is discarded. The link is deleted
+    afterwards so no demo data is left behind. Best-effort: a timeout here
+    still warms the cold path.
+    """
+    try:
+        req = urllib.request.Request(
+            f"{APP_URL}/api/v1/links",
+            data=json.dumps({"originalUrl": "https://example.com/warmup"}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            code = json.loads(resp.read().decode()).get("code")
+        if code:
+            urllib.request.urlopen(
+                urllib.request.Request(
+                    f"{APP_URL}/api/v1/links/{code}", method="DELETE"
+                ),
+                timeout=10,
+            )
+    except Exception:
+        pass
+
+
 # ---- Main ----
 
 def main():
@@ -279,6 +309,11 @@ def main():
     # Step 7: Alert rules loaded
     print("\n7. Alert rules")
     record(check("alert rules loaded", prometheus_alert_rules_loaded))
+
+    # Warm up the cold first-create path (~5s one-time latency after boot) so the
+    # timed end-to-end check below does not trip its own 5s connection timeout.
+    print("\nWarming up application endpoint (cold first-create after boot)...")
+    warm_up_endpoint()
 
     # Step 8: End-to-end — redirect counter changes
     print("\n8. End-to-end metrics path (create link → redirect → Prometheus)")
