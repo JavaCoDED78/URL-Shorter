@@ -176,6 +176,42 @@ def wait_for_app_scraped(timeout=60):
     return False
 
 
+def wait_for_app_up(timeout=90):
+    """Wait until the application Prometheus target is UP.
+
+    A freshly booted app can be mid-start when the smoke test begins, so its
+    target reports ``up: 0`` until the first successful scrape. Metrics checks
+    (3-6) must not run against a target that is still coming up; this waits for
+    a stable, healthy scrape before continuing.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        status, data = http_get(f"{BASE_URL_PROMETHEUS}/api/v1/targets")
+        if status == 200:
+            targets = (data or {}).get("data", {}).get("activeTargets", [])
+            if [t for t in targets if t.get("health") == "up"]:
+                return True
+        time.sleep(3)
+    return False
+
+
+def wait_for_metrics_warm(timeout=90):
+    """Wait until the PromQL rate window and the recording rule have live data.
+
+    Check 5 needs >=2 scrapes inside the 1m rate window and check 6 needs one
+    recording-rule evaluation (15s interval) after traffic exists. A single
+    prime is therefore not enough on its own; poll until both hold.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        q_ok, _ = prometheus_query_non_empty()
+        r_ok, _ = prometheus_recording_rules_evaluated()
+        if q_ok and r_ok:
+            return True
+        time.sleep(3)
+    return False
+
+
 def prime_redirect_traffic(iterations=3):
     """Resolve a link a few times to give metric checks live traffic.
 
@@ -365,6 +401,21 @@ def main():
     record(ok == 200)
     print(f"  [{'PASS' if ok == 200 else 'FAIL'}] Grafana health endpoint")
 
+    # Warm-up phase. Metrics checks 3-6 are meaningless until the application is
+    # fully up AND the metric pipeline is warm. At the start of the test a
+    # freshly booted app is still coming up (target up: 0), not yet scraped, and
+    # has no traffic for the rate window or the 5m recording rule. Wait for a
+    # stable healthy scrape, seed one redirect wave (which also warms the cold
+    # first-create path), then wait until the rate window and recording rule
+    # have live data. The prime link is deleted afterwards, so no demo data is
+    # left behind.
+    print("\nWarming metrics pipeline (app up + traffic + warm window)...")
+    if not wait_for_app_up(90):
+        print("  warning: application target not UP within 90s")
+    prime_redirect_traffic()
+    if not wait_for_metrics_warm(90):
+        print("  warning: metrics pipeline not warm within 90s")
+
     # Step 3: Prometheus — target discovered
     print("\n3. Prometheus target discovery")
     record(check("application target discovered", prometheus_targets))
@@ -372,16 +423,6 @@ def main():
     # Step 4: Prometheus — application metrics scraped
     print("\n4. Application metrics scraping")
     record(check("application metrics present", prometheus_application_scraped))
-
-    # Cold-start mitigation: on a freshly booted app Prometheus has not scraped
-    # it yet, so the PromQL rate window (check 5) and the 5m recording rule
-    # (check 6) have no data and return empty results. Wait for the first
-    # scrape, then seed one redirect wave so those checks see live series (the
-    # warm-up link is deleted afterwards, so no demo data is left behind).
-    print("\nWarming metrics pipeline (first scrape + prime traffic)...")
-    if not wait_for_app_scraped(60):
-        print("  warning: application metrics not scraped within 60s")
-    prime_redirect_traffic()
 
     # Step 5: PromQL — non-empty query
     print("\n5. PromQL query")
