@@ -95,23 +95,29 @@ def prometheus_metric_changes_on_request(iterations=5):
     import urllib.parse
     import urllib.error
 
-    # Create a link
+    # Create a link. The very first create after a cold boot incurs a one-time
+    # ~5s connection-pool warmup (ADR: cold start), so allow headroom and retry
+    # transient connection errors rather than failing the whole check.
     body = json.dumps({"originalUrl": "https://example.com/health"}).encode()
-    req = urllib.request.Request(
-        f"{APP_URL}/api/v1/links",
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            code = json.loads(resp.read().decode()).get("code")
-    except urllib.error.HTTPError as e:
-        return False, {"detail": f"link creation failed: {e.code}"}
-    except Exception as e:
-        return False, {"detail": f"link creation failed: {e}"}
+    code = None
+    for _attempt in range(3):
+        req = urllib.request.Request(
+            f"{APP_URL}/api/v1/links",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                code = json.loads(resp.read().decode()).get("code")
+            break
+        except urllib.error.HTTPError as e:
+            if e.code != 503:
+                return False, {"detail": f"link creation failed: {e.code}"}
+        except Exception:
+            pass  # cold first-create may close the socket; retry
     if not code:
-        return False, {"detail": "no code returned"}
+        return False, {"detail": "no code returned after retries"}
 
     # Trigger redirects
     for _ in range(iterations):
@@ -124,17 +130,11 @@ def prometheus_metric_changes_on_request(iterations=5):
         except Exception:
             pass  # some redirects raise ConnectionError
 
-    # Query Prometheus for the counter
-    prom_query = 'urlshorter_linksRedirected_total{job="urlshorter-app"}'
-    q = f"{BASE_URL_PROMETHEUS}/api/v1/query?query={urllib.parse.quote(prom_query)}"
-    status, data = http_get(q)
-    if status != 200:
-        return False, data
-    result = data.get("data", {}).get("result", [])
-    if not result:
-        return False, {"detail": "no series found for urlshorter_linksRedirected_total"}
-    value = float(result[0]["value"][1])
-    return value >= iterations, {"expected_at_least": iterations, "actual": value}
+    # Wait for the increment to surface in Prometheus. The app increments in
+    # memory instantly, but Prometheus only reports the new value on the next
+    # 15s scrape — so poll rather than querying once and racing the interval.
+    return await_metric_value(
+        'urlshorter_linksRedirected_total{job="urlshorter-app"}', iterations)
 
 
 def prometheus_recording_rules_evaluated():
@@ -157,6 +157,81 @@ def prometheus_alert_rules_loaded():
     groups = data["data"].get("groups", [])
     total_rules = sum(len(g.get("rules", [])) for g in groups)
     return total_rules > 0, {"alert_groups": len(groups), "total_rules": total_rules}
+
+
+def wait_for_app_scraped(timeout=60):
+    """Wait until Prometheus has scraped the application at least once.
+
+    On a cold start Prometheus has collected zero scrapes, so PromQL ``rate()``
+    windows and the 5m recording rules have no data and return empty results.
+    This polls the metric-name index until an application counter appears so the
+    checks below see live series instead of racing the 15s scrape interval.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        ok, _ = prometheus_application_scraped()
+        if ok:
+            return True
+        time.sleep(2)
+    return False
+
+
+def prime_redirect_traffic(iterations=3):
+    """Resolve a link a few times to give metric checks live traffic.
+
+    Checks 5 and 6 evaluate a rate window and a 5m recording rule; with no
+    traffic they return nothing / NaN. One directed wave seeds that data and
+    also warms the cold first-create path. The link is deleted afterwards so no
+    demo data is left behind. Best-effort: a failure here must not abort.
+    """
+    try:
+        body = json.dumps({"originalUrl": "https://example.com/prime"}).encode()
+        req = urllib.request.Request(
+            f"{APP_URL}/api/v1/links", data=body,
+            headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            code = json.loads(resp.read().decode()).get("code")
+        if code:
+            for _ in range(iterations):
+                try:
+                    urllib.request.urlopen(
+                        urllib.request.Request(f"{APP_URL}/{code}", method="GET"),
+                        timeout=5)
+                except urllib.error.HTTPError:
+                    pass
+            urllib.request.urlopen(
+                urllib.request.Request(
+                    f"{APP_URL}/api/v1/links/{code}", method="DELETE"),
+                timeout=10)
+    except Exception:
+        pass
+
+
+def await_metric_value(query, expected_min, timeout=45):
+    """Poll Prometheus until a query value reaches ``expected_min`` (bounded).
+
+    Fixes the scrape-interval race: the app increments counters in memory
+    instantly, but Prometheus only surfaces the new value on the next 15s
+    scrape. Rather than guess a fixed sleep, poll until the value lands (or the
+    deadline elapses) and return the latest observed value.
+    """
+    def read():
+        q = f"{BASE_URL_PROMETHEUS}/api/v1/query?query={urllib.parse.quote(query)}"
+        status, data = http_get(q)
+        result = (data or {}).get("data", {}).get("result", [])
+        try:
+            return float(result[0]["value"][1]) if result else None
+        except (TypeError, IndexError, ValueError):
+            return None
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        value = read()
+        if value is not None and value >= expected_min:
+            return True, value
+        time.sleep(2)
+    actual = read() or 0.0
+    return actual >= expected_min, {"expected_at_least": expected_min, "actual": actual}
 
 
 def prometheus_query_non_empty():
@@ -297,6 +372,16 @@ def main():
     # Step 4: Prometheus — application metrics scraped
     print("\n4. Application metrics scraping")
     record(check("application metrics present", prometheus_application_scraped))
+
+    # Cold-start mitigation: on a freshly booted app Prometheus has not scraped
+    # it yet, so the PromQL rate window (check 5) and the 5m recording rule
+    # (check 6) have no data and return empty results. Wait for the first
+    # scrape, then seed one redirect wave so those checks see live series (the
+    # warm-up link is deleted afterwards, so no demo data is left behind).
+    print("\nWarming metrics pipeline (first scrape + prime traffic)...")
+    if not wait_for_app_scraped(60):
+        print("  warning: application metrics not scraped within 60s")
+    prime_redirect_traffic()
 
     # Step 5: PromQL — non-empty query
     print("\n5. PromQL query")
