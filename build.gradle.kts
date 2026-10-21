@@ -58,7 +58,7 @@ dependencies {
 
     // --- Nullability: JSpecify type-level annotations (@NullMarked/@Nullable) ---
     // Maven group is org.jspecify; the annotation *package* is net.jspecify.annotations.
-    implementation("org.jspecify:jspecify:0.3.0")
+    implementation("org.jspecify:jspecify:1.0.1")
 
     // --- Code generation: Lombok + config metadata ---
     compileOnly("org.projectlombok:lombok")
